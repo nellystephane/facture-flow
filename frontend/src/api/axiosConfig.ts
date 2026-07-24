@@ -3,7 +3,7 @@ import axios from 'axios';
 // En développement, le proxy Vite redirige /api vers le backend local.
 // En production, définissez VITE_API_URL (ex: https://api.votredomaine.com/api)
 // dans les variables d'environnement de votre hébergeur frontend.
-const baseURL = import.meta.env.VITE_API_URL || '/api' ;
+const baseURL = import.meta.env.VITE_API_URL || 'https://facture-flow.onrender.com' ;
 
 const api = axios.create({
   baseURL,
