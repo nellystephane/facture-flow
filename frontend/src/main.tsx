@@ -1,15 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App';
 import './index.css';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("L'élément #root est introuvable dans le DOM");
-}
 
-ReactDOM.createRoot(rootElement).render(
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter basename="/facture-flow">
+      <App />
+    </BrowserRouter>
   </React.StrictMode>
 );
