@@ -28,6 +28,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true, // Utile pour le débogage
     minify: 'esbuild',
+    
   },
   
   // ✅ Variables d'environnement pour le frontend
