@@ -3,38 +3,23 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  
-  // ✅ Base URL pour GitHub Pages
-  base: '/facture-flow/', // Mettez le nom de votre repo GitHub
-  
+  plugins: [
+    react(),
+    tailwindcss(),],
+  base: '/facture-flow/',
   server: {
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // Dev local
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'), // Garder /api
       },
     },
-    hmr: {
-      protocol: 'ws',
-      host: 'localhost',
-    },
   },
-  
-  // ✅ Configuration pour le build
-  build: {
-    outDir: 'dist',
-    sourcemap: true, // Utile pour le débogage
-    minify: 'esbuild',
-    
+  resolve: {
+    extensions: ['.js', '.ts', '.jsx', '.tsx', '.json'],
   },
-  
-  // ✅ Variables d'environnement pour le frontend
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL || 'https://facture-flow.onrender.com'
-    ),
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
   },
 });
