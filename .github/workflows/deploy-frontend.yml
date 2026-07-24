@@ -26,6 +26,8 @@ jobs:
 
       - name: Build the project
         working-directory: ./frontend
+        env:
+          VITE_API_URL: https://facture-flow.onrender.com
         run: npm run build
 
       - name: Deploy to GitHub Pages
