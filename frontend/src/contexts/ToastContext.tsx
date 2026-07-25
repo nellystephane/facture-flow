@@ -16,7 +16,7 @@ const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
 const COLORS: Record<ToastType, { bg: string; icon: ReactNode }> = {
   success: { bg: 'linear-gradient(135deg,#10b981,#047857)', icon: <CheckCircle2 size={18} /> },
-  error: { bg: 'linear-gradient(135deg,#e11d2a,#b3121d)', icon: <XCircle size={18} /> },
+  error: { bg: 'linear-gradient(135deg,#d9524d,#b23c37)', icon: <XCircle size={18} /> },
   info: { bg: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)', icon: <Info size={18} /> },
 };
 

@@ -35,16 +35,16 @@ export default function Landing() {
             <div className="flex items-center gap-2.5">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
-                style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}
+                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}
               >
                 <Zap size={20} fill="white" />
               </div>
               <span className="font-extrabold text-xl text-[#0a0a0c]">FactuFlow</span>
             </div>
             <div className="hidden md:flex items-center gap-7 text-sm font-medium text-gray-600">
-              <a href="#features" className="hover:text-[#e11d2a] transition-soft">Fonctionnalités</a>
-              <a href="#pricing" className="hover:text-[#e11d2a] transition-soft">Tarifs</a>
-              <a href="#faq" className="hover:text-[#e11d2a] transition-soft">FAQ</a>
+              <a href="#features" className="hover:text-[#d9524d] transition-soft">Fonctionnalités</a>
+              <a href="#pricing" className="hover:text-[#d9524d] transition-soft">Tarifs</a>
+              <a href="#faq" className="hover:text-[#d9524d] transition-soft">FAQ</a>
             </div>
             <div className="flex items-center gap-2">
               {user ? (
@@ -63,8 +63,8 @@ export default function Landing() {
         <section className="px-4 sm:px-6 lg:px-12 pt-12 pb-20 max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="animate-fade-up">
-              <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-6 text-xs font-semibold text-[#e11d2a]">
-                <span className="w-2 h-2 rounded-full bg-[#e11d2a] pulse-red" />
+              <div className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-6 text-xs font-semibold text-[#d9524d]">
+                <span className="w-2 h-2 rounded-full bg-[#d9524d] pulse-red" />
                 Pensé pour l'Afrique francophone
               </div>
               <h1 className="text-4xl md:text-6xl font-extrabold text-[#0a0a0c] leading-[1.05] tracking-tight">
@@ -94,7 +94,7 @@ export default function Landing() {
                 <div className="space-y-3">
                   {[
                     { icon: FileText, title: 'Créez un devis', desc: 'En moins de 30 secondes', color: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' },
-                    { icon: TrendingUp, title: 'Transformez-le en facture', desc: 'En un seul clic', color: 'linear-gradient(135deg,#e11d2a,#b3121d)' },
+                    { icon: TrendingUp, title: 'Transformez-le en facture', desc: 'En un seul clic', color: 'linear-gradient(135deg,#d9524d,#b23c37)' },
                     { icon: Wallet, title: 'Suivez le paiement', desc: 'Mobile Money, virement, espèces', color: 'linear-gradient(135deg,#10b981,#047857)' },
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-4 p-3 rounded-xl hover:bg-white/50 transition-soft animate-fade-up" style={{ animationDelay: `${0.2 + i * 0.12}s` }}>
@@ -126,7 +126,7 @@ export default function Landing() {
                 { value: formatCompact(stats!.totalEncaisse), label: 'Encaissés via FactuFlow', icon: Wallet },
               ].map(({ value, label, icon: Icon }, i) => (
                 <div key={i} className="glass-card p-5 text-center animate-fade-up" style={{ animationDelay: `${i * 0.1}s` }}>
-                  <Icon className="mx-auto mb-2 text-[#e11d2a]" size={24} />
+                  <Icon className="mx-auto mb-2 text-[#d9524d]" size={24} />
                   <p className="text-2xl font-extrabold text-[#0a0a0c]">{value}</p>
                   <p className="text-xs text-gray-500 mt-1">{label}</p>
                 </div>
@@ -138,7 +138,7 @@ export default function Landing() {
         {/* ===== Features ===== */}
         <section id="features" className="px-4 sm:px-6 lg:px-12 py-20 max-w-7xl mx-auto">
           <div className="text-center mb-14 animate-fade-up">
-            <p className="text-sm font-bold text-[#e11d2a] uppercase tracking-widest mb-3">Fonctionnalités</p>
+            <p className="text-sm font-bold text-[#d9524d] uppercase tracking-widest mb-3">Fonctionnalités</p>
             <h2 className="text-3xl md:text-5xl font-extrabold text-[#0a0a0c]">Tout ce qu'il vous faut</h2>
             <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
               Une suite complète pour gérer votre activité de A à Z, sans complexité.
@@ -156,7 +156,7 @@ export default function Landing() {
             ].map(({ icon: Icon, title, desc }, i) => (
               <div key={i} className="glass-card p-6 animate-fade-up" style={{ animationDelay: `${i * 0.08}s` }}>
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg"
-                  style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+                  style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
                   <Icon size={22} />
                 </div>
                 <h3 className="text-lg font-bold text-[#0a0a0c] mb-1.5">{title}</h3>
@@ -169,7 +169,7 @@ export default function Landing() {
         {/* ===== Pricing ===== */}
         <section id="pricing" className="px-4 sm:px-6 lg:px-12 py-20 max-w-7xl mx-auto">
           <div className="text-center mb-14 animate-fade-up">
-            <p className="text-sm font-bold text-[#e11d2a] uppercase tracking-widest mb-3">Tarifs</p>
+            <p className="text-sm font-bold text-[#d9524d] uppercase tracking-widest mb-3">Tarifs</p>
             <h2 className="text-3xl md:text-5xl font-extrabold text-[#0a0a0c]">Un prix pour chaque ambition</h2>
             <p className="text-gray-600 mt-4">Sans engagement. Annulable à tout moment.</p>
           </div>
@@ -193,11 +193,11 @@ export default function Landing() {
               },
             ].map((plan, i) => (
               <div key={i}
-                className={`glass-card p-7 flex flex-col animate-fade-up relative ${plan.popular ? 'ring-2 ring-[#e11d2a]' : ''}`}
+                className={`glass-card p-7 flex flex-col animate-fade-up relative ${plan.popular ? 'ring-2 ring-[#d9524d]' : ''}`}
                 style={{ animationDelay: `${i * 0.1}s` }}>
                 {plan.popular && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold text-white px-4 py-1 rounded-full whitespace-nowrap"
-                    style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+                    style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
                     ★ Le plus populaire
                   </span>
                 )}
@@ -224,7 +224,7 @@ export default function Landing() {
         {/* ===== FAQ ===== */}
         <section id="faq" className="px-4 sm:px-6 lg:px-12 py-20 max-w-3xl mx-auto">
           <div className="text-center mb-12 animate-fade-up">
-            <p className="text-sm font-bold text-[#e11d2a] uppercase tracking-widest mb-3">FAQ</p>
+            <p className="text-sm font-bold text-[#d9524d] uppercase tracking-widest mb-3">FAQ</p>
             <h2 className="text-3xl md:text-4xl font-extrabold text-[#0a0a0c]">Questions fréquentes</h2>
           </div>
           <div className="space-y-3">
@@ -237,7 +237,7 @@ export default function Landing() {
               <details key={i} className="glass-card p-5 group animate-fade-up" style={{ animationDelay: `${i * 0.05}s` }}>
                 <summary className="font-semibold text-[#0a0a0c] cursor-pointer flex items-center justify-between list-none">
                   {item.q}
-                  <span className="text-[#e11d2a] transition-transform group-open:rotate-45 text-xl">+</span>
+                  <span className="text-[#d9524d] transition-transform group-open:rotate-45 text-xl">+</span>
                 </summary>
                 <p className="text-sm text-gray-600 mt-3 leading-relaxed">{item.a}</p>
               </details>
@@ -252,10 +252,10 @@ export default function Landing() {
             style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}
           >
             <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-30"
-              style={{ background: 'radial-gradient(circle,#e11d2a,transparent 70%)' }} />
+              style={{ background: 'radial-gradient(circle,#d9524d,transparent 70%)' }} />
             <div className="relative z-10">
               <div className="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center text-white shadow-lg"
-                style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
                 <Zap size={26} fill="white" />
               </div>
               <h2 className="text-3xl md:text-4xl font-extrabold mb-3">Prêt à propulser votre business ?</h2>
@@ -274,16 +274,16 @@ export default function Landing() {
           <div className="glass rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
                 <Zap size={16} fill="white" />
               </div>
               <span className="font-bold text-[#0a0a0c]">FactuFlow</span>
             </div>
             <p className="text-xs text-gray-500">© {new Date().getFullYear()} FactuFlow. Conçu pour les entrepreneurs africains.</p>
             <div className="flex gap-5 text-xs text-gray-500">
-              <a href="#" className="hover:text-[#e11d2a]">Confidentialité</a>
-              <a href="#" className="hover:text-[#e11d2a]">CGU</a>
-              <a href="#" className="hover:text-[#e11d2a]">Contact</a>
+              <a href="#" className="hover:text-[#d9524d]">Confidentialité</a>
+              <a href="#" className="hover:text-[#d9524d]">CGU</a>
+              <a href="#" className="hover:text-[#d9524d]">Contact</a>
             </div>
           </div>
         </footer>

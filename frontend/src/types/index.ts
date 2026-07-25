@@ -1,3 +1,17 @@
+export interface BankInfo {
+  nomBanque?: string;
+  titulaire?: string;
+  iban?: string;
+  rib?: string;
+  swift?: string;
+}
+
+export interface AbonnementInfo {
+  duree: '6mois' | '1an' | null;
+  dateDebut?: string | null;
+  dateFin?: string | null;
+}
+
 export interface User {
   id: string;
   nom: string;
@@ -7,7 +21,10 @@ export interface User {
   adresse?: string;
   logoUrl?: string;
   devise?: string;
+  banque?: BankInfo;
   subscription?: 'gratuit' | 'pro' | 'business';
+  abonnement?: AbonnementInfo;
+  estPremium?: boolean;
 }
 
 export interface Client {
@@ -56,6 +73,9 @@ export interface Invoice {
   template?: string;
   owner: string;
   quote?: string;
+  publicToken?: string;
+  dateEnvoi?: string | null;
+  dateVue?: string | null;
   totalHT?: number;
   totalTTC?: number;
   createdAt?: string;
@@ -85,14 +105,20 @@ export interface Quote {
 export type MethodePaiement =
   | 'especes' | 'mtn_money' | 'moov_money' | 'carte' | 'virement' | 'autre';
 
+export type PaymentOrigine = 'manuel' | 'en_ligne';
+export type PaymentStatut = 'en_attente' | 'complete' | 'echoue';
+
 export interface Payment {
   _id: string;
   invoice: Invoice | string;
   montant: number;
   methode: MethodePaiement;
+  origine?: PaymentOrigine;
+  statut?: PaymentStatut;
   date: string;
   reference?: string;
   note?: string;
+  receiptNumber?: string;
   owner: string;
   createdAt?: string;
 }
@@ -107,4 +133,17 @@ export interface DashboardData {
   revenusMensuels: { mois: string; total: number }[];
   topClients: { nom: string; total: number }[];
   facturesRecentes: Invoice[];
+}
+
+export interface SubscriptionOption {
+  duree: '6mois' | '1an';
+  mois: number;
+  prix: number;
+}
+
+export interface SubscriptionPlan {
+  id: 'pro' | 'business';
+  nom: string;
+  avantages: string[];
+  options: SubscriptionOption[];
 }

@@ -138,7 +138,7 @@ export default function QuoteForm() {
                     <GripVertical size={16} className="text-gray-300 shrink-0" />
                     <span className="text-xs font-bold text-gray-400">Ligne {idx + 1}</span>
                     {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 hover:text-[#e11d2a]"><Trash2 size={15} /></button>
+                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 hover:text-[#d9524d]"><Trash2 size={15} /></button>
                     )}
                   </div>
                   <div className="grid sm:grid-cols-12 gap-2">

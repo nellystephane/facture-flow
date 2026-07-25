@@ -10,7 +10,7 @@ interface StatCardProps {
 }
 
 const ACCENTS: Record<string, string> = {
-  rouge: 'linear-gradient(135deg, #e11d2a, #b3121d)',
+  rouge: 'linear-gradient(135deg, #d9524d, #b23c37)',
   noir: 'linear-gradient(135deg, #1a1a1f, #0a0a0c)',
   vert: 'linear-gradient(135deg, #10b981, #047857)',
   bleu: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',

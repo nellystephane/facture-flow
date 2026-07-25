@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 interface PageHeaderProps {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   icon?: ReactNode;
   actions?: ReactNode;
 }
@@ -13,7 +13,7 @@ export default function PageHeader({ title, subtitle, icon, actions }: PageHeade
       <div className="flex items-center gap-3">
         {icon && (
           <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-lg"
-            style={{ background: 'linear-gradient(135deg, #e11d2a, #b3121d)' }}>
+            style={{ background: 'linear-gradient(135deg, #d9524d, #b23c37)' }}>
             {icon}
           </div>
         )}

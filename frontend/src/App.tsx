@@ -17,6 +17,8 @@ import QuoteForm from './pages/QuoteForm';
 import QuoteDetail from './pages/QuoteDetail';
 import Payments from './pages/Payments';
 import Profile from './pages/Profile';
+import Abonnement from './pages/Abonnement';
+import PaymentPublic from './pages/PaymentPublic';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -46,6 +48,9 @@ function AppRoutes() {
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
 
+      {/* Page de paiement publique — accessible au client sans compte */}
+      <Route path="/payer/:token" element={<PaymentPublic />} />
+
       <Route path="/app" element={
         <ProtectedRoute>
           <Layout />
@@ -66,6 +71,7 @@ function AppRoutes() {
         <Route path="quotes/:id" element={<QuoteDetail />} />
         <Route path="payments" element={<Payments />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="abonnement" element={<Abonnement />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -17,5 +17,14 @@ export const getInvoicePayments = (id: string) =>
 export const createInvoiceFromQuote = (quoteId: string) =>
   api.post<Invoice>(`/invoices/from-quote/${quoteId}`);
 
+// Facturation rapide depuis un tarif préconçu (réservé Pro/Business)
+export const createInvoiceFromService = (data: {
+  serviceId: string; clientId: string; quantite?: number; prixUnitaire?: number; dateEcheance?: string; objet?: string;
+}) => api.post<Invoice>('/invoices/from-service', data);
+
+// Envoi réel par email (PDF joint + lien de paiement)
+export const sendInvoiceEmail = (id: string) =>
+  api.post<{ message: string; invoice: Invoice; paymentUrl: string | null }>(`/invoices/${id}/envoyer`);
+
 // PDF : ouvre dans un nouvel onglet (le backend renvoie le PDF directement)
 export const invoicePdfUrl = (id: string) => `/api/invoices/${id}/pdf`;

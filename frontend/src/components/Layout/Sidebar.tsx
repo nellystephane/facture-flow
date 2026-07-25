@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Users, Package, FileSpreadsheet,
-  Wallet, User, LogOut, X, Zap
+  Wallet, User, LogOut, X, Zap, Crown
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/app/clients', label: 'Clients', icon: Users },
   { to: '/app/services', label: 'Produits & Services', icon: Package },
   { to: '/app/payments', label: 'Paiements', icon: Wallet },
+  { to: '/app/abonnement', label: 'Abonnement', icon: Crown },
   { to: '/app/profile', label: 'Mon profil', icon: User },
 ];
 
@@ -51,7 +52,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             <div className="flex items-center gap-2.5">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
-                style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}
+                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}
               >
                 <Zap size={20} fill="white" />
               </div>
@@ -81,7 +82,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   }`
                 }
                 style={({ isActive }) =>
-                  isActive ? { background: 'linear-gradient(135deg,#e11d2a,#b3121d)' } : undefined
+                  isActive ? { background: 'linear-gradient(135deg,#d9524d,#b23c37)' } : undefined
                 }
               >
                 <Icon size={18} />
@@ -96,16 +97,16 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}
           >
             <p className="text-xs font-bold mb-1 flex items-center gap-1.5">
-              <Zap size={14} className="text-[#ff3b46]" /> Plan {user?.subscription || 'gratuit'}
+              <Zap size={14} className="text-[#f4847d]" /> Plan {user?.subscription || 'gratuit'}
             </p>
             <p className="text-[11px] text-gray-300 mb-3 leading-relaxed">
               Passez au plan Pro pour des factures illimitées et les relances auto.
             </p>
             <NavLink
-              to="/app/profile"
+              to="/app/abonnement"
               onClick={onClose}
               className="block text-center text-xs font-semibold py-2 rounded-lg transition-soft"
-              style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}
+              style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}
             >
               Améliorer →
             </NavLink>
@@ -116,7 +117,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
-                style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}
+                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}
               >
                 {user?.nom?.charAt(0).toUpperCase() || 'U'}
               </div>
@@ -127,7 +128,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold text-[#e11d2a] bg-[rgba(225,29,42,0.08)] hover:bg-[rgba(225,29,42,0.15)] transition-soft"
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold text-[#d9524d] bg-[rgba(225,29,42,0.08)] hover:bg-[rgba(225,29,42,0.15)] transition-soft"
             >
               <LogOut size={16} /> Déconnexion
             </button>

@@ -102,7 +102,7 @@ export default function Payments() {
                       <td className="px-5 py-4 text-gray-500">{formatDate(p.date)}</td>
                       <td className="px-5 py-4">
                         <p className="font-medium text-[#0a0a0c]">{client?.nom || '—'}</p>
-                        {inv && <Link to={`/app/invoices/${inv._id}`} className="text-xs text-[#e11d2a] hover:underline">{inv.numero}</Link>}
+                        {inv && <Link to={`/app/invoices/${inv._id}`} className="text-xs text-[#d9524d] hover:underline">{inv.numero}</Link>}
                       </td>
                       <td className="px-5 py-4"><span className="badge badge-payee">{METHODE_LABEL[p.methode]}</span></td>
                       <td className="px-5 py-4 text-gray-500">{p.reference || '—'}</td>

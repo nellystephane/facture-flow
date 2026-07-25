@@ -36,7 +36,7 @@ export default function Login() {
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2.5 mb-8">
           <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg"
-            style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+            style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
             <Zap size={24} fill="white" />
           </div>
           <span className="font-extrabold text-2xl text-[#0a0a0c]">FactuFlow</span>
@@ -47,7 +47,7 @@ export default function Login() {
           <p className="text-sm text-gray-500 text-center mt-1 mb-7">Connectez-vous à votre espace</p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm font-medium text-[#b3121d] bg-[rgba(225,29,42,0.1)] border border-[rgba(225,29,42,0.2)] animate-fade-in">
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm font-medium text-[#b23c37] bg-[rgba(225,29,42,0.1)] border border-[rgba(225,29,42,0.2)] animate-fade-in">
               {error}
             </div>
           )}
@@ -84,7 +84,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#e11d2a]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#d9524d]"
                 >
                   {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -99,14 +99,14 @@ export default function Login() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Pas encore de compte ?{' '}
-            <Link to="/register" className="font-semibold text-[#e11d2a] hover:underline">
+            <Link to="/register" className="font-semibold text-[#d9524d] hover:underline">
               Créer un compte
             </Link>
           </p>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-5">
-          <Link to="/" className="hover:text-[#e11d2a]">← Retour à l'accueil</Link>
+          <Link to="/" className="hover:text-[#d9524d]">← Retour à l'accueil</Link>
         </p>
       </div>
     </div>

@@ -66,7 +66,7 @@ export default function Dashboard() {
               <p className="text-xs text-gray-500">6 derniers mois</p>
             </div>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
-              style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+              style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
               <TrendingUp size={18} />
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function Dashboard() {
                     style={{
                       height: `${Math.max((r.total / maxRevenu) * 100, 3)}%`,
                       background: r.total === maxRevenu && maxRevenu > 0
-                        ? 'linear-gradient(180deg,#e11d2a,#b3121d)'
+                        ? 'linear-gradient(180deg,#d9524d,#b23c37)'
                         : 'linear-gradient(180deg,#1a1a1f,#0a0a0c)'
                     }}
                   >
@@ -110,7 +110,7 @@ export default function Dashboard() {
                   </div>
                   <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
                     <div className="h-full rounded-full transition-soft"
-                      style={{ width: `${(c.total / maxClient) * 100}%`, background: 'linear-gradient(90deg,#e11d2a,#b3121d)' }} />
+                      style={{ width: `${(c.total / maxClient) * 100}%`, background: 'linear-gradient(90deg,#d9524d,#b23c37)' }} />
                   </div>
                 </div>
               ))}
@@ -126,7 +126,7 @@ export default function Dashboard() {
         <div className="glass-card p-6 lg:col-span-2 animate-fade-up delay-4">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-bold text-[#0a0a0c]">Dernières factures</h3>
-            <Link to="/app/invoices" className="text-sm font-semibold text-[#e11d2a] hover:underline flex items-center gap-1">
+            <Link to="/app/invoices" className="text-sm font-semibold text-[#d9524d] hover:underline flex items-center gap-1">
               Voir tout <ArrowRight size={14} />
             </Link>
           </div>
@@ -147,7 +147,7 @@ export default function Dashboard() {
                     return (
                       <tr key={inv._id} className="hover:bg-white/40 transition-soft">
                         <td className="px-2 py-3">
-                          <Link to={`/app/invoices/${inv._id}`} className="font-semibold text-[#0a0a0c] hover:text-[#e11d2a]">
+                          <Link to={`/app/invoices/${inv._id}`} className="font-semibold text-[#0a0a0c] hover:text-[#d9524d]">
                             {inv.numero}
                           </Link>
                         </td>
@@ -181,7 +181,7 @@ export default function Dashboard() {
                 { to: '/app/services', label: 'Gérer les services', icon: Wallet },
               ].map(({ to, label, icon: Icon }) => (
                 <Link key={to} to={to}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-white/70 hover:text-[#e11d2a] transition-soft">
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-white/70 hover:text-[#d9524d] transition-soft">
                   <Icon size={16} /> {label}
                   <ArrowRight size={14} className="ml-auto" />
                 </Link>
@@ -192,7 +192,7 @@ export default function Dashboard() {
           <div className="glass-card p-6 animate-fade-up delay-5"
             style={{ background: 'linear-gradient(135deg, rgba(225,29,42,0.08), rgba(10,10,12,0.04))' }}>
             <div className="flex items-center gap-2 mb-2">
-              <Wallet size={18} className="text-[#e11d2a]" />
+              <Wallet size={18} className="text-[#d9524d]" />
               <h3 className="font-bold text-[#0a0a0c]">Total encaissé</h3>
             </div>
             <p className="text-2xl font-extrabold text-[#0a0a0c]">{formatFCFA(data?.totalPaye)}</p>

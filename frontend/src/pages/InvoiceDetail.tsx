@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Download, Pencil, Wallet, Trash2,
-  Send, CheckCircle2, Clock, XCircle
+  Send, CheckCircle2, Clock, XCircle, Mail, Link2, Receipt, Loader2
 } from 'lucide-react';
-import { getInvoice, patchInvoiceStatus, deleteInvoice, invoicePdfUrl } from '../api/invoices';
-import { createPayment, getPayments, deletePayment } from '../api/payments';
+import { getInvoice, patchInvoiceStatus, deleteInvoice, invoicePdfUrl, sendInvoiceEmail } from '../api/invoices';
+import { createPayment, getPayments, deletePayment, paymentReceiptUrl } from '../api/payments';
 import type { Invoice, Payment, InvoiceStatut, MethodePaiement } from '../types';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import InfoHint from '../components/ui/InfoHint';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, formatDate, badgeClass, INVOICE_STATUT_LABEL, METHODE_LABEL, apiError, totalTTC, todayISO } from '../utils/format';
 
@@ -24,6 +25,8 @@ export default function InvoiceDetail() {
   const [deleting, setDeleting] = useState(false);
   const [payForm, setPayForm] = useState({ montant: 0, methode: 'especes' as MethodePaiement, date: todayISO(), reference: '' });
   const [paySaving, setPaySaving] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const load = () => {
     if (!id) return;
@@ -75,6 +78,37 @@ export default function InvoiceDetail() {
     } catch (err) { toast(apiError(err), 'error'); }
   };
 
+  const handleSendEmail = async () => {
+    if (!client?.email) {
+      toast("Ce client n'a pas d'adresse email enregistrée.", 'error');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const res = await sendInvoiceEmail(id!);
+      setInvoice(res.data.invoice);
+      toast(`Facture envoyée à ${client.email}`);
+    } catch (err) { toast(apiError(err), 'error'); }
+    finally { setSendingEmail(false); }
+  };
+
+  const paymentLink = invoice?.publicToken ? `${window.location.origin}/payer/${invoice.publicToken}` : null;
+
+  const handleCopyLink = async () => {
+    if (!paymentLink) return;
+    await navigator.clipboard.writeText(paymentLink);
+    setLinkCopied(true);
+    toast('Lien de paiement copié');
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const openReceipt = (paymentId: string) => {
+    const token = localStorage.getItem('token');
+    fetch(paymentReceiptUrl(paymentId), { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.blob())
+      .then((blob) => window.open(URL.createObjectURL(blob), '_blank'));
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -90,7 +124,8 @@ export default function InvoiceDetail() {
 
   const client = typeof invoice.client === 'object' ? invoice.client : null;
   const ttc = invoice.totalTTC || totalTTC(invoice.items, invoice.remise, invoice.tva);
-  const totalPaye = payments.reduce((s, p) => s + p.montant, 0);
+  const paiementsCompletes = payments.filter((p) => (p.statut || 'complete') === 'complete');
+  const totalPaye = paiementsCompletes.reduce((s, p) => s + p.montant, 0);
   const reste = ttc - totalPaye;
 
   return (
@@ -108,6 +143,9 @@ export default function InvoiceDetail() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button onClick={handleSendEmail} disabled={sendingEmail} className="btn-primary text-sm">
+            {sendingEmail ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />} Envoyer par email
+          </button>
           <button onClick={openPdf} className="btn-ghost text-sm"><Download size={16} /> PDF</button>
           <Link to={`/app/invoices/${id}/edit`} className="btn-dark text-sm"><Pencil size={16} /> Modifier</Link>
           <button onClick={() => setDeleteOpen(true)} className="btn-icon" title="Supprimer"><Trash2 size={16} /></button>
@@ -172,25 +210,53 @@ export default function InvoiceDetail() {
             )}
           </div>
 
+          {/* Lien de paiement client */}
+          {paymentLink && invoice.statut !== 'payee' && invoice.statut !== 'annulee' && (
+            <div className="glass-card p-6 animate-fade-up">
+              <h3 className="font-bold text-[#0a0a0c] mb-2 flex items-center gap-2">
+                <Link2 size={18} /> Page de paiement client
+                <InfoHint text="Ce lien est unique à cette facture. Votre client peut l'ouvrir sans créer de compte, choisir son moyen de paiement (Mobile Money, carte, virement) et payer directement. Le statut de la facture se met à jour automatiquement dès la confirmation." />
+              </h3>
+              <p className="text-sm text-gray-500 mb-3">Ce lien permet au client de payer en ligne (Mobile Money, carte, virement) sans créer de compte. Il est aussi inclus automatiquement dans l'email et le PDF de la facture.</p>
+              <div className="flex flex-wrap gap-2">
+                <input readOnly className="field flex-1 min-w-[220px] text-xs text-gray-500" value={paymentLink} onClick={(e) => (e.target as HTMLInputElement).select()} />
+                <button onClick={handleCopyLink} className="btn-ghost text-sm shrink-0">{linkCopied ? 'Copié !' : 'Copier'}</button>
+              </div>
+            </div>
+          )}
+
           {/* Historique paiements */}
           <div className="glass-card p-6 animate-fade-up">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-[#0a0a0c] flex items-center gap-2"><Wallet size={18} /> Paiements</h3>
-              <button onClick={() => setPayModal(true)} className="btn-ghost text-xs py-1.5"><Wallet size={14} /> Enregistrer un paiement</button>
+              <button onClick={() => setPayModal(true)} className="btn-ghost text-xs py-1.5"><Wallet size={14} /> Enregistrer un paiement en espèces</button>
             </div>
             {payments.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-6">Aucun paiement enregistré</p>
             ) : (
               <div className="space-y-2">
-                {payments.map((p) => (
-                  <div key={p._id} className="flex items-center justify-between p-3 rounded-xl bg-white/50 border border-gray-100">
-                    <div>
-                      <p className="font-semibold text-[#0a0a0c]">{formatFCFA(p.montant)}</p>
-                      <p className="text-xs text-gray-500">{METHODE_LABEL[p.methode]} • {formatDate(p.date)}{p.reference ? ` • ${p.reference}` : ''}</p>
+                {payments.map((p) => {
+                  const statut = p.statut || 'complete';
+                  return (
+                    <div key={p._id} className="flex items-center justify-between p-3 rounded-xl bg-white/50 border border-gray-100 gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-[#0a0a0c]">{formatFCFA(p.montant)}</p>
+                          {statut === 'en_attente' && <span className="badge badge-envoyee">En attente</span>}
+                          {statut === 'echoue' && <span className="badge badge-en_retard">Échoué</span>}
+                          {p.origine === 'en_ligne' && <span className="badge badge-vue">En ligne</span>}
+                        </div>
+                        <p className="text-xs text-gray-500">{METHODE_LABEL[p.methode]} • {formatDate(p.date)}{p.reference ? ` • ${p.reference}` : ''}</p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {statut === 'complete' && (
+                          <button onClick={() => openReceipt(p._id)} className="btn-icon" title="Télécharger le reçu"><Receipt size={14} /></button>
+                        )}
+                        <button onClick={() => handleDeletePay(p._id)} className="btn-icon"><Trash2 size={14} /></button>
+                      </div>
                     </div>
-                    <button onClick={() => handleDeletePay(p._id)} className="btn-icon"><Trash2 size={14} /></button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -203,14 +269,14 @@ export default function InvoiceDetail() {
             <h3 className="font-bold text-[#0a0a0c] mb-4">Récapitulatif</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">Sous-total</span><span className="font-medium">{formatFCFA(invoice.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
-              {invoice.remise ? <div className="flex justify-between"><span className="text-gray-500">Remise</span><span className="font-medium text-[#e11d2a]">- {formatFCFA(invoice.remise)}</span></div> : null}
+              {invoice.remise ? <div className="flex justify-between"><span className="text-gray-500">Remise</span><span className="font-medium text-[#d9524d]">- {formatFCFA(invoice.remise)}</span></div> : null}
               <div className="flex justify-between"><span className="text-gray-500">TVA ({invoice.tva}%)</span><span className="font-medium">{formatFCFA(ttc / (1 + invoice.tva / 100) * invoice.tva / 100)}</span></div>
               <div className="rounded-xl p-3 mt-3 text-white" style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 uppercase">Total TTC</p>
                 <p className="text-xl font-extrabold">{formatFCFA(ttc)}</p>
               </div>
               <div className="flex justify-between pt-2"><span className="text-green-600 font-medium">Encaissé</span><span className="font-bold text-green-600">{formatFCFA(totalPaye)}</span></div>
-              {reste > 0 && <div className="flex justify-between"><span className="text-[#e11d2a] font-medium">Reste à payer</span><span className="font-bold text-[#e11d2a]">{formatFCFA(reste)}</span></div>}
+              {reste > 0 && <div className="flex justify-between"><span className="text-[#d9524d] font-medium">Reste à payer</span><span className="font-bold text-[#d9524d]">{formatFCFA(reste)}</span></div>}
             </div>
 
             {/* Actions statut */}

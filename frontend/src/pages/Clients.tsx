@@ -93,7 +93,7 @@ export default function Clients() {
             <div key={c._id} className="glass-card p-5 animate-fade-up" style={{ animationDelay: `${i * 0.05}s` }}>
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold shrink-0"
-                  style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+                  style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
                   {c.nom.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">

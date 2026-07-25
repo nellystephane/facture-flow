@@ -159,7 +159,7 @@ export default function InvoiceForm() {
                     <GripVertical size={16} className="text-gray-300 shrink-0" />
                     <span className="text-xs font-bold text-gray-400">Ligne {idx + 1}</span>
                     {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 hover:text-[#e11d2a]">
+                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 hover:text-[#d9524d]">
                         <Trash2 size={15} />
                       </button>
                     )}

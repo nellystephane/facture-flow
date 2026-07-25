@@ -59,7 +59,7 @@ export default function Quotes() {
           </div>
           <div className="relative">
             <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <select className="field pl-10 pr-8" value={statut} onChange={(e) => setStatut(e.target.value)}>
+            <select className="field pl-10 pr-10" value={statut} onChange={(e) => setStatut(e.target.value)}>
               {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
@@ -96,7 +96,7 @@ export default function Quotes() {
                   return (
                     <tr key={q._id} className="hover:bg-white/50 transition-soft">
                       <td className="px-5 py-4">
-                        <Link to={`/app/quotes/${q._id}`} className="font-bold text-[#0a0a0c] hover:text-[#e11d2a]">{q.numero}</Link>
+                        <Link to={`/app/quotes/${q._id}`} className="font-bold text-[#0a0a0c] hover:text-[#d9524d]">{q.numero}</Link>
                       </td>
                       <td className="px-5 py-4 text-gray-700">{client?.nom || '—'}</td>
                       <td className="px-5 py-4 text-gray-500">{formatDate(q.dateEmission)}</td>

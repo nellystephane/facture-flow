@@ -43,7 +43,7 @@ export default function Profile() {
 
           <div className="flex items-center gap-4 mb-6">
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-white font-extrabold text-3xl shadow-lg shrink-0"
-              style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
+              style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
               {user?.nom?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div>
@@ -110,7 +110,7 @@ export default function Profile() {
         <div className="space-y-6">
           <div className="glass-card p-6 animate-fade-up delay-1">
             <div className="flex items-center gap-2 mb-4">
-              <Zap size={18} className="text-[#e11d2a]" />
+              <Zap size={18} className="text-[#d9524d]" />
               <h3 className="font-bold text-[#0a0a0c]">Votre abonnement</h3>
             </div>
             <div className="rounded-2xl p-5 text-white mb-4" style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>

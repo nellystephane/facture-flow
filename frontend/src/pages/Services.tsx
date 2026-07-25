@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Package, Plus, Pencil, Trash2, Search, Tag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Package, Plus, Pencil, Trash2, Search, Tag, Zap, Lock } from 'lucide-react';
 import { getServices, createService, updateService, deleteService } from '../api/services';
-import type { Service } from '../types';
+import { getClients } from '../api/clients';
+import { createInvoiceFromService } from '../api/invoices';
+import type { Service, Client } from '../types';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import InfoHint from '../components/ui/InfoHint';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { formatFCFA, apiError } from '../utils/format';
+import { formatFCFA, apiError, todayISO } from '../utils/format';
 
 const EMPTY = { nom: '', description: '', prix: 0, unite: 'unité' };
 
@@ -22,6 +27,15 @@ export default function Services() {
   const [toDelete, setToDelete] = useState<Service | null>(null);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const estPremium = !!user?.subscription && user.subscription !== 'gratuit';
+
+  // Facturation rapide (premium)
+  const [invoiceModal, setInvoiceModal] = useState<Service | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [invoiceForm, setInvoiceForm] = useState({ clientId: '', quantite: 1, prixUnitaire: 0, dateEcheance: todayISO() });
+  const [invoicing, setInvoicing] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -65,6 +79,41 @@ export default function Services() {
     }
   };
 
+  const openInvoiceModal = (s: Service) => {
+    if (!estPremium) {
+      toast('Fonctionnalité réservée aux comptes Pro/Business. Découvrez les abonnements.', 'error');
+      navigate('/app/abonnement');
+      return;
+    }
+    if (clients.length === 0) {
+      getClients().then((res) => setClients(res.data)).catch((err) => toast(apiError(err), 'error'));
+    }
+    setInvoiceForm({ clientId: '', quantite: 1, prixUnitaire: s.prix, dateEcheance: todayISO() });
+    setInvoiceModal(s);
+  };
+
+  const handleQuickInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invoiceModal || !invoiceForm.clientId) return;
+    setInvoicing(true);
+    try {
+      const res = await createInvoiceFromService({
+        serviceId: invoiceModal._id,
+        clientId: invoiceForm.clientId,
+        quantite: invoiceForm.quantite,
+        prixUnitaire: invoiceForm.prixUnitaire,
+        dateEcheance: invoiceForm.dateEcheance,
+      });
+      toast('Facture créée');
+      setInvoiceModal(null);
+      navigate(`/app/invoices/${res.data._id}`);
+    } catch (err) {
+      toast(apiError(err), 'error');
+    } finally {
+      setInvoicing(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!toDelete) return;
     setDeleting(true);
@@ -86,7 +135,10 @@ export default function Services() {
     <div>
       <PageHeader
         title="Produits & Services"
-        subtitle={`${services.length} article(s) réutilisable(s)`}
+        subtitle={<>
+          {services.length} tarif(s) préconçu(s) — homogènes pour vos prestations courantes, ajustables au cas par cas
+          <InfoHint text="Créez ici vos tarifs standards (ex: 'Création de logo — 50 000 FCFA'). Vous pourrez toujours ajuster le prix pour un client précis lors de la facturation, sans changer le tarif de base." />
+        </>}
         icon={<Package size={20} />}
         actions={<button onClick={openCreate} className="btn-primary text-sm"><Plus size={18} /> Nouveau</button>}
       />
@@ -125,7 +177,7 @@ export default function Services() {
               </div>
               <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                 <div>
-                  <p className="text-lg font-extrabold text-[#e11d2a]">{formatFCFA(s.prix)}</p>
+                  <p className="text-lg font-extrabold text-[#d9524d]">{formatFCFA(s.prix)}</p>
                   <p className="text-[10px] text-gray-400 uppercase">/ {s.unite}</p>
                 </div>
                 <div className="flex gap-2">
@@ -133,6 +185,11 @@ export default function Services() {
                   <button className="btn-icon" onClick={() => setToDelete(s)}><Trash2 size={15} /></button>
                 </div>
               </div>
+              <button
+                onClick={() => openInvoiceModal(s)}
+                className="btn-dark text-xs w-full justify-center mt-3 py-2"
+              >
+                {estPremium ? <Zap size={13} /> : <Lock size={13} />} Facturer directement à un client</button>
             </div>
           ))}
         </div>
@@ -165,6 +222,47 @@ export default function Services() {
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving && <span className="spinner" style={{ width: 16, height: 16 }} />}
               {editing ? 'Mettre à jour' : 'Créer'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Facturation rapide depuis un tarif préconçu (premium) */}
+      <Modal open={!!invoiceModal} onClose={() => setInvoiceModal(null)} title={`Facturer "${invoiceModal?.nom}"`}>
+        <form onSubmit={handleQuickInvoice} className="space-y-4">
+          <p className="text-xs text-gray-500 -mt-1">
+            Le tarif de base reste inchangé dans votre catalogue — seule cette facture utilise le prix ci-dessous.
+          </p>
+          <div>
+            <label className="field-label">Client *</label>
+            <select className="field" value={invoiceForm.clientId} onChange={(e) => setInvoiceForm({ ...invoiceForm, clientId: e.target.value })} required autoFocus>
+              <option value="">Sélectionner...</option>
+              {clients.map((c) => <option key={c._id} value={c._id}>{c.nom}{c.entreprise ? ` — ${c.entreprise}` : ''}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="field-label">Quantité</label>
+              <input type="number" min={1} className="field" value={invoiceForm.quantite}
+                onChange={(e) => setInvoiceForm({ ...invoiceForm, quantite: Number(e.target.value) })} />
+            </div>
+            <div>
+              <label className="field-label">Prix unitaire (FCFA)
+                <InfoHint text="Pré-rempli avec votre tarif préconçu — modifiez-le librement pour ce client précis si besoin." />
+              </label>
+              <input type="number" min={0} className="field" value={invoiceForm.prixUnitaire}
+                onChange={(e) => setInvoiceForm({ ...invoiceForm, prixUnitaire: Number(e.target.value) })} />
+            </div>
+          </div>
+          <div>
+            <label className="field-label">Échéance</label>
+            <input type="date" className="field" value={invoiceForm.dateEcheance}
+              onChange={(e) => setInvoiceForm({ ...invoiceForm, dateEcheance: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn-ghost" onClick={() => setInvoiceModal(null)}>Annuler</button>
+            <button type="submit" className="btn-primary" disabled={invoicing || !invoiceForm.clientId}>
+              {invoicing && <span className="spinner" style={{ width: 16, height: 16 }} />} Créer la facture
             </button>
           </div>
         </form>

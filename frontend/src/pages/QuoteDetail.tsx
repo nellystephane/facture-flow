@@ -149,7 +149,7 @@ export default function QuoteDetail() {
             <h3 className="font-bold text-[#0a0a0c] mb-4">Récapitulatif</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">Sous-total</span><span className="font-medium">{formatFCFA(quote.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
-              {quote.remise ? <div className="flex justify-between"><span className="text-gray-500">Remise</span><span className="font-medium text-[#e11d2a]">- {formatFCFA(quote.remise)}</span></div> : null}
+              {quote.remise ? <div className="flex justify-between"><span className="text-gray-500">Remise</span><span className="font-medium text-[#d9524d]">- {formatFCFA(quote.remise)}</span></div> : null}
               <div className="flex justify-between"><span className="text-gray-500">TVA ({quote.tva}%)</span><span className="font-medium">{formatFCFA(ttc / (1 + quote.tva / 100) * quote.tva / 100)}</span></div>
               <div className="rounded-xl p-3 mt-3 text-white" style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 uppercase">Total TTC</p>
