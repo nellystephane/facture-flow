@@ -21,7 +21,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(helmet());
 
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+const allowedOrigins = (process.env.CLIENT_URL || 'https://nellystephane.github.io/facture-flow')
   .split(',')
   .map((o) => o.trim().replace(/\/$/, ''))
   .filter(Boolean);
