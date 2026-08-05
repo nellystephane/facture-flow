@@ -23,16 +23,31 @@ app.use(helmet());
 
 const allowedOrigins = (process.env.CLIENT_URL || 'https://nellystephane.github.io/facture-flow')
   .split(',')
-  .map((o) => o.trim().replace(/\/$/, ''))
+  .map((o) => o.trim().replace(/\/+$/, ''))
   .filter(Boolean);
+
+// Normalise une origine en ne gardant que protocole + hôte + port (sans chemin).
+// Le navigateur n'envoie jamais le chemin dans l'en-tête Origin (ex. une URL
+// déployée sur GitHub Pages envoie "https://nellystephane.github.io" même si
+// l'app tourne sous "/facture-flow"). Comparer sur la seule base permet de
+// tolérer que CLIENT_URL contienne ou non le chemin.
+const normalizeOrigin = (o) => {
+  try {
+    const u = new URL(o);
+    return `${u.protocol}//${u.host}`.toLowerCase();
+  } catch {
+    return o.toLowerCase().replace(/\/+$/, '');
+  }
+};
+
+const allowedOriginsBase = allowedOrigins.map(normalizeOrigin);
 
 console.log('CORS — origines autorisées :', allowedOrigins);
 
 app.use(cors({
   origin(origin, callback) {
     if (!origin) return callback(null, true); // requêtes sans origine (curl, health check…)
-    const normalized = origin.replace(/\/$/, '');
-    if (allowedOrigins.includes(normalized)) return callback(null, true);
+    if (allowedOriginsBase.includes(normalizeOrigin(origin))) return callback(null, true);
     console.warn(`CORS refusé pour l'origine "${origin}". Origines autorisées : ${allowedOrigins.join(', ')}. Ajoutez-la à la variable d'environnement CLIENT_URL sur Render si c'est légitime.`);
     callback(new Error('Origine non autorisée par CORS'));
   },
