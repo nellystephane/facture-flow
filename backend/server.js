@@ -23,11 +23,17 @@ app.use(helmet());
 
 const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
-  .map((o) => o.trim());
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+console.log('CORS — origines autorisées :', allowedOrigins);
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin) return callback(null, true); // requêtes sans origine (curl, health check…)
+    const normalized = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalized)) return callback(null, true);
+    console.warn(`CORS refusé pour l'origine "${origin}". Origines autorisées : ${allowedOrigins.join(', ')}. Ajoutez-la à la variable d'environnement CLIENT_URL sur Render si c'est légitime.`);
     callback(new Error('Origine non autorisée par CORS'));
   },
   credentials: true,
