@@ -13,4 +13,4 @@ Corriger l'échec de déploiement (Render) causé par une double arborescence du
 - [x] Étape 6 : Ajouter `nodemailer` dans `backend/package.json`
 - [x] Étape 7 : Supprimer l'arborescence imbriquée obsolète (git rm + disque)
 - [x] Étape 8 : Vérifier le démarrage local du serveur ✅ (MongoDB + serveur OK)
-- [ ] Étape 9 : Committer et pousser sur GitHub (Render + GitHub Actions)
+- [x] Étape 9 : Committer et pousser sur GitHub (Render + GitHub Actions)
