@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const itemSchema = new mongoose.Schema({
   description: { type: String, required: true },
@@ -28,6 +29,11 @@ const invoiceSchema = new mongoose.Schema({
   },
   template: { type: String, default: 'classique' },
   quote: { type: mongoose.Schema.Types.ObjectId, ref: 'Quote', default: null },
+  // Jeton public : permet au client d'accéder à la page de paiement sans compte.
+  publicToken: { type: String, unique: true, sparse: true, index: true },
+  derniereRelance: { type: Date, default: null },
+  dateEnvoi: { type: Date, default: null },
+  dateVue: { type: Date, default: null },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 invoiceSchema.virtual('totalHT').get(function () {
@@ -37,6 +43,13 @@ invoiceSchema.virtual('totalHT').get(function () {
 
 invoiceSchema.virtual('totalTTC').get(function () {
   return this.totalHT * (1 + (this.tva || 0) / 100);
+});
+
+invoiceSchema.pre('save', function (next) {
+  if (!this.publicToken) {
+    this.publicToken = crypto.randomBytes(20).toString('hex');
+  }
+  next();
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);
