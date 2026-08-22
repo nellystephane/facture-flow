@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>FactuFlow</title>
+    <!--
+      GitHub Pages ne fait que du fichier statique : il n'y a aucun moyen de
+      lui dire "pour toute URL inconnue, sers index.html et laisse React
+      Router gérer la route" (contrairement à Vercel/Netlify). La technique
+      standard est de laisser GitHub Pages afficher CE fichier 404.html pour
+      toute route inconnue, puis de rediriger ici vers la racine du site en
+      encodant le chemin demandé dans la query string. index.html contient le
+      script qui décode cette query string et restaure la bonne URL avant que
+      React Router ne démarre.
+      Voir https://github.com/rafgraph/spa-github-pages
+    -->
+    <script type="text/javascript">
+      // Nombre de segments de chemin à conserver tels quels : 1 ici, pour
+      // "/facture-flow" (le nom du dépôt, cf. vite.config.ts `base` et
+      // main.tsx `basename`). À changer si vous déployez sous un autre chemin.
+      var pathSegmentsToKeep = 1;
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

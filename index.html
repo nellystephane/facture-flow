@@ -3,15 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/facture-flow/favicon.svg" />
+    <link rel="apple-touch-icon" href="/facture-flow/icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="FactuFlow — La plateforme de facturation et de gestion pour freelances, artisans et PME d'Afrique francophone. Devis, factures, paiements Mobile Money." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>FactuFlow — Facturation & Gestion pour PME</title>
-    <script type="module" crossorigin src="/facture-flow/assets/index-cEStOQYg.js"></script>
-    <link rel="stylesheet" crossorigin href="/facture-flow/assets/index-GZf_zGLK.css">
-  </head>
+    <!-- GitHub Pages ne sait servir que des fichiers statiques : un lien direct
+         ou un rafraîchissement sur une route interne (ex: /facture-flow/app/factures/123)
+         renverrait une vraie 404 sans ce script. Il restaure la bonne URL après le
+         redirect fait par public/404.html, avant que React Router ne démarre.
+         Voir https://github.com/rafgraph/spa-github-pages -->
+    <script type="text/javascript">
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function (s) {
+            return s.replace(/~and~/g, '&');
+          }).join('?');
+          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      }(window.location));
+    </script>
+    <script type="module" crossorigin src="/facture-flow/assets/index-5-kqec6I.js"></script>
+    <link rel="stylesheet" crossorigin href="/facture-flow/assets/index-Tns_tNnm.css">
+  <link rel="manifest" href="/facture-flow/manifest.webmanifest"></head>
   <body>
     <div id="root"></div>
   </body>
