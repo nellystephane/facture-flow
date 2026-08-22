@@ -1,0 +1,42 @@
+name: Deploy React Frontend to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # ← Changer de 18 à 20
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build the project
+        working-directory: ./frontend
+        env:
+          VITE_API_URL: https://facture-flow.onrender.com/api
+          # Optionnel : ajoutez un secret de dépôt nommé SENTRY_DSN_FRONTEND
+          # (Settings → Secrets and variables → Actions) pour activer le
+          # monitoring d'erreurs Sentry en production. Vide = désactivé.
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN_FRONTEND }}
+        run: npm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          publish_branch: gh-pages
