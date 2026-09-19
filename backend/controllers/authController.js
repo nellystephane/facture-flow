@@ -252,6 +252,10 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   if (!match) return res.status(400).json({ message: 'Code incorrect.' });
 
   user.password = await bcrypt.hash(password, 10);
+  // Un code de réinitialisation est envoyé à l'adresse email du compte :
+  // sa validation prouve le contrôle de cette adresse. Le compte peut donc
+  // être considéré comme vérifié après une réinitialisation réussie.
+  user.emailVerifie = true;
   user.codeResetPassword = null;
   user.codeResetPasswordExpire = null;
   await user.save();
