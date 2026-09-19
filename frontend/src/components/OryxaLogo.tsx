@@ -24,7 +24,7 @@ export default function OryxaLogo({
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`} style={style}>
       <img
-        src={`${import.meta.env.BASE_URL}icons/logo.png`}
+        src={`${import.meta.env.BASE_URL}icons/logo.png?v=20260919`}
         alt="Logo Oryxa"
         width={size}
         height={size}
