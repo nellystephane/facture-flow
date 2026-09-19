@@ -38,7 +38,7 @@ async function verifierLimiteGratuite(userId) {
   return verifierLimiteFactures(Invoice, user);
 }
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateEcheance', 'items', 'remise', 'tva', 'notes', 'template'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateEcheance', 'items', 'remise', 'tva', 'notes', 'template', 'fraisSupportesPar'];
 
 function pickFields(body) {
   const o = {};
@@ -66,6 +66,25 @@ exports.getInvoices = asyncHandler(async (req, res) => {
     Invoice.countDocuments(filter),
   ]);
   res.json(paginatedResponse(items, total, page, limit));
+});
+
+exports.previewInvoicePdf = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId);
+  const data = pickFields(req.body);
+  const client = await Client.findOne({ _id: data.client, owner: req.userId });
+  if (!client) return res.status(404).json({ message: 'Client introuvable.' });
+  if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) data.template = 'classique';
+  const invoice = {
+    ...data,
+    numero: 'APERÇU',
+    statut: 'brouillon',
+    dateEmission: data.dateEmission || new Date(),
+    client,
+  };
+  const buffer = await buildInvoicePdf({ invoice, user, paymentUrl: null });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="Apercu-facture.pdf"');
+  res.send(buffer);
 });
 
 exports.getInvoiceById = asyncHandler(async (req, res) => {
@@ -273,14 +292,14 @@ exports.sendInvoiceEmail = asyncHandler(async (req, res) => {
 // avantage payant — le style doit être à la hauteur.
 // GET /api/invoices/export?from=YYYY-MM-DD&to=YYYY-MM-DD&statut=payee
 // -----------------------------------------------------------------------
-const ROUGE_FACTUFLOW = 'FFD9524D';
-const NOIR_FACTUFLOW = 'FF0A0A0C';
+const ROUGE_ORYXA = 'FFD9524D';
+const NOIR_ORYXA = 'FF0A0A0C';
 const GRIS_CLAIR = 'FFF7F7F8';
 
 function styleEntete(ligne) {
   ligne.eachCell((cell) => {
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ROUGE_FACTUFLOW } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ROUGE_ORYXA } };
     cell.alignment = { vertical: 'middle' };
   });
   ligne.height = 22;
@@ -288,7 +307,7 @@ function styleEntete(ligne) {
 
 function styleTitre(ligne, taille = 15) {
   ligne.eachCell((cell) => {
-    cell.font = { bold: true, size: taille, color: { argb: NOIR_FACTUFLOW } };
+    cell.font = { bold: true, size: taille, color: { argb: NOIR_ORYXA } };
   });
 }
 
@@ -320,7 +339,7 @@ exports.exportComptable = asyncHandler(async (req, res) => {
     : 'Toutes les factures';
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'FactuFlow';
+  workbook.creator = 'Oryxa';
   workbook.created = new Date();
 
   // ===== Onglet 1 : Factures =====
@@ -369,7 +388,7 @@ exports.exportComptable = asyncHandler(async (req, res) => {
 
   const totalRow = wsFactures.getRow(ligneIdx + 1);
   totalRow.values = ['', '', '', '', `${invoices.length} facture(s)`, totalHT, '', totalTTC];
-  totalRow.eachCell((cell) => { cell.font = { bold: true }; cell.border = { top: { style: 'medium', color: { argb: NOIR_FACTUFLOW } } }; });
+  totalRow.eachCell((cell) => { cell.font = { bold: true }; cell.border = { top: { style: 'medium', color: { argb: NOIR_ORYXA } } }; });
   totalRow.getCell(6).numFmt = FORMAT_MONTANT;
   totalRow.getCell(8).numFmt = FORMAT_MONTANT;
   totalRow.getCell(6).alignment = { horizontal: 'right' };
@@ -417,14 +436,14 @@ exports.exportComptable = asyncHandler(async (req, res) => {
 
   const totalRowP = wsPaiements.getRow(ligneP + 1);
   totalRowP.values = ['', '', `${paiements.length} paiement(s)`, totalPaye, '', ''];
-  totalRowP.eachCell((cell) => { cell.font = { bold: true }; cell.border = { top: { style: 'medium', color: { argb: NOIR_FACTUFLOW } } }; });
+  totalRowP.eachCell((cell) => { cell.font = { bold: true }; cell.border = { top: { style: 'medium', color: { argb: NOIR_ORYXA } } }; });
   totalRowP.getCell(4).numFmt = FORMAT_MONTANT;
   totalRowP.getCell(4).alignment = { horizontal: 'right' };
 
   wsPaiements.columns = [{ width: 14 }, { width: 16 }, { width: 26 }, { width: 15 }, { width: 14 }, { width: 20 }];
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="factuflow-export-${new Date().toISOString().slice(0, 10)}.xlsx"`);
+  res.setHeader('Content-Disposition', `attachment; filename="oryxa-export-${new Date().toISOString().slice(0, 10)}.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
 });

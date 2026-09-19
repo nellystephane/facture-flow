@@ -82,7 +82,7 @@ export default function Equipe() {
         <PageHeader title="Équipe" subtitle="Invitez des collaborateurs sur votre compte" icon={<Users size={20} />} />
         <LockedFeature
           icon={<Users size={24} />}
-          titre="Travaillez à plusieurs sur FactuFlow"
+          titre="Travaillez à plusieurs sur Oryxa"
           description="Invitez des collaborateurs avec des rôles définis (administrateur ou collaborateur) pour gérer vos clients, devis et factures ensemble, avec un historique des actions de chacun."
           planRequis="Business"
         />
@@ -107,19 +107,19 @@ export default function Equipe() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100 bg-white/40">
+              <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase border-b border-gray-100 dark:border-white/10 bg-white/40 dark:bg-white/5">
                 <th className="px-5 py-3 font-semibold">Membre</th>
                 <th className="px-5 py-3 font-semibold">Rôle</th>
                 <th className="px-5 py-3 font-semibold">Statut</th>
                 <th className="px-5 py-3 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-gray-50 dark:divide-white/10">
               {membres.map((m) => (
                 <tr key={m.id}>
                   <td className="px-5 py-4">
-                    <p className="font-semibold text-[#0a0a0c]">{m.nom} {m.estActeur && <span className="text-xs text-gray-400">(vous)</span>}</p>
-                    <p className="text-xs text-gray-500">{m.email}</p>
+                    <p className="font-semibold text-[#0a0a0c] dark:text-white">{m.nom} {m.estActeur && <span className="text-xs text-gray-400 dark:text-gray-500">(vous)</span>}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{m.email}</p>
                   </td>
                   <td className="px-5 py-4">
                     {m.role === 'proprietaire' ? (
@@ -153,18 +153,18 @@ export default function Equipe() {
       </div>
 
       <div className="glass-card p-6 animate-fade-up">
-        <h3 className="font-bold text-[#0a0a0c] mb-4 flex items-center gap-2"><History size={18} /> Historique récent</h3>
+        <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4 flex items-center gap-2"><History size={18} /> Historique récent</h3>
         {activite.length === 0 ? (
-          <p className="text-sm text-gray-400">Aucune activité enregistrée pour le moment.</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Aucune activité enregistrée pour le moment.</p>
         ) : (
           <ul className="space-y-3">
             {activite.map((a) => (
-              <li key={a._id} className="text-sm flex items-start justify-between gap-3 border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+              <li key={a._id} className="text-sm flex items-start justify-between gap-3 border-b border-gray-50 dark:border-white/10 pb-3 last:border-0 last:pb-0">
                 <div>
-                  <span className="font-semibold text-[#0a0a0c]">{a.acteurNom}</span>{' '}
-                  <span className="text-gray-500">{a.details}</span>
+                  <span className="font-semibold text-[#0a0a0c] dark:text-white">{a.acteurNom}</span>{' '}
+                  <span className="text-gray-500 dark:text-gray-400">{a.details}</span>
                 </div>
-                <span className="text-xs text-gray-400 shrink-0">{new Date(a.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{new Date(a.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
               </li>
             ))}
           </ul>
@@ -184,7 +184,7 @@ export default function Equipe() {
           <div>
             <label className="field-label">Rôle</label>
             <select className="field" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as 'admin' | 'collaborateur' }))}>
-              <option value="collaborateur">Collaborateur — utilise FactuFlow au quotidien</option>
+              <option value="collaborateur">Collaborateur — utilise Oryxa au quotidien</option>
               <option value="admin">Administrateur — peut aussi gérer l'équipe et l'abonnement</option>
             </select>
           </div>

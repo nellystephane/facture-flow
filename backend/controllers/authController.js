@@ -34,6 +34,7 @@ function profilReponse({ acteur, proprietaire }) {
     logoUrl: proprietaire.logoUrl,
     devise: proprietaire.devise,
     banque: proprietaire.banque,
+    payoutSettings: proprietaire.payoutSettings,
     subscription: proprietaire.subscription,
     abonnement: proprietaire.abonnement,
     estPremium: proprietaire.estPremium,
@@ -180,6 +181,15 @@ exports.login = asyncHandler(async (req, res) => {
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(400).json({ message: 'Identifiants invalides' });
+
+  if (user.suspendu) {
+    return res.status(403).json({
+      message: user.suspensionMotif
+        ? `Ce compte a été suspendu : ${user.suspensionMotif}`
+        : 'Ce compte a été suspendu. Contactez le support pour plus de détails.',
+      code: 'COMPTE_SUSPENDU',
+    });
+  }
 
   // On ne révèle "email non confirmé" qu'APRÈS avoir vérifié le mot de
   // passe : à ce stade la personne a déjà prouvé qu'elle connaît le mot de

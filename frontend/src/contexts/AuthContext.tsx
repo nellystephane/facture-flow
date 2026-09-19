@@ -26,14 +26,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       return;
     }
-    authApi
-      .getProfile()
-      .then((res) => setUser(res.data))
-      .catch(() => {
-        localStorage.removeItem('token');
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
+    let actif = true;
+
+    const chargerProfil = async (tentative = 0): Promise<void> => {
+      try {
+        const res = await authApi.getProfile();
+        if (actif) setUser(res.data);
+      } catch (err: any) {
+        const status = err?.response?.status;
+        const timeoutOuReseau = !err?.response || err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK';
+
+        // Un démarrage à froid du backend (Render, par exemple) ou une
+        // connexion mobile instable ne doit pas détruire une session valide.
+        // On retente deux fois avant d'abandonner. Seul un 401/403 invalide
+        // réellement le token.
+        if (timeoutOuReseau && tentative < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 1200 * (tentative + 1)));
+          if (actif) return chargerProfil(tentative + 1);
+          return;
+        }
+
+        if (status === 401) {
+          localStorage.removeItem('token');
+          if (actif) setUser(null);
+        }
+        // Pour une panne réseau persistante, on conserve le token : les
+        // prochains appels pourront fonctionner dès que le serveur revient.
+        if (actif) setLoading(false);
+        return;
+      }
+    };
+
+    chargerProfil().finally(() => {
+      if (actif) setLoading(false);
+    });
+
+    return () => {
+      actif = false;
+    };
   }, []);
 
   const login = async (email: string, password: string) => {

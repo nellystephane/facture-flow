@@ -11,5 +11,6 @@ router.get('/invoices/:token/statut', controller.getPublicPaymentStatus);
 router.get('/invoices/:token/receipt/:paymentId', controller.getPublicReceipt);
 router.get('/quotes/:token', controller.getPublicQuote);
 router.post('/quotes/:token/repondre', controller.respondPublicQuote);
+router.get('/legal/:slug', controller.getLegalContent);
 
 module.exports = router;

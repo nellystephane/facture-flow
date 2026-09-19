@@ -15,6 +15,10 @@ function isFedapayConfigured() {
   return !!process.env.FEDAPAY_SECRET_KEY;
 }
 
+function arePayoutsEnabled() {
+  return process.env.FEDAPAY_PAYOUTS_ENABLED === 'true';
+}
+
 function apiBase() {
   const env = process.env.FEDAPAY_ENVIRONMENT === 'live' ? 'live' : 'sandbox';
   return env === 'live' ? 'https://api.fedapay.com/v1' : 'https://sandbox-api.fedapay.com/v1';
@@ -26,14 +30,22 @@ async function fedapayFetch(path, options = {}) {
     err.code = 'FEDAPAY_NOT_CONFIGURED';
     throw err;
   }
-  const res = await fetch(`${apiBase()}${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let res;
+  try {
+    res = await fetch(`${apiBase()}${path}`, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: {
+        Authorization: `Bearer ${process.env.FEDAPAY_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(data?.message || `Erreur FedaPay (HTTP ${res.status})`);
@@ -88,6 +100,59 @@ async function createPaymentLink({ amount, description, customer, callbackUrl, m
   };
 }
 
+async function createPayout({ amount, mode, customer, metadata }) {
+  if (!arePayoutsEnabled()) {
+    const err = new Error('Les reversements FedaPay ne sont pas activés côté Oryxa. Activez FEDAPAY_PAYOUTS_ENABLED=true après validation du compte FedaPay.');
+    err.code = 'FEDAPAY_PAYOUTS_DISABLED';
+    throw err;
+  }
+  const created = await fedapayFetch('/payouts', {
+    method: 'POST',
+    body: JSON.stringify({
+      amount: Math.round(amount),
+      currency: { iso: 'XOF' },
+      customer: {
+        firstname: customer.firstname || 'Utilisateur',
+        lastname: customer.lastname || '.',
+        email: customer.email,
+        phone_number: customer.phone ? { number: customer.phone, country: 'bj' } : undefined,
+      },
+      mode,
+      custom_metadata: metadata || {},
+    }),
+  });
+  return created['v1/payout'] || created.payout || created;
+}
+
+async function updatePayout(payoutId, { amount, mode, customer }) {
+  const data = await fedapayFetch(`/payouts/${payoutId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      amount: Math.round(amount),
+      currency: { iso: 'XOF' },
+      mode,
+      customer: {
+        firstname: customer.firstname || 'Utilisateur',
+        lastname: customer.lastname || '.',
+        email: customer.email,
+        phone_number: customer.phone ? { number: customer.phone, country: 'bj' } : undefined,
+      },
+    }),
+  });
+  return data['v1/payout'] || data.payout || data;
+}
+
+async function startPayout(payoutId, phone) {
+  const payload = { payouts: [{ id: Number(payoutId), ...(phone ? { phone_number: { number: phone, country: 'BJ' } } : {}) }] };
+  const data = await fedapayFetch('/payouts/start', { method: 'PUT', body: JSON.stringify(payload) });
+  return data['v1/payout'] || data.payout || data;
+}
+
+async function getPayout(payoutId) {
+  const data = await fedapayFetch(`/payouts/${payoutId}`, { method: 'GET' });
+  return data['v1/payout'] || data.payout || data;
+}
+
 async function getTransaction(transactionId) {
   const data = await fedapayFetch(`/transactions/${transactionId}`, { method: 'GET' });
   return data['v1/transaction'] || data.transaction || data;
@@ -117,7 +182,12 @@ function verifyWebhookSignature(rawBody, signatureHeader, secret) {
 
 module.exports = {
   isFedapayConfigured,
+  arePayoutsEnabled,
   createPaymentLink,
+  createPayout,
+  updatePayout,
+  startPayout,
+  getPayout,
   getTransaction,
   verifyWebhookSignature,
 };

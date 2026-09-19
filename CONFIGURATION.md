@@ -59,3 +59,21 @@ cd ../frontend && npm install
 - Facturation rapide depuis un tarif → nouvelle fonctionnalité Premium (`Produits & Services` → "Facturer directement à un client").
 - Abonnements 6 mois / 1 an → nouvelle page `/app/abonnement`, paiement via FedaPay.
 - Info-bulles d'aide (icône "!") ajoutées sur les points potentiellement peu clairs (lien de paiement, tarif ajustable, durée d'abonnement, moyens de paiement).
+
+## Reversements FedaPay Oryxa
+
+Pour activer les reversements réels :
+
+- `FEDAPAY_SECRET_KEY` doit être configurée (sandbox puis live) ;
+- `FEDAPAY_ENVIRONMENT=live` en production ;
+- `FEDAPAY_WEBHOOK_SECRET` doit être configurée pour vérifier les webhooks ;
+- la fonctionnalité **Payouts** doit être activée/autorisé sur le compte FedaPay marchand ;
+- l'Utilisateur Oryxa doit renseigner une destination Mobile Money et activer les reversements automatiques dans son profil.
+
+Aucun mode de simulation n'est utilisé par le code financier.
+
+## Support client
+
+L'espace utilisateur contient une rubrique **Support** permettant d'ouvrir et de suivre des demandes. Les demandes sont enregistrées dans MongoDB et apparaissent dans **Admin Oryxa > Support**, avec un compteur des nouveaux messages sur le tableau de bord administrateur.
+
+Par défaut, les notifications email sont envoyées à `contact@emgdigitalsolutions.bj`. Cette adresse peut être remplacée avec `SUPPORT_EMAIL`. L'envoi email nécessite la configuration SMTP/Brevo déjà utilisée par Oryxa.

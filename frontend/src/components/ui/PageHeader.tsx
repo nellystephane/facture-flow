@@ -18,8 +18,8 @@ export default function PageHeader({ title, subtitle, icon, actions }: PageHeade
           </div>
         )}
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a0a0c] tracking-tight">{title}</h1>
-          {subtitle && <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>}
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a0a0c] dark:text-white tracking-tight">{title}</h1>
+          {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{subtitle}</p>}
         </div>
       </div>
       {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}

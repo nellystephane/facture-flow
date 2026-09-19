@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 // jamais décrémenté — un numéro une fois attribué n'est jamais réutilisé.
 const counterSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, enum: ['facture', 'devis'], required: true },
+  type: { type: String, enum: ['facture', 'devis', 'recu'], required: true },
   year: { type: Number, required: true },
   seq: { type: Number, default: 0 },
 });
@@ -18,7 +18,7 @@ counterSchema.index({ owner: 1, type: 1, year: 1 }, { unique: true });
 
 const Counter = mongoose.model('Counter', counterSchema);
 
-const PREFIX = { facture: 'FAC', devis: 'DEV' };
+const PREFIX = { facture: 'FAC', devis: 'DEV', recu: 'REC' };
 
 // Attribue et renvoie le prochain numéro, au format PREFIX-ANNEE-0001.
 // La séquence repart à 1 chaque année civile (usage courant en facturation).

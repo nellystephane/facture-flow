@@ -1,4 +1,4 @@
-// ===== Définition centrale des plans FactuFlow =====
+// ===== Définition centrale des plans Oryxa =====
 // Source unique de vérité pour ce que chaque plan permet. Toute nouvelle
 // fonctionnalité à gater derrière un plan payant doit être ajoutée ICI, puis
 // exposée comme fonction dans utils/permissions.js — jamais vérifiée "en
@@ -13,7 +13,9 @@ const PLANS = {
     id: 'gratuit',
     nom: 'Gratuit',
     accroche: 'Pour commencer',
-    limiteFacturesMois: 10,
+    limiteFacturesMois: 5,
+    limiteDevisMois: 5,
+    limiteClients: 20,
     facturationExpress: false,
     logoPersonnalise: false,
     relancesAutomatiques: false,
@@ -30,6 +32,8 @@ const PLANS = {
     accroche: 'Pour travailler plus efficacement',
     recommande: true,
     limiteFacturesMois: null, // illimité
+    limiteDevisMois: null,
+    limiteClients: null,
     facturationExpress: true,
     logoPersonnalise: true,
     relancesAutomatiques: true,
@@ -45,6 +49,8 @@ const PLANS = {
     nom: 'Business',
     accroche: 'Pour les équipes et entreprises',
     limiteFacturesMois: null,
+    limiteDevisMois: null,
+    limiteClients: null,
     facturationExpress: true,
     logoPersonnalise: true,
     relancesAutomatiques: true,

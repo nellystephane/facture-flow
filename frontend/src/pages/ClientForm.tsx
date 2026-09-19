@@ -97,7 +97,7 @@ export default function ClientForm() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6 pt-6 border-t border-gray-100">
+        <div className="flex justify-end gap-2 mt-6 pt-6 border-t border-gray-100 dark:border-white/10">
           <button type="button" onClick={() => navigate('/app/clients')} className="btn-ghost">Annuler</button>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving && <span className="spinner" style={{ width: 16, height: 16 }} />}

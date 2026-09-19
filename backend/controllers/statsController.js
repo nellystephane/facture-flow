@@ -3,6 +3,7 @@ const Client = require('../models/Client');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const { permissionsDe } = require('../utils/permissions');
+const { getWalletBalance } = require('../utils/financial');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -34,7 +35,8 @@ exports.getDashboard = asyncHandler(async (req, res) => {
       (i.dateEcheance && new Date(i.dateEcheance) < new Date() && i.statut !== 'payee' && i.statut !== 'annulee'))
     .reduce((s, i) => s + calcTTC(i), 0);
 
-  const totalPaye = payments.reduce((s, p) => s + (p.montant || 0), 0);
+  const totalPaye = payments.reduce((s, p) => s + (p.montantFacture ?? p.montant ?? 0), 0);
+  const soldeRetirable = await getWalletBalance(req.userId);
 
   const dashboard = {
     totalFactures: invoices.length,
@@ -43,6 +45,8 @@ exports.getDashboard = asyncHandler(async (req, res) => {
     enRetard: Math.round(enRetard),
     totalClients: clients,
     totalPaye: Math.round(totalPaye),
+    soldeRetirable: Math.round(soldeRetirable),
+    prochainReversement: null,
     facturesRecentes: invoices.slice(0, 5),
     statistiquesAvancees: peutVoirAvance,
   };

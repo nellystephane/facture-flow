@@ -50,14 +50,14 @@ export default function PwaUpdatePrompt() {
           style={{ background: 'linear-gradient(135deg,#e11d2a,#b3121d)' }}>
           <RefreshCw size={16} />
         </div>
-        <p className="text-sm font-medium text-[#0a0a0c]">Nouvelle version de FactuFlow disponible</p>
+        <p className="text-sm font-medium text-[#0a0a0c] dark:text-white">Nouvelle version de Oryxa disponible</p>
         <button
           onClick={() => updateRef.current?.(true)}
           className="btn-primary !py-1.5 !px-3 text-sm"
         >
           Mettre à jour
         </button>
-        <button onClick={() => setNeedRefresh(false)} className="text-gray-400 hover:text-gray-700">
+        <button onClick={() => setNeedRefresh(false)} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200">
           <X size={16} />
         </button>
       </div>

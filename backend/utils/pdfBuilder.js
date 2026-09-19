@@ -1,4 +1,8 @@
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+
+const ORYXA_LOGO_PATH = path.join(__dirname, '..', 'assets', 'oryxa-logo.png');
 
 const ACCENT = '#c9504b';
 const ACCENT_DARK = '#8f3530';
@@ -228,10 +232,22 @@ function drawTotals(pdf, doc, devise, startY, style) {
 
 function drawFooter(pdf, gauche) {
   const pageWidth = 595;
-  pdf.rect(0, pdf.page.height - 40, pageWidth, 40).fill(NOIR);
+  const y = pdf.page.height - 40;
+  pdf.rect(0, y, pageWidth, 40).fill(NOIR);
+
+  let textX = 50;
+  if (fs.existsSync(ORYXA_LOGO_PATH)) {
+    try {
+      pdf.image(ORYXA_LOGO_PATH, 50, y + 8, { fit: [24, 24] });
+      textX = 82;
+    } catch (err) {
+      console.error('Logo Oryxa PDF illisible:', err.message);
+    }
+  }
+
   pdf.fillColor('#ffffff').fontSize(8).font('Helvetica');
-  pdf.text(gauche || '', 50, pdf.page.height - 25, { width: 350 });
-  pdf.fillColor('#9ca3af').text('Document généré via FactuFlow', 300, pdf.page.height - 25, { width: 245, align: 'right' });
+  pdf.text(gauche || '', textX, y + 15, { width: 285 });
+  pdf.fillColor('#9ca3af').text('Document généré via Oryxa', 350, y + 15, { width: 195, align: 'right' });
 }
 
 /** Bouton de paiement cliquable + coordonnées bancaires pour virement. */

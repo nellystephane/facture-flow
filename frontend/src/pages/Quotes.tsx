@@ -63,11 +63,11 @@ export default function Quotes() {
       <div className="glass-card p-4 mb-6 animate-fade-up">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input className="field pl-10" placeholder="Rechercher par N° ou client..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="relative">
-            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
             <select className="field pl-10 pr-10" value={statut} onChange={(e) => { setStatut(e.target.value); setPage(1); }}>
               {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
@@ -89,7 +89,7 @@ export default function Quotes() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100 bg-white/40">
+                <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase border-b border-gray-100 dark:border-white/10 bg-white/40 dark:bg-white/5">
                   <th className="px-5 py-3 font-semibold">N°</th>
                   <th className="px-5 py-3 font-semibold">Client</th>
                   <th className="px-5 py-3 font-semibold">Date</th>
@@ -99,17 +99,17 @@ export default function Quotes() {
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-white/10">
                 {quotes.map((q) => {
                   const client = typeof q.client === 'object' ? q.client : null;
                   return (
-                    <tr key={q._id} className="hover:bg-white/50 transition-soft">
+                    <tr key={q._id} className="hover:bg-white/50 dark:hover:bg-white/10 transition-soft">
                       <td className="px-5 py-4">
-                        <Link to={`/app/quotes/${q._id}`} className="font-bold text-[#0a0a0c] hover:text-[#d9524d]">{q.numero}</Link>
+                        <Link to={`/app/quotes/${q._id}`} className="font-bold text-[#0a0a0c] dark:text-white hover:text-[#d9524d]">{q.numero}</Link>
                       </td>
-                      <td className="px-5 py-4 text-gray-700">{client?.nom || '—'}</td>
-                      <td className="px-5 py-4 text-gray-500">{formatDate(q.dateEmission)}</td>
-                      <td className="px-5 py-4 text-gray-500">{formatDate(q.dateExpiration)}</td>
+                      <td className="px-5 py-4 text-gray-700 dark:text-gray-300">{client?.nom || '—'}</td>
+                      <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(q.dateEmission)}</td>
+                      <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(q.dateExpiration)}</td>
                       <td className="px-5 py-4 font-semibold">{formatFCFA(q.totalTTC)}</td>
                       <td className="px-5 py-4"><span className={badgeClass(q.statut)}>{QUOTE_STATUT_LABEL[q.statut]}</span></td>
                       <td className="px-5 py-4">

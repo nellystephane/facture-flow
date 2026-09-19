@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useState } from 'react';
+import OryxaLogo from '../OryxaLogo';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -26,7 +27,7 @@ export default function Layout() {
                 <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             </button>
-            <span className="font-bold text-gradient text-lg">FactuFlow</span>
+            <OryxaLogo size={30} nameClassName="font-bold text-lg text-[#0a0a0c] dark:text-white" imageClassName="rounded-lg" />
             <div className="w-9" />
           </div>
 
@@ -34,8 +35,8 @@ export default function Layout() {
             <Outlet />
           </main>
 
-          <footer className="text-center text-xs text-gray-400 py-6">
-            © {new Date().getFullYear()} FactuFlow — Facturation simple pour PME africaines.
+          <footer className="text-center text-xs text-gray-400 dark:text-gray-500 py-6">
+            © {new Date().getFullYear()} Oryxa — Facturation simple pour PME africaines.
           </footer>
         </div>
       </div>

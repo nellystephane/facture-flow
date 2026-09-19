@@ -20,6 +20,7 @@ const invoiceBase = {
   remise: nonNegativeNumber('La remise').optional().default(0),
   tva: nonNegativeNumber('La TVA').max(100, 'La TVA ne peut pas dépasser 100%.').optional().default(0),
   notes: optionalText(2000),
+  fraisSupportesPar: z.enum(['utilisateur', 'client']).optional(),
   template: z.enum(['classique', 'moderne', 'minimal']).optional(),
 };
 

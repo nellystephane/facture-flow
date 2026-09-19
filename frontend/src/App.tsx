@@ -2,8 +2,12 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AdminAuthProvider } from './contexts/AdminAuthContext';
 import Layout from './components/Layout/Layout';
+import Onboarding from './pages/Onboarding';
 import Landing from './pages/Landing';
+import SplashScreen from './components/SplashScreen';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -18,8 +22,10 @@ import QuoteForm from './pages/QuoteForm';
 import QuoteDetail from './pages/QuoteDetail';
 import Payments from './pages/Payments';
 import Profile from './pages/Profile';
+import ConfirmPayout from './pages/ConfirmPayout';
 import Abonnement from './pages/Abonnement';
 import Equipe from './pages/Equipe';
+import Support from './pages/Support';
 import PaymentPublic from './pages/PaymentPublic';
 import DevisPublic from './pages/DevisPublic';
 import VerifyEmail from './pages/VerifyEmail';
@@ -28,32 +34,37 @@ import CGU from './pages/legal/CGU';
 import Confidentialite from './pages/legal/Confidentialite';
 import MentionsLegales from './pages/legal/MentionsLegales';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
+import NetworkLoading from './components/NetworkLoading';
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminProtectedRoute from './pages/admin/AdminProtectedRoute';
 import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" />
-      </div>
-    );
-  }
+  if (loading) return <SplashScreen />;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function PublicOnly({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>;
+  if (loading) return <SplashScreen />;
   if (user) return <Navigate to="/app" replace />;
   return <>{children}</>;
+}
+
+function EntryPage() {
+  const standalone = typeof window !== 'undefined' && (window.matchMedia?.('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+  if (!standalone) return <Landing />;
+  const done = localStorage.getItem('oryxa_onboarding_v1') === 'done';
+  return done ? <Navigate to="/login" replace /> : <Onboarding />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<EntryPage />} />
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
       <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
       <Route path="/verifier-email" element={<VerifyEmail />} />
@@ -65,6 +76,12 @@ function AppRoutes() {
       {/* Page de paiement publique — accessible au client sans compte */}
       <Route path="/payer/:token" element={<PaymentPublic />} />
       <Route path="/devis/:token" element={<DevisPublic />} />
+      <Route path="/confirmer-retrait/:token" element={<ConfirmPayout />} />
+
+      {/* Espace admin — auth totalement séparée des comptes utilisateurs,
+          voir contexts/AdminAuthContext.tsx et docs/ADMIN_ACCESS.md */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/*" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
 
       <Route path="/app" element={
         <ProtectedRoute>
@@ -88,6 +105,7 @@ function AppRoutes() {
         <Route path="profile" element={<Profile />} />
         <Route path="abonnement" element={<Abonnement />} />
         <Route path="equipe" element={<Equipe />} />
+        <Route path="support" element={<Support />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -97,13 +115,18 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <PermissionsProvider>
-        <ToastProvider>
-          <AppRoutes />
-          <PwaUpdatePrompt />
-        </ToastProvider>
-      </PermissionsProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <PermissionsProvider>
+          <ToastProvider>
+            <AdminAuthProvider>
+              <AppRoutes />
+              <PwaUpdatePrompt />
+              <NetworkLoading />
+            </AdminAuthProvider>
+          </ToastProvider>
+        </PermissionsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

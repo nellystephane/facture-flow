@@ -4,17 +4,30 @@ const fedapay = require('../utils/fedapay');
 const { PLANS, FEATURES } = require('../config/plans');
 const { permissionsDe, facturesCeMoisCi } = require('../utils/permissions');
 const Invoice = require('../models/Invoice');
+const PlatformSettings = require('../models/PlatformSettings');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
-// Grille tarifaire validée : le mensuel est le prix de référence, les
-// engagements plus longs sont dégressifs (~9% de remise à 6 mois, ~19% à
-// l'année) pour inciter à l'engagement long sans le rendre obligatoire.
+// Grille tarifaire par défaut (utilisée tant qu'aucun admin n'a rien changé
+// dans /admin > Tarifs — voir getTarifsActuels() ci-dessous, qui surcharge
+// ces valeurs avec celles éventuellement enregistrées en base).
 const TARIFS = {
   pro: { 1: 3500, 6: 19000, 12: 34000 },
   business: { 1: 6000, 6: 32000, 12: 58000 },
 };
 const MOIS_PAR_DUREE = { '1mois': 1, '6mois': 6, '1an': 12 };
+
+// Toujours utiliser cette fonction plutôt que la constante TARIFS
+// directement, pour que les tarifs édités depuis /admin s'appliquent sans
+// redéploiement.
+async function getTarifsActuels() {
+  const settings = await PlatformSettings.findOne();
+  if (!settings) return TARIFS;
+  return {
+    pro: { 1: settings.tarifs?.pro?.[1] ?? TARIFS.pro[1], 6: settings.tarifs?.pro?.[6] ?? TARIFS.pro[6], 12: settings.tarifs?.pro?.[12] ?? TARIFS.pro[12] },
+    business: { 1: settings.tarifs?.business?.[1] ?? TARIFS.business[1], 6: settings.tarifs?.business?.[6] ?? TARIFS.business[6], 12: settings.tarifs?.business?.[12] ?? TARIFS.business[12] },
+  };
+}
 
 function avantagesDe(planId) {
   const plan = PLANS[planId];
@@ -25,12 +38,13 @@ function avantagesDe(planId) {
 }
 
 exports.getPlans = asyncHandler(async (req, res) => {
+  const TARIFS = await getTarifsActuels();
   res.json({
     plans: [
       {
         id: 'gratuit', nom: PLANS.gratuit.nom, accroche: PLANS.gratuit.accroche,
         prix: 0,
-        avantages: [`${PLANS.gratuit.limiteFacturesMois} factures/mois`, 'Clients illimités', 'Devis illimités', 'Paiement en ligne', 'Reçus automatiques'],
+        avantages: [`${PLANS.gratuit.limiteFacturesMois} factures/mois`, `${PLANS.gratuit.limiteDevisMois} devis/mois`, `${PLANS.gratuit.limiteClients} clients`, 'Paiement en ligne', 'Reçus automatiques'],
       },
       {
         id: 'pro', nom: PLANS.pro.nom, accroche: PLANS.pro.accroche, recommande: true,
@@ -57,8 +71,8 @@ exports.getPlans = asyncHandler(async (req, res) => {
 exports.getComparatif = asyncHandler(async (req, res) => {
   const lignes = [
     { label: 'Factures', gratuit: `${PLANS.gratuit.limiteFacturesMois}/mois`, pro: 'Illimitées', business: 'Illimitées' },
-    { label: 'Clients', gratuit: 'Illimités', pro: 'Illimités', business: 'Illimités' },
-    { label: 'Devis', gratuit: 'Illimités', pro: 'Illimités', business: 'Illimités' },
+    { label: 'Clients', gratuit: `${PLANS.gratuit.limiteClients}`, pro: 'Illimités', business: 'Illimités' },
+    { label: 'Devis', gratuit: `${PLANS.gratuit.limiteDevisMois}/mois`, pro: 'Illimités', business: 'Illimités' },
     { label: 'Paiement en ligne', gratuit: true, pro: true, business: true },
     { label: 'Reçus automatiques', gratuit: true, pro: true, business: true },
     ...FEATURES.filter((f) => f.cle !== 'multiUtilisateurs').map((f) => ({
@@ -87,6 +101,7 @@ exports.getPermissions = asyncHandler(async (req, res) => {
       utilisees,
       illimitee: perms.limiteFacturesMois === null,
     },
+    limites: { devisMois: perms.limiteDevisMois, clients: perms.limiteClients },
     peutUtiliserFacturationExpress: perms.peutUtiliserFacturationExpress(),
     peutUtiliserLogoPersonnalise: perms.peutUtiliserLogoPersonnalise(),
     peutUtiliserRelancesAutomatiques: perms.peutUtiliserRelancesAutomatiques(),
@@ -99,6 +114,7 @@ exports.getPermissions = asyncHandler(async (req, res) => {
 
 exports.subscribe = asyncHandler(async (req, res) => {
   const { plan, duree } = req.body;
+  const TARIFS = await getTarifsActuels();
   if (!TARIFS[plan]) return res.status(400).json({ message: 'Plan invalide' });
   if (!MOIS_PAR_DUREE[duree]) return res.status(400).json({ message: 'Durée invalide' });
 

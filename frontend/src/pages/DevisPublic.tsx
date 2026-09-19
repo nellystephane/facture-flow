@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import OryxaLogo from '../components/OryxaLogo';
 import { useParams } from 'react-router-dom';
 import { Building2, CheckCircle2, Loader2, AlertTriangle, MessageCircleQuestion, FileText, Download } from 'lucide-react';
 import { getPublicQuote, respondPublicQuote, type PublicQuoteResponse } from '../api/public';
@@ -63,8 +64,8 @@ export default function DevisPublic() {
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="glass-card p-8 max-w-md text-center">
           <AlertTriangle className="mx-auto text-[#d9524d] mb-3" size={32} />
-          <p className="font-bold text-[#0a0a0c] mb-1">Lien invalide</p>
-          <p className="text-sm text-gray-500">{error}</p>
+          <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Lien invalide</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
         </div>
       </div>
     );
@@ -82,16 +83,16 @@ export default function DevisPublic() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 justify-center mb-2">
             <Building2 size={20} className="text-[#d9524d]" />
-            <span className="font-extrabold text-lg text-[#0a0a0c]">{emetteur.entreprise || emetteur.nom}</span>
+            <span className="font-extrabold text-lg text-[#0a0a0c] dark:text-white">{emetteur.entreprise || emetteur.nom}</span>
           </div>
-          <p className="text-sm text-gray-500">Devis {quote.numero} • Émis le {formatDate(quote.dateEmission)}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Devis {quote.numero} • Émis le {formatDate(quote.dateEmission)}</p>
         </div>
 
         <div className="glass-card p-6 md:p-8">
-          <div className="text-center pb-6 mb-6 border-b border-gray-100">
-            <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold mb-1">Montant du devis</p>
-            <p className="text-3xl font-extrabold text-[#0a0a0c]">{formatFCFA(totalTTC)}</p>
-            {quote.objet && <p className="text-sm text-gray-500 mt-2">{quote.objet}</p>}
+          <div className="text-center pb-6 mb-6 border-b border-gray-100 dark:border-white/10">
+            <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold mb-1">Montant du devis</p>
+            <p className="text-3xl font-extrabold text-[#0a0a0c] dark:text-white">{formatFCFA(totalTTC)}</p>
+            {quote.objet && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{quote.objet}</p>}
           </div>
 
           <a
@@ -105,21 +106,21 @@ export default function DevisPublic() {
           {dejaAccepte ? (
             <div className="text-center py-4">
               <CheckCircle2 className="mx-auto text-green-600 mb-3" size={40} />
-              <p className="font-bold text-[#0a0a0c] mb-1">Devis accepté</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Devis accepté</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Merci ! {emetteur.entreprise || emetteur.nom} a été notifié(e) et va vous faire parvenir votre facture prochainement.
               </p>
             </div>
           ) : dejaRefuse ? (
             <div className="text-center py-4">
-              <p className="font-bold text-[#0a0a0c] mb-1">Ce devis a été refusé</p>
-              <p className="text-sm text-gray-500">Contactez {emetteur.entreprise || emetteur.nom} directement si vous changez d'avis.</p>
+              <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Ce devis a été refusé</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Contactez {emetteur.entreprise || emetteur.nom} directement si vous changez d'avis.</p>
             </div>
           ) : resultat === 'demande_envoyee' ? (
             <div className="text-center py-4">
               <MessageCircleQuestion className="mx-auto text-[#d9524d] mb-3" size={40} />
-              <p className="font-bold text-[#0a0a0c] mb-1">Demande envoyée</p>
-              <p className="text-sm text-gray-500">{emetteur.entreprise || emetteur.nom} a reçu votre question et reviendra vers vous.</p>
+              <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Demande envoyée</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{emetteur.entreprise || emetteur.nom} a reçu votre question et reviendra vers vous.</p>
             </div>
           ) : mode === 'demande_infos' ? (
             <form onSubmit={handleDemanderInfos} className="space-y-3">
@@ -156,7 +157,7 @@ export default function DevisPublic() {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">Propulsé par FactuFlow</p>
+        <div className="flex justify-center mt-6"><OryxaLogo size={18} nameClassName="text-xs font-semibold text-gray-400 dark:text-gray-500" imageClassName="rounded-md opacity-70" /></div>
       </div>
     </div>
   );

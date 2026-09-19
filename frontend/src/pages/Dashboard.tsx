@@ -31,7 +31,7 @@ export default function Dashboard() {
     return (
       <div>
         <div className="h-8 w-64 skeleton mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
           {[...Array(4)].map((_, i) => <div key={i} className="h-28 skeleton" />)}
         </div>
         <div className="h-80 skeleton" />
@@ -58,6 +58,7 @@ export default function Dashboard() {
         <StatCard label="En attente" value={formatCompact(data?.enAttente)} icon={<Clock size={22} />} accent="bleu" delay={0.08} />
         <StatCard label="En retard" value={formatCompact(data?.enRetard)} icon={<AlertTriangle size={22} />} accent="rouge" delay={0.16} />
         <StatCard label="Clients" value={data?.totalClients ?? 0} icon={<Users size={22} />} accent="noir" delay={0.24} />
+        <StatCard label="Solde retirable" value={formatCompact(data?.soldeRetirable)} icon={<Wallet size={22} />} accent="vert" delay={0.32} />
       </div>
 
       {data?.statistiquesAvancees ? (
@@ -66,8 +67,8 @@ export default function Dashboard() {
           <div className="glass-card p-6 lg:col-span-2 animate-fade-up delay-2">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="font-bold text-[#0a0a0c]">Revenus mensuels</h3>
-                <p className="text-xs text-gray-500">6 derniers mois</p>
+                <h3 className="font-bold text-[#0a0a0c] dark:text-white">Revenus mensuels</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">6 derniers mois</p>
               </div>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
                 style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
@@ -87,12 +88,12 @@ export default function Dashboard() {
                           : 'linear-gradient(180deg,#1a1a1f,#0a0a0c)'
                       }}
                     >
-                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#0a0a0c] opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+                      <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#0a0a0c] dark:text-white opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
                         {formatCompact(r.total)}
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-500 capitalize">{r.mois}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{r.mois}</span>
                 </div>
               ))}
             </div>
@@ -101,18 +102,18 @@ export default function Dashboard() {
           {/* Top clients */}
           <div className="glass-card p-6 animate-fade-up delay-3">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-[#0a0a0c]">Top clients</h3>
-              <Users size={18} className="text-gray-400" />
+              <h3 className="font-bold text-[#0a0a0c] dark:text-white">Top clients</h3>
+              <Users size={18} className="text-gray-400 dark:text-gray-500" />
             </div>
             {topClients.length ? (
               <div className="space-y-4">
                 {topClients.map((c, i) => (
                   <div key={i}>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium text-[#0a0a0c] truncate">{c.nom}</span>
-                      <span className="text-gray-500 text-xs">{formatCompact(c.total)}</span>
+                      <span className="font-medium text-[#0a0a0c] dark:text-white truncate">{c.nom}</span>
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">{formatCompact(c.total)}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                    <div className="h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
                       <div className="h-full rounded-full transition-soft"
                         style={{ width: `${(c.total / maxClient) * 100}%`, background: 'linear-gradient(90deg,#d9524d,#b23c37)' }} />
                     </div>
@@ -120,7 +121,7 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center py-8">Aucun client pour le moment</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">Aucun client pour le moment</p>
             )}
           </div>
         </div>
@@ -139,7 +140,7 @@ export default function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="glass-card p-6 lg:col-span-2 animate-fade-up delay-4">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="font-bold text-[#0a0a0c]">Dernières factures</h3>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white">Dernières factures</h3>
             <Link to="/app/invoices" className="text-sm font-semibold text-[#d9524d] hover:underline flex items-center gap-1">
               Voir tout <ArrowRight size={14} />
             </Link>
@@ -148,24 +149,24 @@ export default function Dashboard() {
             <div className="overflow-x-auto -mx-2">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100">
+                  <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase border-b border-gray-100 dark:border-white/10">
                     <th className="px-2 pb-3 font-semibold">N°</th>
                     <th className="px-2 pb-3 font-semibold">Client</th>
                     <th className="px-2 pb-3 font-semibold">Montant</th>
                     <th className="px-2 pb-3 font-semibold">Statut</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-white/10">
                   {data.facturesRecentes.map((inv) => {
                     const client = typeof inv.client === 'object' ? inv.client : null;
                     return (
-                      <tr key={inv._id} className="hover:bg-white/40 transition-soft">
+                      <tr key={inv._id} className="hover:bg-white/40 dark:hover:bg-white/5 transition-soft">
                         <td className="px-2 py-3">
-                          <Link to={`/app/invoices/${inv._id}`} className="font-semibold text-[#0a0a0c] hover:text-[#d9524d]">
+                          <Link to={`/app/invoices/${inv._id}`} className="font-semibold text-[#0a0a0c] dark:text-white hover:text-[#d9524d]">
                             {inv.numero}
                           </Link>
                         </td>
-                        <td className="px-2 py-3 text-gray-600">{client?.nom || '—'}</td>
+                        <td className="px-2 py-3 text-gray-600 dark:text-gray-400">{client?.nom || '—'}</td>
                         <td className="px-2 py-3 font-medium">{formatFCFA(inv.totalTTC)}</td>
                         <td className="px-2 py-3"><span className={badgeClass(inv.statut)}>{INVOICE_STATUT_LABEL[inv.statut]}</span></td>
                       </tr>
@@ -176,8 +177,8 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="text-center py-10">
-              <FileText size={36} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-sm text-gray-500 mb-4">Aucune facture encore. Créez votre première !</p>
+              <FileText size={36} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Aucune facture encore. Créez votre première !</p>
               <Link to="/app/invoices/new" className="btn-primary text-sm"><Plus size={16} /> Nouvelle facture</Link>
             </div>
           )}
@@ -186,7 +187,7 @@ export default function Dashboard() {
         {/* Raccourcis */}
         <div className="space-y-4">
           <div className="glass-card p-6 animate-fade-up delay-5">
-            <h3 className="font-bold text-[#0a0a0c] mb-4">Actions rapides</h3>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4">Actions rapides</h3>
             <div className="space-y-2">
               {[
                 { to: '/app/invoices/new', label: 'Créer une facture', icon: FileText },
@@ -195,7 +196,7 @@ export default function Dashboard() {
                 { to: '/app/services', label: 'Gérer les services', icon: Wallet },
               ].map(({ to, label, icon: Icon }) => (
                 <Link key={to} to={to}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-white/70 hover:text-[#d9524d] transition-soft">
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-white/10 hover:text-[#d9524d] transition-soft">
                   <Icon size={16} /> {label}
                   <ArrowRight size={14} className="ml-auto" />
                 </Link>
@@ -207,10 +208,10 @@ export default function Dashboard() {
             style={{ background: 'linear-gradient(135deg, rgba(225,29,42,0.08), rgba(10,10,12,0.04))' }}>
             <div className="flex items-center gap-2 mb-2">
               <Wallet size={18} className="text-[#d9524d]" />
-              <h3 className="font-bold text-[#0a0a0c]">Total encaissé</h3>
+              <h3 className="font-bold text-[#0a0a0c] dark:text-white">Total encaissé</h3>
             </div>
-            <p className="text-2xl font-extrabold text-[#0a0a0c]">{formatFCFA(data?.totalPaye)}</p>
-            <p className="text-xs text-gray-500 mt-1">Sur {data?.totalFactures || 0} facture(s)</p>
+            <p className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white">{formatFCFA(data?.totalPaye)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Sur {data?.totalFactures || 0} facture(s)</p>
           </div>
         </div>
       </div>

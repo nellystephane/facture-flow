@@ -11,6 +11,7 @@ router.use(auth);
 
 router.get('/', controller.getInvoices);
 router.get('/export', requireFeature('exportComptable'), controller.exportComptable);
+router.post('/preview', validate(createInvoiceSchema), controller.previewInvoicePdf);
 router.get('/:id', controller.getInvoiceById);
 router.post('/', validate(createInvoiceSchema), controller.createInvoice);
 router.put('/:id', validate(updateInvoiceSchema), controller.updateInvoice);

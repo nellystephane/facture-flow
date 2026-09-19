@@ -21,6 +21,8 @@ function permissionsDe(user) {
     plan: plan.id,
     planNom: plan.nom,
     limiteFacturesMois: plan.limiteFacturesMois,
+    limiteDevisMois: plan.limiteDevisMois,
+    limiteClients: plan.limiteClients,
     peutUtiliserFacturationExpress: () => plan.facturationExpress,
     peutUtiliserLogoPersonnalise: () => plan.logoPersonnalise,
     peutUtiliserRelancesAutomatiques: () => plan.relancesAutomatiques,
@@ -53,3 +55,29 @@ async function verifierLimiteFactures(Invoice, user) {
 }
 
 module.exports = { permissionsDe, verifierLimiteFactures, facturesCeMoisCi };
+
+
+async function verifierLimiteDevis(Quote, user) {
+  const plan = planEffectifDe(user);
+  if (plan.limiteDevisMois === null) return null;
+  const debutMois = new Date();
+  debutMois.setDate(1); debutMois.setHours(0, 0, 0, 0);
+  const count = await Quote.countDocuments({ owner: user._id, createdAt: { $gte: debutMois } });
+  if (count >= plan.limiteDevisMois) {
+    return { message: `Limite de ${plan.limiteDevisMois} devis/mois atteinte sur le plan ${plan.nom}. Passez au plan Pro pour des devis illimités.`, code: 'FREE_QUOTE_LIMIT_REACHED', limite: plan.limiteDevisMois, utilisees: count };
+  }
+  return null;
+}
+
+async function verifierLimiteClients(Client, user) {
+  const plan = planEffectifDe(user);
+  if (plan.limiteClients === null) return null;
+  const count = await Client.countDocuments({ owner: user._id });
+  if (count >= plan.limiteClients) {
+    return { message: `Limite de ${plan.limiteClients} clients atteinte sur le plan ${plan.nom}. Passez au plan Pro pour gérer davantage de clients.`, code: 'FREE_CLIENT_LIMIT_REACHED', limite: plan.limiteClients, utilisees: count };
+  }
+  return null;
+}
+
+module.exports.verifierLimiteDevis = verifierLimiteDevis;
+module.exports.verifierLimiteClients = verifierLimiteClients;

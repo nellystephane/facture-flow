@@ -6,6 +6,7 @@ const { paginationParams, paginatedResponse } = require('../utils/pagination');
 const { buildQuotePdf } = require('../utils/pdfBuilder');
 const email = require('../utils/email');
 const { enregistrerActivite } = require('../utils/activityLog');
+const { verifierLimiteDevis } = require('../utils/permissions');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -47,6 +48,25 @@ exports.getQuotes = asyncHandler(async (req, res) => {
   res.json(paginatedResponse(items, total, page, limit));
 });
 
+exports.previewQuotePdf = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId);
+  const data = pickFields(req.body);
+  const client = await Client.findOne({ _id: data.client, owner: req.userId });
+  if (!client) return res.status(404).json({ message: 'Client introuvable.' });
+  const quote = {
+    ...data,
+    numero: 'APERÇU',
+    statut: 'brouillon',
+    dateEmission: data.dateEmission || new Date(),
+    dateExpiration: data.dateExpiration || new Date(Date.now() + 30 * 24 * 3600 * 1000),
+    client,
+  };
+  const buffer = await buildQuotePdf({ quote, user });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="Apercu-devis.pdf"');
+  res.send(buffer);
+});
+
 exports.getQuoteById = asyncHandler(async (req, res) => {
   const quote = await Quote.findOne({ _id: req.params.id, owner: req.userId }).populate('client');
   if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
@@ -54,6 +74,9 @@ exports.getQuoteById = asyncHandler(async (req, res) => {
 });
 
 exports.createQuote = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.userId);
+  const limite = await verifierLimiteDevis(Quote, user);
+  if (limite) return res.status(403).json(limite);
   const data = pickFields(req.body);
   if (!data.client) return res.status(400).json({ message: 'Le client est requis' });
   data.owner = req.userId;

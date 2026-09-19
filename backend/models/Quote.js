@@ -48,11 +48,10 @@ quoteSchema.virtual('totalTTC').get(function () {
   return this.totalHT * (1 + (this.tva || 0) / 100);
 });
 
-quoteSchema.pre('save', function (next) {
+quoteSchema.pre('save', function () {
   if (!this.publicToken) {
     this.publicToken = crypto.randomBytes(20).toString('hex');
   }
-  next();
 });
 
 module.exports = mongoose.model('Quote', quoteSchema);

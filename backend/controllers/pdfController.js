@@ -48,6 +48,6 @@ exports.paymentReceiptPdf = asyncHandler(async (req, res) => {
 // Utilisé côté front pour afficher le total déjà payé sur une facture
 exports.invoiceStatus = asyncHandler(async (req, res) => {
   const payments = await Payment.find({ invoice: req.params.id });
-  const totalPaye = payments.reduce((s, p) => s + (p.statut !== 'echoue' ? (p.montant || 0) : 0), 0);
+  const totalPaye = payments.reduce((s, p) => s + (p.statut !== 'echoue' ? (p.montantFacture ?? p.montant ?? 0) : 0), 0);
   res.json({ totalPaye, paiements: payments });
 });

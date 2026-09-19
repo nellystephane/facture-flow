@@ -16,13 +16,14 @@ export interface PublicInvoiceResponse {
   totalTTC: number;
   totalPaye: number;
   payments: Payment[];
+  fraisPaiement?: { montantFacture: number; montantClientPaye: number; fraisPayinEstimes: number; fraisPayoutEstimes: number; fraisTransfertClient: number; montantNetEstimeUtilisateur: number; };
 }
 
 export const getPublicInvoice = (token: string) =>
   api.get<PublicInvoiceResponse>(`/public/invoices/${token}`);
 
 export const initiateOnlinePayment = (token: string, data: { firstname?: string; lastname?: string; email: string; phone?: string }) =>
-  api.post<{ paymentUrl: string }>(`/public/invoices/${token}/pay`, data);
+  api.post<{ paymentUrl: string; montantFacture: number; montantClientPaye: number; fraisTransfert: number }>(`/public/invoices/${token}/pay`, data);
 
 export const getPublicPaymentStatus = (token: string) =>
   api.get<{ statutFacture: string; dernierPaiement: Payment | null }>(`/public/invoices/${token}/statut`);

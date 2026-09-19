@@ -90,10 +90,10 @@ export default function Select({
         onClick={() => setOpen((o) => !o)}
         className={`field flex items-center justify-between gap-2 text-left disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
-        <span className={selected || estValeurLibre ? 'text-[#0a0a0c]' : 'text-gray-400'}>
+        <span className={selected || estValeurLibre ? 'text-[#0a0a0c] dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
           {selected ? selected.label : (estValeurLibre ? value : placeholder)}
         </span>
-        <ChevronDown size={16} className={`text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-gray-400 dark:text-gray-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && createPortal(
@@ -114,20 +114,20 @@ export default function Select({
                   >
                     <span>
                       <span className="block">{o.label}</span>
-                      {o.sublabel && <span className="block text-xs text-gray-400">{o.sublabel}</span>}
+                      {o.sublabel && <span className="block text-xs text-gray-400 dark:text-gray-500">{o.sublabel}</span>}
                     </span>
                     {o.value === value && <Check size={15} className="text-[#d9524d] shrink-0" />}
                   </button>
                 ))}
                 {options.length === 0 && (
-                  <p className="px-4 py-3 text-sm text-gray-400">Aucune option</p>
+                  <p className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">Aucune option</p>
                 )}
               </div>
               {allowCustom && (
                 <button
                   type="button"
                   onClick={() => setCustomMode(true)}
-                  className="fs-select-option border-t border-gray-100 text-[#d9524d] font-medium"
+                  className="fs-select-option border-t border-gray-100 dark:border-white/10 text-[#d9524d] font-medium"
                 >
                   + {customPlaceholder}
                 </button>

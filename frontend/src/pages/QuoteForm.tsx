@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FileSpreadsheet, ArrowLeft, Save, Plus, Trash2, GripVertical } from 'lucide-react';
-import { getQuote, createQuote, updateQuote } from '../api/quotes';
+import { getQuote, createQuote, updateQuote, previewQuotePdf } from '../api/quotes';
 import { getAllClients } from '../api/clients';
 import { getServices } from '../api/services';
 import type { Client, Service, Item } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
 
@@ -19,6 +20,8 @@ export default function QuoteForm() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const [form, setForm] = useState({
     client: '',
@@ -72,6 +75,18 @@ export default function QuoteForm() {
     updateItem(idx, 'prixUnitaire', s.prix);
   };
 
+  const handlePreview = async () => {
+    if (!form.client) { toast('Sélectionnez un client avant la prévisualisation.', 'error'); return; }
+    if (form.items.some((i) => !i.description.trim())) { toast('Toutes les lignes doivent avoir une description.', 'error'); return; }
+    setPreviewing(true);
+    try {
+      const res = await previewQuotePdf(form);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(res.data));
+    } catch (err) { toast(apiError(err), 'error'); }
+    finally { setPreviewing(false); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.client) { toast('Sélectionnez un client', 'error'); return; }
@@ -102,7 +117,7 @@ export default function QuoteForm() {
       <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-6 animate-fade-up">
         <div className="lg:col-span-2 space-y-6">
           <div className="glass-card p-6">
-            <h3 className="font-bold text-[#0a0a0c] mb-4">Informations</h3>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4">Informations</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="field-label">Client *</label>
@@ -128,17 +143,17 @@ export default function QuoteForm() {
 
           <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[#0a0a0c]">Articles</h3>
+              <h3 className="font-bold text-[#0a0a0c] dark:text-white">Articles</h3>
               <button type="button" onClick={addItem} className="btn-ghost text-xs py-1.5"><Plus size={14} /> Ajouter une ligne</button>
             </div>
             <div className="space-y-3">
               {form.items.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl border border-gray-100 bg-white/40">
+                <div key={idx} className="p-3 rounded-xl border border-gray-100 dark:border-white/10 bg-white/40 dark:bg-white/5">
                   <div className="flex items-center gap-2 mb-2">
-                    <GripVertical size={16} className="text-gray-300 shrink-0" />
-                    <span className="text-xs font-bold text-gray-400">Ligne {idx + 1}</span>
+                    <GripVertical size={16} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500">Ligne {idx + 1}</span>
                     {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 hover:text-[#d9524d]"><Trash2 size={15} /></button>
+                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 dark:text-gray-500 hover:text-[#d9524d]"><Trash2 size={15} /></button>
                     )}
                   </div>
                   <div className="grid sm:grid-cols-12 gap-2">
@@ -151,7 +166,7 @@ export default function QuoteForm() {
                     <div className="sm:col-span-3">
                       <input type="number" min={0} step="any" className="field" placeholder="Prix unit." value={item.prixUnitaire} onChange={(e) => updateItem(idx, 'prixUnitaire', Number(e.target.value))} />
                     </div>
-                    <div className="sm:col-span-2 flex items-center font-semibold text-[#0a0a0c] text-sm">{formatFCFA(item.quantite * item.prixUnitaire)}</div>
+                    <div className="sm:col-span-2 flex items-center font-semibold text-[#0a0a0c] dark:text-white text-sm">{formatFCFA(item.quantite * item.prixUnitaire)}</div>
                   </div>
                   {services.length > 0 && (
                     <div className="mt-2">
@@ -174,25 +189,31 @@ export default function QuoteForm() {
 
         <div>
           <div className="glass-card p-6 sticky top-6">
-            <h3 className="font-bold text-[#0a0a0c] mb-4">Totaux</h3>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4">Totaux</h3>
             <div className="space-y-3">
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Sous-total</span><span className="font-semibold">{formatFCFA(form.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
-              <div className="flex justify-between items-center text-sm"><span className="text-gray-500">Remise (FCFA)</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.remise} onChange={(e) => update('remise', Number(e.target.value))} /></div>
-              <div className="flex justify-between items-center text-sm"><span className="text-gray-500">TVA (%)</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.tva} onChange={(e) => update('tva', Number(e.target.value))} /></div>
-              <div className="flex justify-between text-sm pt-2 border-t border-gray-100"><span className="text-gray-500">Total HT</span><span className="font-semibold">{formatFCFA(ht)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">TVA</span><span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Sous-total</span><span className="font-semibold">{formatFCFA(form.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
+              <div className="flex justify-between items-center text-sm"><span className="text-gray-500 dark:text-gray-400">Remise (FCFA)</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.remise} onChange={(e) => update('remise', Number(e.target.value))} /></div>
+              <div className="flex justify-between items-center text-sm"><span className="text-gray-500 dark:text-gray-400">TVA (%)</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.tva} onChange={(e) => update('tva', Number(e.target.value))} /></div>
+              <div className="flex justify-between text-sm pt-2 border-t border-gray-100 dark:border-white/10"><span className="text-gray-500 dark:text-gray-400">Total HT</span><span className="font-semibold">{formatFCFA(ht)}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">TVA</span><span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span></div>
               <div className="rounded-xl p-3 mt-3 text-white" style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
-                <p className="text-xs text-gray-300 uppercase">Total TTC</p>
+                <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>
                 <p className="text-xl font-extrabold">{formatFCFA(ttc)}</p>
               </div>
             </div>
-            <button type="submit" className="btn-primary w-full justify-center mt-5" disabled={saving}>
+            <div className="grid grid-cols-2 gap-2 mt-5">
+              <button type="button" onClick={handlePreview} className="btn-ghost w-full justify-center" disabled={saving || previewing}>
+                {previewing ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <span>◫</span>} Prévisualiser
+              </button>
+              <button type="submit" className="btn-primary w-full justify-center" disabled={saving}>
               {saving && <span className="spinner" style={{ width: 16, height: 16 }} />}
-              <Save size={18} /> {isEdit ? 'Mettre à jour' : 'Créer le devis'}
-            </button>
+                <Save size={18} /> {isEdit ? 'Mettre à jour' : 'Créer le devis'}
+              </button>
+            </div>
           </div>
         </div>
       </form>
+      <PdfPreviewModal open={!!previewUrl} onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} url={previewUrl} title={isEdit ? 'Aperçu du devis modifié' : 'Aperçu du devis'} filename="Apercu-devis.pdf" />
     </div>
   );
 }

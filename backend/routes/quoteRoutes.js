@@ -9,6 +9,7 @@ const router = express.Router();
 router.use(auth);
 
 router.get('/', controller.getQuotes);
+router.post('/preview', validate(createQuoteSchema), controller.previewQuotePdf);
 router.get('/:id', controller.getQuoteById);
 router.post('/', validate(createQuoteSchema), controller.createQuote);
 router.put('/:id', validate(updateQuoteSchema), controller.updateQuote);

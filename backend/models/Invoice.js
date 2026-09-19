@@ -22,6 +22,9 @@ const invoiceSchema = new mongoose.Schema({
   remise: { type: Number, default: 0 },
   tva: { type: Number, default: 0 },
   notes: { type: String, default: '' },
+  // Qui supporte les frais liés au paiement en ligne et au reversement.
+  // 'utilisateur' conserve le comportement historique : le client paie le TTC.
+  fraisSupportesPar: { type: String, enum: ['utilisateur', 'client'], default: 'utilisateur' },
   statut: {
     type: String,
     enum: ['brouillon', 'envoyee', 'vue', 'payee', 'en_retard', 'annulee'],
@@ -45,11 +48,10 @@ invoiceSchema.virtual('totalTTC').get(function () {
   return this.totalHT * (1 + (this.tva || 0) / 100);
 });
 
-invoiceSchema.pre('save', function (next) {
+invoiceSchema.pre('save', function () {
   if (!this.publicToken) {
     this.publicToken = crypto.randomBytes(20).toString('hex');
   }
-  next();
 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

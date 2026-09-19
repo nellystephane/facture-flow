@@ -48,8 +48,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             >
               {COLORS[t.type].icon}
             </div>
-            <p className="text-sm font-medium text-[#0a0a0c] flex-1">{t.message}</p>
-            <button onClick={() => remove(t.id)} className="text-gray-400 hover:text-gray-700">
+            <p className="text-sm font-medium text-[#0a0a0c] dark:text-white flex-1">{t.message}</p>
+            <button onClick={() => remove(t.id)} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200">
               <X size={16} />
             </button>
           </div>

@@ -77,7 +77,7 @@ export default function Clients() {
       {/* Recherche */}
       <div className="glass-card p-4 mb-6 animate-fade-up">
         <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Rechercher par nom, entreprise, email..."
@@ -109,19 +109,19 @@ export default function Clients() {
                   {c.nom.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[#0a0a0c] truncate">{c.nom}</p>
-                  {c.entreprise && <p className="text-xs text-gray-500 truncate">{c.entreprise}</p>}
+                  <p className="font-bold text-[#0a0a0c] dark:text-white truncate">{c.nom}</p>
+                  {c.entreprise && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{c.entreprise}</p>}
                 </div>
               </div>
 
-              <div className="space-y-1.5 text-sm text-gray-600 mb-4">
-                {c.email && <p className="flex items-center gap-2 truncate"><Mail size={14} className="text-gray-400 shrink-0" /> {c.email}</p>}
-                {c.telephone && <p className="flex items-center gap-2"><Phone size={14} className="text-gray-400 shrink-0" /> {c.telephone}</p>}
-                {c.adresse && <p className="flex items-center gap-2 truncate"><MapPin size={14} className="text-gray-400 shrink-0" /> {c.adresse}</p>}
-                {!c.email && !c.telephone && !c.adresse && <p className="text-gray-400 italic text-xs">Aucune coordonnée</p>}
+              <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                {c.email && <p className="flex items-center gap-2 truncate"><Mail size={14} className="text-gray-400 dark:text-gray-500 shrink-0" /> {c.email}</p>}
+                {c.telephone && <p className="flex items-center gap-2"><Phone size={14} className="text-gray-400 dark:text-gray-500 shrink-0" /> {c.telephone}</p>}
+                {c.adresse && <p className="flex items-center gap-2 truncate"><MapPin size={14} className="text-gray-400 dark:text-gray-500 shrink-0" /> {c.adresse}</p>}
+                {!c.email && !c.telephone && !c.adresse && <p className="text-gray-400 dark:text-gray-500 italic text-xs">Aucune coordonnée</p>}
               </div>
 
-              <div className="flex gap-2 pt-3 border-t border-gray-100">
+              <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-white/10">
                 <Link to={`/app/clients/${c._id}/edit`} className="btn-icon" title="Modifier">
                   <Pencil size={16} />
                 </Link>

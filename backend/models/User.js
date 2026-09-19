@@ -17,6 +17,28 @@ const userSchema = new mongoose.Schema({
     rib: { type: String, default: '' },
     swift: { type: String, default: '' },
   },
+  // Destination des reversements Oryxa. Les coordonnées sont utilisées uniquement
+  // lorsque le compte est explicitement activé par son propriétaire.
+  payoutSettings: {
+    // Destination de reversement réellement autorisée par FedaPay.
+    // `pending` signifie que la nouvelle destination attend la confirmation
+    // envoyée à l'adresse email du compte Oryxa.
+    enabled: { type: Boolean, default: false },
+    mode: { type: String, enum: ['mobile_money', 'bank_transfer'], default: 'mobile_money' },
+    provider: { type: String, default: 'mtn' },
+    phone: { type: String, default: '' },
+    country: { type: String, default: 'BJ' },
+    titulaire: { type: String, default: '' },
+    bank: { type: String, default: '' },
+    iban: { type: String, default: '' },
+    rib: { type: String, default: '' },
+    schedule: { type: String, enum: ['weekly', 'monthly'], default: 'weekly' },
+    status: { type: String, enum: ['pending', 'active', 'disabled'], default: 'disabled' },
+    emailConfirmed: { type: Boolean, default: false },
+    confirmationTokenHash: { type: String, default: null, select: false },
+    confirmationTokenExpire: { type: Date, default: null, select: false },
+    confirmedAt: { type: Date, default: null },
+  },
   subscription: { type: String, enum: ['gratuit', 'pro', 'business'], default: 'gratuit' },
   // Vérification d'email à l'inscription : code à 6 chiffres, valable 15 minutes.
   emailVerifie: { type: Boolean, default: false },
@@ -40,6 +62,11 @@ const userSchema = new mongoose.Schema({
   // travail à chaque requête.
   compteProprietaire: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   role: { type: String, enum: ['proprietaire', 'admin', 'collaborateur'], default: 'proprietaire' },
+  // Suspension par un admin PLATEFORME (voir middleware/adminAuth.js) — à ne
+  // pas confondre avec le champ `role` ci-dessus, qui décrit un rôle
+  // D'ÉQUIPE au sein d'un même espace de travail Business.
+  suspendu: { type: Boolean, default: false },
+  suspensionMotif: { type: String, default: '' },
 }, { timestamps: true });
 
 // Un compte est "premium" tant que son abonnement payant (pro/business) n'a pas expiré.

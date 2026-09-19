@@ -13,14 +13,45 @@ const baseURL = import.meta.env.VITE_API_URL || 'https://facture-flow.onrender.c
 // frontend au lieu du backend, et renverrait une 404.
 export const API_BASE_URL = baseURL;
 
+
+// Indicateur global non bloquant : il n'apparaît que si une requête dure
+// réellement un peu longtemps, pour éviter les clignotements sur les réponses rapides.
+let pendingRequests = 0;
+let loadingTimer: ReturnType<typeof setTimeout> | null = null;
+
+const emitGlobalLoading = (loading: boolean) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('oryxa:network-loading', { detail: { loading } }));
+};
+
+const startGlobalLoading = () => {
+  pendingRequests += 1;
+  if (pendingRequests !== 1 || loadingTimer) return;
+  loadingTimer = setTimeout(() => {
+    loadingTimer = null;
+    if (pendingRequests > 0) emitGlobalLoading(true);
+  }, 350);
+};
+
+const stopGlobalLoading = () => {
+  pendingRequests = Math.max(0, pendingRequests - 1);
+  if (pendingRequests > 0) return;
+  if (loadingTimer) {
+    clearTimeout(loadingTimer);
+    loadingTimer = null;
+  }
+  emitGlobalLoading(false);
+};
+
 const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+  timeout: 30000,
 });
 
 // Injecte le JWT à chaque requête
 api.interceptors.request.use((config) => {
+  startGlobalLoading();
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -30,8 +61,12 @@ api.interceptors.request.use((config) => {
 
 // Déconnexion auto si token expiré
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    stopGlobalLoading();
+    return res;
+  },
   (err) => {
+    stopGlobalLoading();
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
       // On respecte le base path de déploiement (ex: "/facture-flow/" sur

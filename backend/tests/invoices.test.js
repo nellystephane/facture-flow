@@ -81,19 +81,19 @@ describe('Numérotation des factures', () => {
   });
 });
 
-describe('Limite du plan Gratuit (10 factures/mois)', () => {
-  it('bloque la 11e facture du mois avec un message explicite', async () => {
+describe('Limite du plan Gratuit (5 factures/mois)', () => {
+  it('bloque la 6e facture du mois avec un message explicite', async () => {
     const { token } = await creerUtilisateurConnecte(app);
     const client = await creerClient(app, token);
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       const res = await request(app).post('/api/invoices').set('Authorization', `Bearer ${token}`).send(facturePayload(client._id));
       expect(res.status).toBe(201);
     }
 
-    const onzieme = await request(app).post('/api/invoices').set('Authorization', `Bearer ${token}`).send(facturePayload(client._id));
-    expect(onzieme.status).toBe(403);
-    expect(onzieme.body.code).toBe('FREE_LIMIT_REACHED');
+    const sixieme = await request(app).post('/api/invoices').set('Authorization', `Bearer ${token}`).send(facturePayload(client._id));
+    expect(sixieme.status).toBe(403);
+    expect(sixieme.body.code).toBe('FREE_LIMIT_REACHED');
   }, 20000);
 });
 

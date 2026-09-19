@@ -7,6 +7,8 @@ const fedapay = require('../utils/fedapay');
 const email = require('../utils/email');
 const { buildReceiptPdf } = require('../utils/pdfBuilder');
 const { creerFactureDepuisDevis } = require('./invoiceController');
+const LegalContent = require('../models/LegalContent');
+const { calculatePaymentQuote } = require('../utils/financial');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -56,8 +58,10 @@ exports.getPublicInvoice = asyncHandler(async (req, res) => {
     await invoice.save();
   }
   const payments = await Payment.find({ invoice: invoice._id, statut: 'complete' }).sort({ date: -1 });
-  const totalPaye = payments.reduce((s, p) => s + (p.montant || 0), 0);
-  res.json({ invoice, emetteur: user, totalTTC: computeTTC(invoice), totalPaye, payments });
+  const totalPaye = payments.reduce((s, p) => s + (p.montantFacture ?? p.montant ?? 0), 0);
+  const totalTTC = computeTTC(invoice);
+  const quote = await calculatePaymentQuote(Math.max(0, totalTTC - totalPaye), invoice.fraisSupportesPar || 'utilisateur');
+  res.json({ invoice, emetteur: user, totalTTC, totalPaye, payments, fraisPaiement: quote });
 });
 
 // POST /api/public/invoices/:token/pay  { firstname, lastname, email, phone }
@@ -70,7 +74,14 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
   const { firstname, lastname, email, phone } = req.body;
   if (!email) return res.status(400).json({ message: 'Email requis pour le paiement.' });
 
-  const montant = computeTTC(invoice);
+  const reste = Math.max(0, computeTTC(invoice) - (await Payment.aggregate([
+    { $match: { invoice: invoice._id, statut: 'complete' } },
+    { $group: { _id: null, total: { $sum: { $ifNull: ['$montantFacture', '$montant'] } } } },
+  ]))[0]?.total || 0);
+  if (reste <= 0.5) return res.status(400).json({ message: 'Cette facture est déjà réglée.' });
+  const fraisSupportesPar = invoice.fraisSupportesPar || 'utilisateur';
+  const quote = await calculatePaymentQuote(reste, fraisSupportesPar);
+  const montant = quote.montantClientPaye;
   const publicBase = (process.env.CLIENT_URL_PUBLIC || (process.env.CLIENT_URL || '').split(',')[0] || '').replace(/\/$/, '');
 
   const { transactionId, paymentUrl } = await fedapay.createPaymentLink({
@@ -78,21 +89,27 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
     description: `Facture ${invoice.numero}`,
     customer: { email, firstname, lastname, phone },
     callbackUrl: `${publicBase}/payer/${invoice.publicToken}?statut=retour`,
-    metadata: { type: 'invoice', invoiceId: String(invoice._id), publicToken: invoice.publicToken },
+    metadata: { type: 'invoice', invoiceId: String(invoice._id), publicToken: invoice.publicToken, fraisSupportesPar, montantFacture: reste },
   });
 
   await Payment.create({
     owner: invoice.owner,
     invoice: invoice._id,
     montant,
-    methode: 'carte',
+    montantFacture: reste,
+    montantClientPaye: montant,
+    fraisPayin: quote.fraisPayinEstimes,
+    fraisPayoutProvisionnes: quote.fraisPayoutEstimes,
+    fraisSupportesPar,
+    montantNetUtilisateur: quote.montantNetEstimeUtilisateur,
+    methode: 'autre',
     origine: 'en_ligne',
     statut: 'en_attente',
     fedapayTransactionId: String(transactionId),
     note: `Initié en ligne par ${email}`,
   });
 
-  res.json({ paymentUrl });
+  res.json({ paymentUrl, montantFacture: reste, montantClientPaye: montant, fraisTransfert: quote.fraisTransfertClient });
 });
 
 // GET /api/public/invoices/:token/statut — pour le polling front après retour de paiement
@@ -187,4 +204,13 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
   }
 
   res.json({ message: 'Votre demande a été transmise au prestataire.', quote });
+});
+
+// Surcharge éventuelle d'une page légale, éditée depuis /admin — renvoie
+// null si l'admin n'a jamais rien personnalisé pour cette page (le
+// frontend affiche alors son contenu par défaut codé en dur).
+exports.getLegalContent = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const doc = await LegalContent.findOne({ slug });
+  res.json(doc || null);
 });

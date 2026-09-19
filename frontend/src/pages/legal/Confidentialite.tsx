@@ -1,12 +1,12 @@
 import LegalLayout from './LegalLayout';
 
-const h2 = 'text-lg font-bold text-[#0a0a0c] mt-2';
+const h2 = 'text-lg font-bold text-[#0a0a0c] dark:text-white mt-2';
 const ul = 'list-disc pl-5 space-y-1.5';
 
 export default function Confidentialite() {
   return (
-    <LegalLayout title="Politique de confidentialité" updated="[à compléter — ex. 12 août 2026]">
-      <p className="text-xs italic text-gray-400 bg-gray-50 rounded-lg p-3">
+    <LegalLayout slug="confidentialite" title="Politique de confidentialité" updated="[à compléter — ex. 12 août 2026]">
+      <p className="text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
         Modèle de départ à faire relire par un professionnel avant exploitation commerciale réelle, en particulier
         pour vérifier sa conformité aux règles de protection des données applicables à vos utilisateurs (RGPD si vous
         avez des utilisateurs en Europe, loi locale sur la protection des données personnelles le cas échéant).
@@ -16,7 +16,7 @@ export default function Confidentialite() {
       <section>
         <h2 className={h2}>1. Qui sommes-nous</h2>
         <p>
-          FactuFlow est édité par [Nom de l'entreprise / de l'exploitant], [adresse], joignable à [email de contact].
+          Oryxa est édité par [Nom de l'entreprise / de l'exploitant], [adresse], joignable à [email de contact].
           Cette politique explique quelles données sont collectées lorsque vous utilisez l'application, pourquoi, et
           comment les exercer vos droits sur celles-ci.
         </p>
@@ -41,19 +41,19 @@ export default function Confidentialite() {
           <li>Journaux techniques standards du serveur (horodatage, adresse IP, erreurs) à des fins de sécurité et de diagnostic.</li>
         </ul>
         <p className="mt-2">
-          FactuFlow n'utilise pas de cookies publicitaires ni de traceurs tiers à des fins de suivi marketing.
+          Oryxa n'utilise pas de cookies publicitaires ni de traceurs tiers à des fins de suivi marketing.
         </p>
       </section>
 
       <section>
         <h2 className={h2}>3. Sous-traitants et destinataires des données</h2>
-        <p>Pour fonctionner, FactuFlow fait appel aux prestataires suivants, qui traitent des données pour notre compte :</p>
+        <p>Pour fonctionner, Oryxa fait appel aux prestataires suivants, qui traitent des données pour notre compte :</p>
         <ul className={ul}>
           <li><strong>Hébergement de la base de données</strong> — MongoDB Atlas ;</li>
           <li><strong>Hébergement du serveur applicatif</strong> — Render ;</li>
           <li><strong>Hébergement du site (frontend)</strong> — GitHub Pages ;</li>
           <li><strong>Envoi d'emails transactionnels</strong> (confirmation de compte, factures, reçus) — Brevo ;</li>
-          <li><strong>Paiement en ligne</strong> (Mobile Money, carte, virement) — FedaPay, qui traite directement les données de paiement ; FactuFlow n'a jamais accès aux numéros de carte ou identifiants Mobile Money.</li>
+          <li><strong>Paiement en ligne</strong> (Mobile Money, carte, virement) — FedaPay, qui traite directement les données de paiement ; Oryxa n'a jamais accès aux numéros de carte ou identifiants Mobile Money.</li>
         </ul>
         <p className="mt-2">
           Ces prestataires n'utilisent vos données que pour exécuter le service demandé et n'sont pas autorisés à les
@@ -85,9 +85,9 @@ export default function Confidentialite() {
       <section>
         <h2 className={h2}>6. Vos données clients : vous êtes responsable de traitement</h2>
         <p>
-          Lorsque vous saisissez des informations sur vos propres clients dans FactuFlow, vous en êtes le responsable
+          Lorsque vous saisissez des informations sur vos propres clients dans Oryxa, vous en êtes le responsable
           de traitement : il vous appartient de vous assurer que vous avez le droit de collecter et traiter ces
-          données (par exemple parce qu'elles sont nécessaires à l'exécution d'un contrat commercial). FactuFlow agit
+          données (par exemple parce qu'elles sont nécessaires à l'exécution d'un contrat commercial). Oryxa agit
           alors en tant que sous-traitant technique, se contentant d'héberger et de traiter ces données pour exécuter
           les instructions données via l'application.
         </p>

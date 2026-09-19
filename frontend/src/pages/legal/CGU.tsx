@@ -1,14 +1,14 @@
 import LegalLayout from './LegalLayout';
 
-const h2 = 'text-lg font-bold text-[#0a0a0c] mt-2';
+const h2 = 'text-lg font-bold text-[#0a0a0c] dark:text-white mt-2';
 const ul = 'list-disc pl-5 space-y-1.5';
 
 export default function CGU() {
   return (
-    <LegalLayout title="Conditions Générales d'Utilisation" updated="[à compléter — ex. 12 août 2026]">
-      <p className="text-xs italic text-gray-400 bg-gray-50 rounded-lg p-3">
+    <LegalLayout slug="cgu" title="Conditions Générales d'Utilisation" updated="[à compléter — ex. 12 août 2026]">
+      <p className="text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
         Modèle de départ à faire relire par un professionnel du droit avant toute exploitation commerciale réelle,
-        en particulier parce que FactuFlow encaisse des paiements pour le compte de tiers. Remplacez les mentions
+        en particulier parce que Oryxa encaisse des paiements pour le compte de tiers. Remplacez les mentions
         entre crochets [ainsi] par vos informations réelles.
       </p>
 
@@ -16,7 +16,7 @@ export default function CGU() {
         <h2 className={h2}>1. Objet</h2>
         <p>
           Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de l'application
-          FactuFlow (ci-après « le Service »), éditée par [Nom de l'entreprise / de l'exploitant], permettant à ses
+          Oryxa (ci-après « le Service »), éditée par [Nom de l'entreprise / de l'exploitant], permettant à ses
           utilisateurs (ci-après « l'Utilisateur ») de créer des devis et factures, gérer des clients, et encaisser
           des paiements auprès de leurs propres clients.
         </p>

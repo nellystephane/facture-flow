@@ -20,7 +20,7 @@ export default function ConfirmDialog({
         <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[rgba(225,29,42,0.12)] text-[#d9524d] shrink-0">
           <AlertTriangle size={20} />
         </div>
-        <p className="text-sm text-gray-600 pt-2">{message}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 pt-2">{message}</p>
       </div>
       <div className="flex justify-end gap-2">
         <button className="btn-ghost" onClick={onClose} disabled={loading}>Annuler</button>

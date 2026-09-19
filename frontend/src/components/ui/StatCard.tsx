@@ -22,9 +22,9 @@ export default function StatCard({ label, value, icon, trend, accent = 'rouge', 
     <div className="glass-card p-5 animate-fade-up" style={{ animationDelay: `${delay}s` }}>
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-extrabold text-[#0a0a0c] mt-1 truncate">{value}</p>
-          {trend && <p className="text-xs text-gray-400 mt-1">{trend}</p>}
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</p>
+          <p className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white mt-1 truncate">{value}</p>
+          {trend && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{trend}</p>}
         </div>
         <div
           className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0"

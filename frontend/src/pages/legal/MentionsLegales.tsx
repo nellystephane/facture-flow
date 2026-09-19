@@ -1,13 +1,13 @@
 import LegalLayout from './LegalLayout';
 
-const h2 = 'text-lg font-bold text-[#0a0a0c] mt-2';
+const h2 = 'text-lg font-bold text-[#0a0a0c] dark:text-white mt-2';
 
 export default function MentionsLegales() {
   return (
-    <LegalLayout title="Mentions légales" updated="[à compléter — ex. 12 août 2026]">
-      <p className="text-xs italic text-gray-400 bg-gray-50 rounded-lg p-3">
+    <LegalLayout slug="mentions-legales" title="Mentions légales" updated="[à compléter — ex. 12 août 2026]">
+      <p className="text-xs italic text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-white/5 rounded-lg p-3">
         Page à compléter avec votre identité réelle avant mise en ligne définitive : ces mentions sont obligatoires
-        dès qu'un site édite du contenu ou encaisse des paiements. Si vous exploitez FactuFlow en tant qu'entreprise
+        dès qu'un site édite du contenu ou encaisse des paiements. Si vous exploitez Oryxa en tant qu'entreprise
         individuelle ou société, indiquez votre numéro d'identification fiscale/registre du commerce (ex. IFU au
         Bénin) une fois celui-ci obtenu.
       </p>
@@ -51,7 +51,7 @@ export default function MentionsLegales() {
       <section>
         <h2 className={h2}>Propriété intellectuelle</h2>
         <p>
-          L'application FactuFlow (interface, code, marque, logo) est la propriété de [Nom de l'entreprise /
+          L'application Oryxa (interface, code, marque, logo) est la propriété de [Nom de l'entreprise /
           exploitant], sauf mention contraire. Toute reproduction non autorisée est interdite. Les documents (devis,
           factures) que vous générez avec le Service, ainsi que leur contenu, vous appartiennent.
         </p>

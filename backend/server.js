@@ -20,6 +20,10 @@ const publicRoutes = require('./routes/publicRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const teamRoutes = require('./routes/teamRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const supportRoutes = require('./routes/supportRoutes');
+const payoutRoutes = require('./routes/payoutRoutes');
+const { isEmailConfigured } = require('./utils/email');
 
 const app = express();
 
@@ -73,11 +77,16 @@ app.use('/api/auth/verifier-email', authLimiter);
 app.use('/api/auth/renvoyer-code', authLimiter);
 app.use('/api/auth/mot-de-passe-oublie', authLimiter);
 app.use('/api/auth/reinitialiser-mot-de-passe', authLimiter);
+// Même limiteur que la connexion utilisateur : l'espace admin n'a qu'un
+// mot de passe partagé (voir docs/ADMIN_ACCESS.md), donc le brute-force
+// doit être freiné au moins aussi agressivement qu'ailleurs.
+app.use('/api/admin/login', authLimiter);
 
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
     db: mongoose.connection.readyState === 1 ? 'connecté' : 'déconnecté',
+    email: isEmailConfigured() ? 'configuré' : 'non configuré',
     time: new Date().toISOString(),
   });
 });
@@ -92,6 +101,9 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/payouts', payoutRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Ressource introuvable' });
@@ -113,6 +125,7 @@ app.use((err, req, res, next) => {
 const { demarrerNettoyageAbonnements } = require('./jobs/cleanExpiredSubscriptions');
 const { demarrerRelancesAutomatiques } = require('./jobs/paymentReminders');
 const { demarrerNettoyageComptesNonConfirmes } = require('./jobs/cleanUnverifiedAccounts');
+const { demarrerReversementsAutomatiques } = require('./jobs/payouts');
 
 const PORT = process.env.PORT || 5000;
 
@@ -132,9 +145,10 @@ async function start() {
   demarrerNettoyageAbonnements();
   demarrerRelancesAutomatiques();
   demarrerNettoyageComptesNonConfirmes();
+  demarrerReversementsAutomatiques();
 
   app.listen(PORT, () => {
-    console.log(`Serveur FactuFlow démarré sur le port ${PORT}`);
+    console.log(`Serveur Oryxa démarré sur le port ${PORT}`);
   });
 }
 

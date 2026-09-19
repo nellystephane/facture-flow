@@ -2,6 +2,7 @@ const Client = require('../models/Client');
 const { paginationParams, paginatedResponse } = require('../utils/pagination');
 
 const asyncHandler = require('../middleware/asyncHandler');
+const { verifierLimiteClients } = require('../utils/permissions');
 
 exports.getClients = asyncHandler(async (req, res) => {
   const { page, limit, skip } = paginationParams(req.query);
@@ -24,6 +25,9 @@ exports.getClientById = asyncHandler(async (req, res) => {
 });
 
 exports.createClient = asyncHandler(async (req, res) => {
+  const user = await require('../models/User').findById(req.userId);
+  const limite = await verifierLimiteClients(Client, user);
+  if (limite) return res.status(403).json(limite);
   const { nom, entreprise, email, telephone, adresse, notes } = req.body;
   if (!nom) return res.status(400).json({ message: 'Le nom du client est requis' });
   const client = await Client.create({

@@ -6,13 +6,13 @@ const { buildReceiptPdf } = require('../utils/pdfBuilder');
 const email = require('../utils/email');
 const { paginationParams, paginatedResponse } = require('../utils/pagination');
 const { enregistrerActivite } = require('../utils/activityLog');
+const WalletEntry = require('../models/WalletEntry');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
 async function nextReceiptNumber(owner) {
-  const year = new Date().getFullYear();
-  const count = await Payment.countDocuments({ owner, statut: 'complete' });
-  return `REC-${year}-${String(count + 1).padStart(4, '0')}`;
+  const { nextNumber } = require('../models/Counter');
+  return nextNumber(owner, 'recu');
 }
 
 exports.getPaymentsStats = asyncHandler(async (req, res) => {
@@ -126,7 +126,25 @@ exports.createPayment = asyncHandler(async (req, res) => {
 });
 
 exports.deletePayment = asyncHandler(async (req, res) => {
-  const payment = await Payment.findOneAndDelete({ _id: req.params.id, owner: req.userId });
+  const payment = await Payment.findOne({ _id: req.params.id, owner: req.userId });
   if (!payment) return res.status(404).json({ message: 'Paiement introuvable' });
+  if (payment.origine === 'en_ligne' && payment.statut === 'complete') {
+    return res.status(409).json({ message: 'Un paiement en ligne confirmé ne peut pas être supprimé : il participe à votre historique financier et à votre solde retirable.', code: 'PAYMENT_FINANCIAL_LOCK' });
+  }
+  const invoice = await Invoice.findById(payment.invoice);
+  await WalletEntry.deleteMany({ payment: payment._id });
+  await payment.deleteOne();
+  if (invoice && invoice.statut === 'payee') {
+    const restant = await Payment.aggregate([
+      { $match: { invoice: invoice._id, statut: 'complete' } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$montantFacture', '$montant'] } } } },
+    ]);
+    const totalPaye = Number(restant[0]?.total || 0);
+    const totalTTC = ((invoice.items || []).reduce((sum, item) => sum + (item.quantite || 0) * (item.prixUnitaire || 0), 0) - (invoice.remise || 0)) * (1 + (invoice.tva || 0) / 100);
+    if (totalPaye < totalTTC - 0.01) {
+      invoice.statut = 'envoyee';
+      await invoice.save();
+    }
+  }
   res.json({ message: 'Paiement supprimé' });
 });

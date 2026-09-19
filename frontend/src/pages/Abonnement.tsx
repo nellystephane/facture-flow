@@ -55,8 +55,8 @@ export default function Abonnement() {
       <div className="glass-card p-6 mb-8 animate-fade-up">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div>
-            <p className="text-xs text-gray-400 uppercase font-semibold">Plan actuel</p>
-            <p className="text-2xl font-extrabold text-[#0a0a0c] capitalize">{permissions?.planNom || 'Gratuit'}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 uppercase font-semibold">Plan actuel</p>
+            <p className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white capitalize">{permissions?.planNom || 'Gratuit'}</p>
           </div>
           {user?.subscription && user.subscription !== 'gratuit' && user.estPremium && (
             <span className="badge badge-payee">
@@ -73,16 +73,16 @@ export default function Abonnement() {
         {facturation && (
           <div>
             <div className="flex items-center justify-between text-sm mb-1.5">
-              <span className="text-gray-500 flex items-center gap-1.5">
+              <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
                 Factures ce mois-ci
                 <InfoHint text="Le compteur se remet à zéro le 1er de chaque mois. Vos anciennes factures ne sont jamais supprimées." />
               </span>
-              <span className="font-semibold text-[#0a0a0c]">
+              <span className="font-semibold text-[#0a0a0c] dark:text-white">
                 {facturation.illimitee ? `${facturation.utilisees} — illimité` : `${facturation.utilisees} / ${facturation.limite}`}
               </span>
             </div>
             {!facturation.illimitee && (
-              <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -101,7 +101,7 @@ export default function Abonnement() {
         )}
 
         {!peutGererAbonnement && (
-          <p className="text-xs text-gray-400 mt-4 pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
             Seul le propriétaire du compte peut modifier l'abonnement.
           </p>
         )}
@@ -110,8 +110,8 @@ export default function Abonnement() {
       {peutGererAbonnement && (
         <>
           <div className="text-center mb-8 animate-fade-up">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a0a0c] mb-2">Choisissez votre plan</h1>
-            <p className="text-gray-500 max-w-xl mx-auto">
+            <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a0a0c] dark:text-white mb-2">Choisissez votre plan</h1>
+            <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
               Gratuit pour découvrir, Pro pour gagner du temps, Business pour gérer une équipe.
             </p>
           </div>
@@ -121,24 +121,24 @@ export default function Abonnement() {
             <div className="glass-card p-1 inline-flex rounded-full">
               <button
                 onClick={() => setDuree('1mois')}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${duree === '1mois' ? 'bg-[#0a0a0c] text-white' : 'text-gray-500'}`}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${duree === '1mois' ? 'bg-[#0a0a0c] text-white' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 1 mois
               </button>
               <button
                 onClick={() => setDuree('6mois')}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${duree === '6mois' ? 'bg-[#0a0a0c] text-white' : 'text-gray-500'}`}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${duree === '6mois' ? 'bg-[#0a0a0c] text-white' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 6 mois
               </button>
               <button
                 onClick={() => setDuree('1an')}
-                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${duree === '1an' ? 'bg-[#0a0a0c] text-white' : 'text-gray-500'}`}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-1.5 ${duree === '1an' ? 'bg-[#0a0a0c] text-white' : 'text-gray-500 dark:text-gray-400'}`}
               >
                 1 an <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">plus économique</span>
               </button>
             </div>
-            <InfoHint text="À l'année, le tarif mensuel réel est plus bas qu'en engagement 6 mois ou mensuel — c'est le choix le plus avantageux si vous comptez utiliser FactuFlow durablement." />
+            <InfoHint text="À l'année, le tarif mensuel réel est plus bas qu'en engagement 6 mois ou mensuel — c'est le choix le plus avantageux si vous comptez utiliser Oryxa durablement." />
           </div>
 
           <div className="grid md:grid-cols-3 gap-5">
@@ -154,25 +154,25 @@ export default function Abonnement() {
                       <Sparkles size={11} /> Recommandé
                     </span>
                   )}
-                  <h3 className="text-lg font-extrabold text-[#0a0a0c] mb-1">{plan.nom}</h3>
-                  <p className="text-xs text-gray-400 mb-3">{plan.accroche}</p>
+                  <h3 className="text-lg font-extrabold text-[#0a0a0c] dark:text-white mb-1">{plan.nom}</h3>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{plan.accroche}</p>
                   {plan.id === 'gratuit' ? (
-                    <div className="mb-5"><span className="text-2xl font-extrabold text-[#0a0a0c]">0 FCFA</span></div>
+                    <div className="mb-5"><span className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white">0 FCFA</span></div>
                   ) : (
                     <>
                       <div className="mb-1">
-                        <span className="text-2xl font-extrabold text-[#0a0a0c]">{formatFCFA(option?.prix || 0)}</span>
-                        <span className="text-gray-400 text-sm"> / {labelDuree}</span>
+                        <span className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white">{formatFCFA(option?.prix || 0)}</span>
+                        <span className="text-gray-400 dark:text-gray-500 text-sm"> / {labelDuree}</span>
                       </div>
                       {duree !== '1mois' && (
-                        <p className="text-xs text-gray-400 mb-5">soit environ {formatFCFA(prixMensuel)} / mois</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">soit environ {formatFCFA(prixMensuel)} / mois</p>
                       )}
                       {duree === '1mois' && <div className="mb-5" />}
                     </>
                   )}
                   <ul className="space-y-2 mb-6">
                     {plan.avantages.slice(0, 5).map((a) => (
-                      <li key={a} className="flex items-start gap-2 text-sm text-gray-600">
+                      <li key={a} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <Check size={15} className="text-green-600 mt-0.5 shrink-0" /> {a}
                       </li>
                     ))}
@@ -210,22 +210,22 @@ export default function Abonnement() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100 bg-white/40">
+                      <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase border-b border-gray-100 dark:border-white/10 bg-white/40 dark:bg-white/5">
                         <th className="px-5 py-3 font-semibold">Fonctionnalité</th>
                         <th className="px-5 py-3 font-semibold text-center">Gratuit</th>
                         <th className="px-5 py-3 font-semibold text-center">Pro</th>
                         <th className="px-5 py-3 font-semibold text-center">Business</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-gray-50 dark:divide-white/10">
                       {comparatif.map((ligne) => (
                         <tr key={ligne.label}>
-                          <td className="px-5 py-3 text-gray-700 font-medium">{ligne.label}</td>
+                          <td className="px-5 py-3 text-gray-700 dark:text-gray-300 font-medium">{ligne.label}</td>
                           {[ligne.gratuit, ligne.pro, ligne.business].map((val, i) => (
                             <td key={i} className="px-5 py-3 text-center">
                               {typeof val === 'boolean'
-                                ? (val ? <Check size={16} className="text-green-600 mx-auto" /> : <Minus size={16} className="text-gray-300 mx-auto" />)
-                                : <span className="text-gray-600">{val}</span>}
+                                ? (val ? <Check size={16} className="text-green-600 mx-auto" /> : <Minus size={16} className="text-gray-300 dark:text-gray-600 mx-auto" />)
+                                : <span className="text-gray-600 dark:text-gray-400">{val}</span>}
                             </td>
                           ))}
                         </tr>

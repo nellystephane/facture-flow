@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText, ArrowLeft, Save, Plus, Trash2, GripVertical, Lock, Send } from 'lucide-react';
-import { getInvoice, createInvoice, updateInvoice, sendInvoiceEmail } from '../api/invoices';
+import { getInvoice, createInvoice, updateInvoice, sendInvoiceEmail, previewInvoicePdf } from '../api/invoices';
 import { getAllClients } from '../api/clients';
 import { getServices } from '../api/services';
 import type { Client, Service, Item, InvoiceStatut } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
 
 const TEMPLATES = [
-  { id: 'classique', label: 'Classique', desc: 'Rouge signature FactuFlow' },
+  { id: 'classique', label: 'Classique', desc: 'Rouge signature Oryxa' },
   { id: 'moderne', label: 'Moderne', desc: 'Accent bleu' },
   { id: 'minimal', label: 'Minimal', desc: 'Noir & blanc épuré' },
 ];
@@ -28,10 +29,12 @@ export default function InvoiceForm() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
 
   const [form, setForm] = useState<{
     client: string; objet: string; dateEmission: string; dateEcheance: string;
-    items: Item[]; remise: number; tva: number; notes: string; statut: InvoiceStatut; template: string;
+    items: Item[]; remise: number; tva: number; notes: string; fraisSupportesPar: 'utilisateur' | 'client'; statut: InvoiceStatut; template: string;
   }>({
     client: '',
     objet: '',
@@ -41,6 +44,7 @@ export default function InvoiceForm() {
     remise: 0,
     tva: 0,
     notes: '',
+    fraisSupportesPar: 'utilisateur',
     statut: 'brouillon',
     template: 'classique',
   });
@@ -69,6 +73,7 @@ export default function InvoiceForm() {
           remise: d.remise || 0,
           tva: d.tva || 0,
           notes: d.notes || '',
+          fraisSupportesPar: d.fraisSupportesPar || 'utilisateur',
           statut: (d.statut as 'brouillon') || 'brouillon',
           template: d.template || 'classique',
         });
@@ -89,6 +94,18 @@ export default function InvoiceForm() {
     if (!s) return;
     updateItem(idx, 'description', s.nom);
     updateItem(idx, 'prixUnitaire', s.prix);
+  };
+
+  const handlePreview = async () => {
+    if (!form.client) { toast('Sélectionnez un client avant la prévisualisation.', 'error'); return; }
+    if (form.items.some((i) => !i.description.trim())) { toast('Toutes les lignes doivent avoir une description.', 'error'); return; }
+    setPreviewing(true);
+    try {
+      const res = await previewInvoicePdf(form);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(res.data));
+    } catch (err) { toast(apiError(err), 'error'); }
+    finally { setPreviewing(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent, envoyerAussi = false) => {
@@ -146,7 +163,7 @@ export default function InvoiceForm() {
         <div className="lg:col-span-2 space-y-6">
           {/* Infos générales */}
           <div className="glass-card p-6">
-            <h3 className="font-bold text-[#0a0a0c] mb-4">Informations</h3>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4">Informations</h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="field-label">Client *</label>
@@ -170,21 +187,37 @@ export default function InvoiceForm() {
             </div>
           </div>
 
+          {/* Frais de paiement en ligne */}
+          <div className="glass-card p-6">
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Frais de paiement en ligne</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Choisissez qui supporte les frais techniques. Oryxa calculera automatiquement le montant affiché au client.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <button type="button" onClick={() => update('fraisSupportesPar', 'utilisateur')} className={`text-left rounded-2xl p-4 border transition-soft ${form.fraisSupportesPar === 'utilisateur' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
+                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Je supporte les frais</p>
+                <p className="text-xs text-gray-500 mt-1">Le client paie uniquement le montant de la facture.</p>
+              </button>
+              <button type="button" onClick={() => update('fraisSupportesPar', 'client')} className={`text-left rounded-2xl p-4 border transition-soft ${form.fraisSupportesPar === 'client' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
+                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Mon client supporte les frais</p>
+                <p className="text-xs text-gray-500 mt-1">Le total à payer inclut automatiquement les frais de transfert.</p>
+              </button>
+            </div>
+          </div>
+
           {/* Articles */}
           <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-[#0a0a0c]">Articles</h3>
+              <h3 className="font-bold text-[#0a0a0c] dark:text-white">Articles</h3>
               <button type="button" onClick={addItem} className="btn-ghost text-xs py-1.5"><Plus size={14} /> Ajouter une ligne</button>
             </div>
 
             <div className="space-y-3">
               {form.items.map((item, idx) => (
-                <div key={idx} className="p-3 rounded-xl border border-gray-100 bg-white/40">
+                <div key={idx} className="p-3 rounded-xl border border-gray-100 dark:border-white/10 bg-white/40 dark:bg-white/5">
                   <div className="flex items-center gap-2 mb-2">
-                    <GripVertical size={16} className="text-gray-300 shrink-0" />
-                    <span className="text-xs font-bold text-gray-400">Ligne {idx + 1}</span>
+                    <GripVertical size={16} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500">Ligne {idx + 1}</span>
                     {form.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 hover:text-[#d9524d]">
+                      <button type="button" onClick={() => removeItem(idx)} className="ml-auto text-gray-400 dark:text-gray-500 hover:text-[#d9524d]">
                         <Trash2 size={15} />
                       </button>
                     )}
@@ -202,7 +235,7 @@ export default function InvoiceForm() {
                       <input type="number" min={0} step="any" className="field" placeholder="Prix unit." value={item.prixUnitaire}
                         onChange={(e) => updateItem(idx, 'prixUnitaire', Number(e.target.value))} />
                     </div>
-                    <div className="sm:col-span-2 flex items-center font-semibold text-[#0a0a0c] text-sm">
+                    <div className="sm:col-span-2 flex items-center font-semibold text-[#0a0a0c] dark:text-white text-sm">
                       {formatFCFA(item.quantite * item.prixUnitaire)}
                     </div>
                   </div>
@@ -214,7 +247,7 @@ export default function InvoiceForm() {
                           {services.map((s) => <option key={s._id} value={s._id}>{s.nom} — {formatFCFA(s.prix)}</option>)}
                         </select>
                       ) : (
-                        <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                           <Lock size={11} /> Pré-remplissage depuis vos tarifs — plan Pro
                         </p>
                       )}
@@ -234,8 +267,8 @@ export default function InvoiceForm() {
 
           {/* Modèle de PDF */}
           <div className="glass-card p-6">
-            <h3 className="font-bold text-[#0a0a0c] mb-1">Modèle de PDF</h3>
-            <p className="text-xs text-gray-400 mb-4">L'apparence de la facture une fois téléchargée ou envoyée par email.</p>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Modèle de PDF</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">L'apparence de la facture une fois téléchargée ou envoyée par email.</p>
             <div className="grid sm:grid-cols-3 gap-3">
               {TEMPLATES.map((t) => {
                 const disponible = permissions?.modelesFactureDisponibles.includes(t.id) ?? (t.id === 'classique');
@@ -246,12 +279,12 @@ export default function InvoiceForm() {
                     disabled={!disponible}
                     onClick={() => disponible && update('template', t.id)}
                     className={`relative p-3 rounded-xl border text-left transition-soft ${
-                      form.template === t.id ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-100'
-                    } ${!disponible ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300'}`}
+                      form.template === t.id ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-100 dark:border-white/10'
+                    } ${!disponible ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 dark:hover:border-white/20'}`}
                   >
-                    {!disponible && <Lock size={13} className="absolute top-2 right-2 text-gray-400" />}
-                    <p className="text-sm font-semibold text-[#0a0a0c]">{t.label}</p>
-                    <p className="text-xs text-gray-400">{disponible ? t.desc : 'Plan Pro'}</p>
+                    {!disponible && <Lock size={13} className="absolute top-2 right-2 text-gray-400 dark:text-gray-500" />}
+                    <p className="text-sm font-semibold text-[#0a0a0c] dark:text-white">{t.label}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{disponible ? t.desc : 'Plan Pro'}</p>
                   </button>
                 );
               })}
@@ -262,38 +295,41 @@ export default function InvoiceForm() {
         {/* Sidebar totaux */}
         <div className="space-y-6">
           <div className="glass-card p-6 sticky top-6">
-            <h3 className="font-bold text-[#0a0a0c] mb-4">Totaux</h3>
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4">Totaux</h3>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Sous-total</span>
+                <span className="text-gray-500 dark:text-gray-400">Sous-total</span>
                 <span className="font-semibold">{formatFCFA(form.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Remise (FCFA)</span>
+                <span className="text-gray-500 dark:text-gray-400">Remise (FCFA)</span>
                 <input type="number" min={0} className="field w-28 text-right py-1" value={form.remise}
                   onChange={(e) => update('remise', Number(e.target.value))} />
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">TVA (%)</span>
+                <span className="text-gray-500 dark:text-gray-400">TVA (%)</span>
                 <input type="number" min={0} className="field w-28 text-right py-1" value={form.tva}
                   onChange={(e) => update('tva', Number(e.target.value))} />
               </div>
-              <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
-                <span className="text-gray-500">Total HT</span>
+              <div className="flex justify-between text-sm pt-2 border-t border-gray-100 dark:border-white/10">
+                <span className="text-gray-500 dark:text-gray-400">Total HT</span>
                 <span className="font-semibold">{formatFCFA(ht)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">TVA</span>
+                <span className="text-gray-500 dark:text-gray-400">TVA</span>
                 <span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span>
               </div>
               <div className="rounded-xl p-3 mt-3 text-white"
                 style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
-                <p className="text-xs text-gray-300 uppercase">Total TTC</p>
+                <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>
                 <p className="text-xl font-extrabold">{formatFCFA(ttc)}</p>
               </div>
             </div>
 
             <div className="mt-5 space-y-2">
+              <button type="button" onClick={handlePreview} className="btn-ghost w-full justify-center" disabled={saving || previewing}>
+                {previewing ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <span>◫</span>} Prévisualiser le PDF
+              </button>
               <button type="button" onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
                 className="btn-primary w-full justify-center" disabled={saving}>
                 {saving && <span className="spinner" style={{ width: 16, height: 16 }} />}
@@ -307,6 +343,7 @@ export default function InvoiceForm() {
           </div>
         </div>
       </form>
+      <PdfPreviewModal open={!!previewUrl} onClose={() => { if (previewUrl) URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }} url={previewUrl} title={isEdit ? 'Aperçu de la facture modifiée' : 'Aperçu de la facture'} filename="Apercu-facture.pdf" />
     </div>
   );
 }

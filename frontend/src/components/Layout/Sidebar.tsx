@@ -1,10 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Users, Package, FileSpreadsheet,
-  Wallet, User, LogOut, X, Zap, Crown, UsersRound
+  Wallet, User, LogOut, X, Crown, UsersRound, Headphones
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import ThemeToggle from '../ThemeToggle';
+import OryxaLogo from '../OryxaLogo';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -20,6 +22,7 @@ const NAV = [
   { to: '/app/payments', label: 'Paiements', icon: Wallet },
   { to: '/app/abonnement', label: 'Abonnement', icon: Crown },
   { to: '/app/profile', label: 'Mon profil', icon: User },
+  { to: '/app/support', label: 'Support', icon: Headphones },
 ];
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
@@ -60,20 +63,15 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           {/* Logo */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2.5">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg"
-                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}
-              >
-                <Zap size={20} fill="white" />
-              </div>
-              <div>
-                <p className="font-extrabold text-lg text-[#0a0a0c] leading-none">FactuFlow</p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest">Gestion Pro</p>
-              </div>
+              <OryxaLogo size={40} nameClassName="font-extrabold text-lg text-[#0a0a0c] dark:text-white leading-none" imageClassName="rounded-xl shadow-lg" />
+              <span className="sr-only">Gestion Pro</span>
             </div>
-            <button className="btn-icon lg:hidden" onClick={onClose}>
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <ThemeToggle />
+              <button className="btn-icon lg:hidden" onClick={onClose}>
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Navigation */}
@@ -88,7 +86,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   `flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-soft ${
                     isActive
                       ? 'text-white shadow-md'
-                      : 'text-gray-600 hover:text-[#0a0a0c] hover:bg-white/60'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-[#0a0a0c] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
                   }`
                 }
                 style={({ isActive }) =>
@@ -110,7 +108,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               <p className="text-xs font-bold mb-1 flex items-center gap-1.5">
                 <Zap size={14} className="text-[#f4847d]" /> Plan Gratuit
               </p>
-              <p className="text-[11px] text-gray-300 mb-3 leading-relaxed">
+              <p className="text-[11px] text-gray-300 dark:text-gray-600 mb-3 leading-relaxed">
                 Passez au plan Pro pour des factures illimitées, la facturation express et le logo personnalisé.
               </p>
               <NavLink

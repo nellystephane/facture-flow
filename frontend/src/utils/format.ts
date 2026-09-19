@@ -96,8 +96,8 @@ export function apiError(err: unknown, fallback = 'Une erreur est survenue'): st
 
   // Aucune réponse du serveur : backend injoignable, hors ligne, ou timeout.
   if (!e?.response) {
-    if (e?.code === 'ECONNABORTED') {
-      return 'Le serveur met trop de temps à répondre. Réessayez.';
+    if (e?.code === 'ECONNABORTED' || e?.code === 'ETIMEDOUT') {
+      return 'Le serveur met trop de temps à répondre. Il peut être en train de se réveiller. Réessayez dans quelques secondes.';
     }
     return "Impossible de contacter le serveur. Vérifiez votre connexion internet ou réessayez plus tard.";
   }

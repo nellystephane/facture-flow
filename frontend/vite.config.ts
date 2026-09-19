@@ -13,10 +13,10 @@ export default defineConfig({
       // src/components/PwaUpdatePrompt.tsx) pour afficher une bannière
       // "Mettre à jour" au lieu d'un rechargement automatique silencieux.
       injectRegister: false,
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+      includeAssets: ['icons/favicon-32.png', 'icons/favicon-16.png', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'FactuFlow — Facturation & Gestion',
-        short_name: 'FactuFlow',
+        name: 'Oryxa — Facturation & Gestion',
+        short_name: 'Oryxa',
         description: "Devis, factures, clients et paiements Mobile Money pour freelances, artisans et PME d'Afrique francophone.",
         lang: 'fr',
         // Chemins relatifs (et non absolus) : indispensable car l'app est
@@ -26,8 +26,8 @@ export default defineConfig({
         start_url: '.',
         scope: '.',
         display: 'standalone',
-        theme_color: '#e11d2a',
-        background_color: '#f7f7f8',
+        theme_color: '#db0201',
+        background_color: '#0a0a0c',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

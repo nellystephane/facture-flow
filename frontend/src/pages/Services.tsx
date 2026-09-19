@@ -154,7 +154,7 @@ export default function Services() {
 
       <div className="glass-card p-4 mb-6 animate-fade-up">
         <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input className="field pl-10" placeholder="Rechercher un service..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       </div>
@@ -180,14 +180,14 @@ export default function Services() {
                   <Tag size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[#0a0a0c] truncate">{s.nom}</p>
-                  {s.description && <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">{s.description}</p>}
+                  <p className="font-bold text-[#0a0a0c] dark:text-white truncate">{s.nom}</p>
+                  {s.description && <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">{s.description}</p>}
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-white/10">
                 <div>
                   <p className="text-lg font-extrabold text-[#d9524d]">{formatFCFA(s.prix)}</p>
-                  <p className="text-[10px] text-gray-400 uppercase">/ {s.unite}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">/ {s.unite}</p>
                 </div>
                 <div className="flex gap-2">
                   <button className="btn-icon" onClick={() => openEdit(s)}><Pencil size={15} /></button>
@@ -246,7 +246,7 @@ export default function Services() {
       {/* Facturation rapide depuis un tarif préconçu (premium) */}
       <Modal open={!!invoiceModal} onClose={() => setInvoiceModal(null)} title={`Facturer "${invoiceModal?.nom}"`}>
         <form onSubmit={handleQuickInvoice} className="space-y-4">
-          <p className="text-xs text-gray-500 -mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
             Le tarif de base reste inchangé dans votre catalogue — seule cette facture utilise le prix ci-dessous.
           </p>
           <div>

@@ -5,6 +5,8 @@ export const getInvoices = (params?: { statut?: string; client?: string; q?: str
   api.get<Paginated<Invoice>>('/invoices', { params });
 
 export const getInvoice = (id: string) => api.get<Invoice>(`/invoices/${id}`);
+export const previewInvoicePdf = (data: Partial<Invoice>) => api.post('/invoices/preview', data, { responseType: 'blob' });
+
 export const createInvoice = (data: Partial<Invoice>) => api.post<Invoice>('/invoices', data);
 export const updateInvoice = (id: string, data: Partial<Invoice>) => api.put<Invoice>(`/invoices/${id}`, data);
 export const patchInvoiceStatus = (id: string, statut: InvoiceStatut) =>

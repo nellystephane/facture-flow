@@ -5,6 +5,8 @@ export const getQuotes = (params?: { statut?: string; q?: string; page?: number;
   api.get<Paginated<Quote>>('/quotes', { params });
 
 export const getQuote = (id: string) => api.get<Quote>(`/quotes/${id}`);
+export const previewQuotePdf = (data: Partial<Quote>) => api.post('/quotes/preview', data, { responseType: 'blob' });
+
 export const createQuote = (data: Partial<Quote>) => api.post<Quote>('/quotes', data);
 export const updateQuote = (id: string, data: Partial<Quote>) => api.put<Quote>(`/quotes/${id}`, data);
 export const patchQuoteStatus = (id: string, statut: QuoteStatut) =>

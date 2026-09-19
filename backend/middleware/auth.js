@@ -21,8 +21,16 @@ module.exports = async function (req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const acteur = await User.findById(decoded.id).select('compteProprietaire role nom');
+    const acteur = await User.findById(decoded.id).select('compteProprietaire role nom suspendu suspensionMotif');
     if (!acteur) return res.status(401).json({ message: 'Compte introuvable' });
+    if (acteur.suspendu) {
+      return res.status(403).json({
+        message: acteur.suspensionMotif
+          ? `Ce compte a été suspendu : ${acteur.suspensionMotif}`
+          : 'Ce compte a été suspendu. Contactez le support pour plus de détails.',
+        code: 'COMPTE_SUSPENDU',
+      });
+    }
 
     req.actorId = String(acteur._id);
     req.actorNom = acteur.nom;

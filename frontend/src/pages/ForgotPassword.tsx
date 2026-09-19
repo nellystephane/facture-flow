@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Zap, Mail, KeyRound, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Mail, KeyRound, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as authApi from '../api/auth';
 import { apiError } from '../utils/format';
+import OryxaLogo from '../components/OryxaLogo';
 
 function erreurMotDePasse(password: string): string | null {
   if (!password || password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
@@ -62,17 +63,13 @@ export default function ForgotPassword() {
       <div className="orb orb-2" />
 
       <div className="relative z-10 w-full max-w-md animate-scale-in">
-        <Link to="/" className="flex items-center justify-center gap-2.5 mb-6">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg"
-            style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
-            <Zap size={24} fill="white" />
-          </div>
-          <span className="font-extrabold text-2xl text-[#0a0a0c]">FactuFlow</span>
+        <Link to="/" className="flex justify-center mb-6" aria-label="Oryxa — accueil">
+          <OryxaLogo size={52} nameClassName="font-extrabold text-2xl text-[#0a0a0c] dark:text-white" imageClassName="rounded-xl shadow-lg" />
         </Link>
 
         <div className="glass-card p-8">
-          <h1 className="text-2xl font-extrabold text-[#0a0a0c] text-center">Mot de passe oublié</h1>
-          <p className="text-sm text-gray-500 text-center mt-1 mb-6">
+          <h1 className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white text-center">Mot de passe oublié</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 mb-6">
             {step === 'email'
               ? 'Indiquez votre adresse email pour recevoir un code de réinitialisation.'
               : <>Entrez le code envoyé à <strong>{email}</strong> et votre nouveau mot de passe.</>}
@@ -94,7 +91,7 @@ export default function ForgotPassword() {
               <div>
                 <label className="field-label">Adresse email</label>
                 <div className="relative">
-                  <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                   <input type="email" placeholder="vous@exemple.com" value={email}
                     onChange={(e) => setEmail(e.target.value)} className="field pl-10" required autoFocus />
                 </div>
@@ -109,7 +106,7 @@ export default function ForgotPassword() {
               <div>
                 <label className="field-label">Code reçu par email</label>
                 <div className="relative">
-                  <KeyRound size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <KeyRound size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                   <input type="text" inputMode="numeric" maxLength={6} placeholder="000000" value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                     className="field pl-10 text-center tracking-[0.4em] font-bold" required autoFocus />
@@ -118,11 +115,11 @@ export default function ForgotPassword() {
               <div>
                 <label className="field-label">Nouveau mot de passe</label>
                 <div className="relative">
-                  <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                   <input type={showPass ? 'text' : 'password'} placeholder="Min. 8 caractères + 1 spécial" value={password}
                     onChange={(e) => setPassword(e.target.value)} className="field pl-10 pr-10" required />
                   <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#d9524d]">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-[#d9524d]">
                     {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -131,14 +128,14 @@ export default function ForgotPassword() {
                 {loading && <span className="spinner" style={{ width: 16, height: 16 }} />}
                 Réinitialiser mon mot de passe <ArrowRight size={18} />
               </button>
-              <button type="button" onClick={() => setStep('email')} className="text-xs text-gray-400 hover:text-[#d9524d] w-full text-center">
+              <button type="button" onClick={() => setStep('email')} className="text-xs text-gray-400 dark:text-gray-500 hover:text-[#d9524d] w-full text-center">
                 ← Utiliser une autre adresse email
               </button>
             </form>
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-5">
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-5">
           <Link to="/login" className="hover:text-[#d9524d]">← Retour à la connexion</Link>
         </p>
       </div>

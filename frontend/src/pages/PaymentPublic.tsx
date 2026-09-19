@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import OryxaLogo from '../components/OryxaLogo';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Building2, CheckCircle2, Loader2, ShieldCheck, Smartphone, CreditCard, Landmark, Receipt, AlertTriangle } from 'lucide-react';
 import { getPublicInvoice, initiateOnlinePayment, getPublicPaymentStatus, publicReceiptUrl, type PublicInvoiceResponse } from '../api/public';
@@ -73,15 +74,15 @@ export default function PaymentPublic() {
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="glass-card p-8 max-w-md text-center">
           <AlertTriangle className="mx-auto text-[#d9524d] mb-3" size={32} />
-          <p className="font-bold text-[#0a0a0c] mb-1">Lien invalide</p>
-          <p className="text-sm text-gray-500">{error}</p>
+          <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Lien invalide</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{error}</p>
         </div>
       </div>
     );
   }
 
   if (!data) return null;
-  const { invoice, emetteur, totalTTC, totalPaye, payments } = data;
+  const { invoice, emetteur, totalTTC, totalPaye, payments, fraisPaiement } = data;
   const reste = Math.max(0, totalTTC - totalPaye);
   const dejaPayee = invoice.statut === 'payee' || reste <= 0.5;
 
@@ -93,28 +94,35 @@ export default function PaymentPublic() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-2 justify-center mb-2">
             <Building2 size={20} className="text-[#d9524d]" />
-            <span className="font-extrabold text-lg text-[#0a0a0c]">{emetteur.entreprise || emetteur.nom}</span>
+            <span className="font-extrabold text-lg text-[#0a0a0c] dark:text-white">{emetteur.entreprise || emetteur.nom}</span>
           </div>
-          <p className="text-sm text-gray-500">Facture {invoice.numero} • Émise le {formatDate(invoice.dateEmission)}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Facture {invoice.numero} • Émise le {formatDate(invoice.dateEmission)}</p>
         </div>
 
         <div className="glass-card p-6 md:p-8">
           {/* Montant */}
-          <div className="text-center pb-6 mb-6 border-b border-gray-100">
-            <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold mb-1">
+          <div className="text-center pb-6 mb-6 border-b border-gray-100 dark:border-white/10">
+            <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold mb-1">
               {dejaPayee ? 'Montant réglé' : 'Montant à payer'}
             </p>
-            <p className="text-3xl font-extrabold text-[#0a0a0c]">{formatFCFA(dejaPayee ? totalTTC : reste)}</p>
+            <p className="text-3xl font-extrabold text-[#0a0a0c] dark:text-white">{formatFCFA(dejaPayee ? totalTTC : (fraisPaiement?.montantClientPaye || reste))}</p>
+            {!dejaPayee && fraisPaiement && fraisPaiement.fraisTransfertClient > 0 && (
+              <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex justify-between"><span>Montant de la facture</span><span>{formatFCFA(reste)}</span></div>
+                <div className="flex justify-between"><span>Frais de transfert</span><span>{formatFCFA(fraisPaiement.fraisTransfertClient)}</span></div>
+                <div className="flex justify-between font-bold text-[#0a0a0c] dark:text-white mt-1 pt-2 border-t border-gray-100 dark:border-white/10"><span>Total</span><span>{formatFCFA(fraisPaiement.montantClientPaye)}</span></div>
+              </div>
+            )}
             {totalPaye > 0 && !dejaPayee && (
-              <p className="text-xs text-gray-400 mt-1">{formatFCFA(totalPaye)} déjà réglé sur un total de {formatFCFA(totalTTC)}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatFCFA(totalPaye)} déjà réglé sur un total de {formatFCFA(totalTTC)}</p>
             )}
           </div>
 
           {dejaPayee ? (
             <div className="text-center py-4">
               <CheckCircle2 className="mx-auto text-green-600 mb-3" size={40} />
-              <p className="font-bold text-[#0a0a0c] mb-1">Facture réglée</p>
-              <p className="text-sm text-gray-500 mb-5">Merci pour votre paiement. Vous pouvez télécharger votre reçu ci-dessous.</p>
+              <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Facture réglée</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">Merci pour votre paiement. Vous pouvez télécharger votre reçu ci-dessous.</p>
               {payments.filter(p => p.statut === 'complete' || !p.statut).map((p) => (
                 <a
                   key={p._id}
@@ -129,19 +137,19 @@ export default function PaymentPublic() {
           ) : checkingReturn ? (
             <div className="text-center py-8">
               <Loader2 className="mx-auto animate-spin text-[#d9524d] mb-3" size={28} />
-              <p className="text-sm text-gray-500">Vérification de votre paiement en cours...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Vérification de votre paiement en cours...</p>
             </div>
           ) : (
             <>
               <div className="mb-5">
-                <p className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center">
+                <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 flex items-center">
                   Moyens de paiement acceptés
                   <InfoHint text="Après avoir renseigné vos coordonnées, vous serez redirigé vers une page sécurisée FedaPay où vous choisirez précisément votre mode de paiement (numéro Mobile Money, carte, ou coordonnées de virement)." />
                 </p>
-                <div className="flex gap-2 flex-wrap text-xs text-gray-600">
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-100"><Smartphone size={13} /> MTN / Moov Money</span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-100"><CreditCard size={13} /> Carte bancaire</span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-100"><Landmark size={13} /> Virement bancaire</span>
+                <div className="flex gap-2 flex-wrap text-xs text-gray-600 dark:text-gray-400">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"><Smartphone size={13} /> MTN / Moov Money</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"><CreditCard size={13} /> Carte bancaire</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10"><Landmark size={13} /> Virement bancaire</span>
                 </div>
               </div>
 
@@ -171,7 +179,7 @@ export default function PaymentPublic() {
                   {submitting ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
                   Continuer vers le paiement sécurisé
                 </button>
-                <p className="text-[11px] text-gray-400 text-center flex items-center justify-center gap-1">
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center flex items-center justify-center gap-1">
                   <ShieldCheck size={12} /> Paiement sécurisé via FedaPay
                 </p>
               </form>
@@ -179,7 +187,7 @@ export default function PaymentPublic() {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">Propulsé par FactuFlow</p>
+        <div className="flex justify-center mt-6"><OryxaLogo size={18} nameClassName="text-xs font-semibold text-gray-400 dark:text-gray-500" imageClassName="rounded-md opacity-70" /></div>
       </div>
     </div>
   );

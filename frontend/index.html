@@ -2,14 +2,27 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%icons/favicon-16.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#db0201" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="FactuFlow — La plateforme de facturation et de gestion pour freelances, artisans et PME d'Afrique francophone. Devis, factures, paiements Mobile Money." />
+    <meta name="description" content="Oryxa — La plateforme de facturation et de gestion pour freelances, artisans et PME d'Afrique francophone. Devis, factures, paiements Mobile Money." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <title>FactuFlow — Facturation & Gestion pour PME</title>
+    <title>Oryxa — Facturation & Gestion pour PME</title>
+    <!-- Applique le thème sombre/clair AVANT le premier rendu React, pour
+         éviter un flash de mauvais thème (FOUC) au chargement. -->
+    <script>
+      (function () {
+        try {
+          var stocke = localStorage.getItem('oryxa-theme');
+          var sombre = stocke ? stocke === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (sombre) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
     <!-- GitHub Pages ne sait servir que des fichiers statiques : un lien direct
          ou un rafraîchissement sur une route interne (ex: /facture-flow/app/factures/123)
          renverrait une vraie 404 sans ce script. Il restaure la bonne URL après le

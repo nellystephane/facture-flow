@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Zap, ShieldCheck, ArrowRight, Clock } from 'lucide-react';
+import { ShieldCheck, ArrowRight, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as authApi from '../api/auth';
 import { apiError } from '../utils/format';
+import OryxaLogo from '../components/OryxaLogo';
 
 const DUREE_CODE_S = 3 * 60; // doit rester aligné avec DUREE_CODE_VERIFICATION_MS côté backend
 
@@ -113,24 +114,20 @@ export default function VerifyEmail() {
       <div className="orb orb-2" />
 
       <div className="relative z-10 w-full max-w-md animate-scale-in">
-        <Link to="/" className="flex items-center justify-center gap-2.5 mb-6">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg"
-            style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
-            <Zap size={24} fill="white" />
-          </div>
-          <span className="font-extrabold text-2xl text-[#0a0a0c]">FactuFlow</span>
+        <Link to="/" className="flex justify-center mb-6" aria-label="Oryxa — accueil">
+          <OryxaLogo size={52} nameClassName="font-extrabold text-2xl text-[#0a0a0c] dark:text-white" imageClassName="rounded-xl shadow-lg" />
         </Link>
 
         <div className="glass-card p-8">
           <div className="w-12 h-12 rounded-xl bg-[rgba(225,29,42,0.1)] flex items-center justify-center mx-auto mb-4">
             <ShieldCheck size={22} className="text-[#d9524d]" />
           </div>
-          <h1 className="text-2xl font-extrabold text-[#0a0a0c] text-center">Confirmez votre email</h1>
-          <p className="text-sm text-gray-500 text-center mt-1 mb-2">
+          <h1 className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white text-center">Confirmez votre email</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 mb-2">
             Entrez le code à 6 chiffres envoyé à<br /><strong>{email || 'votre adresse email'}</strong>
           </p>
 
-          <div className={`flex items-center justify-center gap-1.5 text-xs font-medium mb-6 ${expire ? 'text-[#b23c37]' : 'text-gray-400'}`}>
+          <div className={`flex items-center justify-center gap-1.5 text-xs font-medium mb-6 ${expire ? 'text-[#b23c37]' : 'text-gray-400 dark:text-gray-500'}`}>
             <Clock size={13} />
             {expire ? 'Code expiré — demandez-en un nouveau' : `Expire dans ${minutes}:${String(secondes).padStart(2, '0')}`}
           </div>
@@ -171,7 +168,7 @@ export default function VerifyEmail() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
             Aucun code reçu ?{' '}
             <button onClick={handleResend} disabled={resending} className="font-semibold text-[#d9524d] hover:underline disabled:opacity-50">
               {resending ? 'Envoi...' : 'Renvoyer le code'}
@@ -179,7 +176,7 @@ export default function VerifyEmail() {
           </p>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-5">
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-5">
           <Link to="/login" className="hover:text-[#d9524d]">← Retour à la connexion</Link>
         </p>
       </div>

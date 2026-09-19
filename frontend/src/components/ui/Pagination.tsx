@@ -12,7 +12,7 @@ export default function Pagination({
 
   return (
     <div className="flex items-center justify-between gap-3 mt-6 flex-wrap">
-      <p className="text-xs text-gray-400">{total} résultat{total > 1 ? 's' : ''} au total</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500">{total} résultat{total > 1 ? 's' : ''} au total</p>
       <div className="flex items-center gap-2">
         <button
           onClick={() => onChange(page - 1)}
@@ -22,7 +22,7 @@ export default function Pagination({
         >
           <ChevronLeft size={16} />
         </button>
-        <span className="text-sm text-gray-500 font-medium px-2">Page {page} sur {totalPages}</span>
+        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium px-2">Page {page} sur {totalPages}</span>
         <button
           onClick={() => onChange(page + 1)}
           disabled={page >= totalPages}

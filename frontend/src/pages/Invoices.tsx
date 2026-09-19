@@ -72,7 +72,7 @@ export default function Invoices() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `factuflow-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.download = `oryxa-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -107,11 +107,11 @@ export default function Invoices() {
       <div className="glass-card p-4 mb-6 animate-fade-up">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input className="field pl-10" placeholder="Rechercher par N° ou client..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="relative">
-            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
             <select className="field pl-10 pr-10" value={statut} onChange={(e) => { setStatut(e.target.value); setPage(1); }}>
               {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
@@ -133,7 +133,7 @@ export default function Invoices() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-gray-400 uppercase border-b border-gray-100 bg-white/40">
+                <tr className="text-left text-xs text-gray-400 dark:text-gray-500 uppercase border-b border-gray-100 dark:border-white/10 bg-white/40 dark:bg-white/5">
                   <th className="px-5 py-3 font-semibold">N°</th>
                   <th className="px-5 py-3 font-semibold">Client</th>
                   <th className="px-5 py-3 font-semibold">Date</th>
@@ -143,18 +143,18 @@ export default function Invoices() {
                   <th className="px-5 py-3 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-gray-50 dark:divide-white/10">
                 {invoices.map((inv) => {
                   const client = typeof inv.client === 'object' ? inv.client : null;
                   return (
-                    <tr key={inv._id} className="hover:bg-white/50 transition-soft">
+                    <tr key={inv._id} className="hover:bg-white/50 dark:hover:bg-white/10 transition-soft">
                       <td className="px-5 py-4">
-                        <Link to={`/app/invoices/${inv._id}`} className="font-bold text-[#0a0a0c] hover:text-[#d9524d]">{inv.numero}</Link>
+                        <Link to={`/app/invoices/${inv._id}`} className="font-bold text-[#0a0a0c] dark:text-white hover:text-[#d9524d]">{inv.numero}</Link>
                       </td>
-                      <td className="px-5 py-4 text-gray-700">{client?.nom || '—'}</td>
-                      <td className="px-5 py-4 text-gray-500">{formatDate(inv.dateEmission)}</td>
-                      <td className="px-5 py-4 text-gray-500">{formatDate(inv.dateEcheance)}</td>
-                      <td className="px-5 py-4 font-semibold text-[#0a0a0c]">{formatFCFA(inv.totalTTC)}</td>
+                      <td className="px-5 py-4 text-gray-700 dark:text-gray-300">{client?.nom || '—'}</td>
+                      <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(inv.dateEmission)}</td>
+                      <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(inv.dateEcheance)}</td>
+                      <td className="px-5 py-4 font-semibold text-[#0a0a0c] dark:text-white">{formatFCFA(inv.totalTTC)}</td>
                       <td className="px-5 py-4"><span className={badgeClass(inv.statut)}>{INVOICE_STATUT_LABEL[inv.statut as InvoiceStatut]}</span></td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1.5">

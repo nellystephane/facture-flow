@@ -1,4 +1,4 @@
-# ⚡ FactuFlow
+# ⚡ Oryxa
 
 **La plateforme de facturation et de gestion pensée pour les freelances, artisans et PME d'Afrique francophone.**
 
@@ -168,7 +168,7 @@ Authorization: Bearer <token>
 
 | Plan       | Prix            | Inclus                                                   |
 |------------|-----------------|----------------------------------------------------------|
-| Gratuit    | 0 FCFA          | 10 factures/mois, clients & devis illimités, PDF         |
+| Gratuit    | 0 FCFA          | 5 factures/mois, 5 devis/mois, jusqu’à 20 clients, PDF |
 | Pro        | 3 000 FCFA/mois | Factures illimitées, logo, relances auto, stats avancées |
 | Business   | 8 000 FCFA/mois | Tout Pro + équipe, WhatsApp, Mobile Money, export comptable |
 
@@ -194,8 +194,21 @@ Le frontend est installable comme une application (mobile et desktop) et fonctio
 - **Installation** : sur mobile (Android/Chrome), un bandeau "Ajouter à l'écran d'accueil" apparaît automatiquement ; sur desktop (Chrome/Edge), une icône d'installation apparaît dans la barre d'adresse.
 - **Mise à jour** : quand une nouvelle version est déployée, une bannière "Nouvelle version disponible" apparaît en bas de l'écran (`src/components/PwaUpdatePrompt.tsx`) — l'app ne se recharge jamais toute seule, pour ne pas faire perdre une saisie en cours.
 - **Ce qui est mis en cache hors-ligne** : uniquement le "shell" applicatif (JS, CSS, HTML, icônes, polices) — **jamais** les réponses de `/api`. Les factures, devis, clients et paiements viennent toujours du réseau en direct : consulter l'app hors-ligne affiche l'interface, pas des données périmées ou fausses.
-- **Icônes** : générées dans `frontend/public/icons/` à partir de `favicon.svg`. Si vous changez le logo, régénérez-les (192×192, 512×512, 512×512 maskable, 180×180 pour iOS) et gardez les mêmes noms de fichiers, ou mettez à jour la liste `icons` dans `vite.config.ts`.
+- **Icônes** : générées dans `frontend/public/icons/` à partir du logo Oryxa (PNG source haute résolution). Si vous changez le logo, régénérez favicon-16/32/48, icon-192, icon-512, icon-512-maskable et apple-touch-icon en gardant les mêmes noms de fichiers, ou mettez à jour la liste `icons` dans `vite.config.ts`.
 - **Config technique** : `vite-plugin-pwa`, configuré dans `vite.config.ts` avec `start_url`/`scope` relatifs (`.`) pour fonctionner aussi bien sous un sous-chemin GitHub Pages qu'à la racine d'un domaine Vercel/Netlify.
+
+---
+
+## 🛡️ Espace admin plateforme
+
+Une interface `/admin`, séparée à 100 % des comptes utilisateurs (auth par
+liste d'emails + mot de passe partagé, jamais un rôle sur un `User`),
+permet de gérer la plateforme dans son ensemble : utilisateurs (suspension,
+changement de plan), revenu réel estimé, paiements/litiges FedaPay, tarifs
+des abonnements, contenu des pages légales (éditable sans redéploiement).
+
+Voir **[docs/ADMIN_ACCESS.md](docs/ADMIN_ACCESS.md)** pour la configuration
+et la liste complète des fonctionnalités.
 
 ---
 
@@ -216,7 +229,14 @@ Le frontend est installable comme une application (mobile et desktop) et fonctio
    - `JWT_SECRET` — une longue chaîne aléatoire (ex. générée avec `openssl rand -hex 32`)
    - `CLIENT_URL` — l'URL de votre frontend une fois déployé (ex. `https://<utilisateur>.github.io` — **sans** le `/<repo>` final, l'origine seule compte pour CORS ; ou `https://factuflow.vercel.app` sur Vercel)
    - `PORT` — laissez Render le définir automatiquement
-5. Déployez, puis vérifiez `https://votre-backend.onrender.com/api/health` → `"db": "connected"`.
+   - `BREVO_SMTP_HOST=smtp-relay.brevo.com`
+   - `BREVO_SMTP_PORT=587`
+   - `BREVO_SMTP_USER` — identifiant SMTP fourni par Brevo
+   - `BREVO_SMTP_PASS` — clé SMTP Brevo, **pas** le mot de passe normal de votre boîte mail
+   - `EMAIL_FROM=Oryxa <contact@emgdigitalsolutions.bj>` — uniquement si cette adresse est autorisée/vérifiée par votre fournisseur SMTP
+   - `SUPPORT_EMAIL=contact@emgdigitalsolutions.bj`
+5. Déployez, puis vérifiez `https://votre-backend.onrender.com/api/health` → `"db": "connecté"` et `"email": "configuré"`.
+6. Connectez-vous à `/admin` puis utilisez **Diagnostic email → Tester l’email**. Cette action envoie un vrai message SMTP et permet de distinguer une mauvaise configuration email d'un problème de frontend.
 
 ### 3. Frontend — GitHub Pages, ou Vercel/Netlify
 
@@ -243,4 +263,4 @@ Le frontend est installable comme une application (mobile et desktop) et fonctio
 
 ## 📝 Licence
 
-Projet propriétaire — © FactuFlow. Conçu avec ❤️ pour les entrepreneurs africains.
+Projet propriétaire — © Oryxa. Conçu avec ❤️ pour les entrepreneurs africains.

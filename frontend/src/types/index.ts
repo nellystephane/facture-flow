@@ -30,6 +30,7 @@ export interface User {
   logoUrl?: string;
   devise?: string;
   banque?: BankInfo;
+  payoutSettings?: { enabled: boolean; mode: 'mobile_money' | 'bank_transfer'; provider: string; phone: string; phoneMasked?: string; country: string; titulaire: string; bank?: string; iban?: string; rib?: string; schedule: 'weekly' | 'monthly'; status?: 'pending' | 'active' | 'disabled'; emailConfirmed?: boolean; confirmedAt?: string | null };
   subscription?: 'gratuit' | 'pro' | 'business';
   abonnement?: AbonnementInfo;
   estPremium?: boolean;
@@ -80,6 +81,7 @@ export interface Invoice {
   remise?: number;
   tva: number;
   notes?: string;
+  fraisSupportesPar?: 'utilisateur' | 'client';
   statut: InvoiceStatut;
   template?: string;
   owner: string;
@@ -128,6 +130,12 @@ export interface Payment {
   _id: string;
   invoice: Invoice | string;
   montant: number;
+  montantFacture?: number | null;
+  montantClientPaye?: number | null;
+  fraisPayin?: number;
+  fraisPayoutProvisionnes?: number;
+  fraisSupportesPar?: 'utilisateur' | 'client';
+  montantNetUtilisateur?: number | null;
   methode: MethodePaiement;
   origine?: PaymentOrigine;
   statut?: PaymentStatut;
@@ -146,6 +154,8 @@ export interface DashboardData {
   enRetard: number;
   totalClients: number;
   totalPaye: number;
+  soldeRetirable?: number;
+  prochainReversement?: string | null;
   revenusMensuels?: { mois: string; total: number }[];
   topClients?: { nom: string; total: number }[];
   facturesRecentes: Invoice[];
@@ -180,6 +190,7 @@ export interface Permissions {
   planNom: string;
   role: 'proprietaire' | 'admin' | 'collaborateur';
   facturation: { limite: number | null; utilisees: number; illimitee: boolean };
+  limites?: { devisMois: number | null; clients: number | null };
   peutUtiliserFacturationExpress: boolean;
   peutUtiliserLogoPersonnalise: boolean;
   peutUtiliserRelancesAutomatiques: boolean;
