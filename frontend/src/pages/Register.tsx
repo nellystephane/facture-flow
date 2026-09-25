@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, Building2, Eye, EyeOff, ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +13,10 @@ function erreurMotDePasse(password: string): string | null {
 }
 
 export default function Register() {
-  const [form, setForm] = useState({ nom: '', entreprise: '', email: '', password: '' });
+  const [params] = useSearchParams();
+  const referralCode = params.get('ref') || localStorage.getItem('oryxa_affiliate_ref') || '';
+  const affiliateMode = params.get('affiliate') === '1' || !!referralCode;
+  const [form, setForm] = useState({ nom: '', entreprise: '', email: '', telephone: '', whatsapp: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
@@ -31,7 +35,7 @@ export default function Register() {
     if (!acceptedTerms) { setError('Merci d’accepter les CGU et la politique de confidentialité pour continuer.'); return; }
     setLoading(true);
     try {
-      const user = await register(form);
+      const user = await register({ ...form, referralCode: referralCode || undefined });
       if (user) {
         navigate('/app'); // compte déjà vérifié (cas legacy) — connexion directe
       } else {
@@ -57,6 +61,7 @@ export default function Register() {
         <div className="glass-card p-8">
           <h1 className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white text-center">Créer votre compte</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 mb-6">Gratuit. Sans carte bancaire.</p>
+          {affiliateMode && <div className="mb-5 rounded-2xl bg-[#d9524d]/10 border border-[#d9524d]/20 px-4 py-3 text-sm text-[#b23c37]">Vous êtes inscrit via un lien partenaire Oryxa. Après vérification de votre email, votre avantage affilié sera pris en compte automatiquement sur les abonnements éligibles.</div>}
 
           {error && (
             <div className="mb-4 px-4 py-3 rounded-xl text-sm font-medium text-[#b23c37] bg-[rgba(225,29,42,0.1)] border border-[rgba(225,29,42,0.2)] animate-fade-in">
@@ -90,6 +95,12 @@ export default function Register() {
                 <input type="email" placeholder="vous@exemple.com" value={form.email}
                   onChange={(e) => update('email', e.target.value)} className="field pl-10" required />
               </div>
+            </div>
+
+            <div>
+              <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
+              <input type="tel" placeholder="+229 …" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} className="field" />
+              <p className="text-[11px] text-gray-400 mt-1">Pour faciliter le partage de vos factures et devis.</p>
             </div>
 
             <div>

@@ -1,17 +1,22 @@
 import type { InvoiceStatut, QuoteStatut, MethodePaiement } from '../types';
 
-/** Formate un montant en FCFA : 1 250 000 FCFA */
-export function formatFCFA(n: number | undefined | null): string {
+export const DEVISE_DEFAUT = 'FCFA';
+
+export function deviseCourante(): string { return DEVISE_DEFAUT; }
+
+/** Affichage monétaire unique d'Oryxa : FCFA (XOF). */
+export function formatMoney(n: number | undefined | null, _devise = DEVISE_DEFAUT): string {
   const value = Number(n || 0);
-  return new Intl.NumberFormat('fr-FR').format(Math.round(value)) + ' FCFA';
+  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(value))} FCFA`;
 }
 
-/** Formate un nombre compact : 1,25 M FCFA */
-export function formatCompact(n: number | undefined | null): string {
+export function formatFCFA(n: number | undefined | null, devise?: string): string { return formatMoney(n, devise || deviseCourante()); }
+
+export function formatCompact(n: number | undefined | null, _devise = DEVISE_DEFAUT): string {
   const value = Number(n || 0);
   if (value >= 1_000_000) return (value / 1_000_000).toFixed(1).replace('.0', '') + ' M FCFA';
   if (value >= 1_000) return (value / 1_000).toFixed(0) + ' k FCFA';
-  return value + ' FCFA';
+  return formatMoney(value);
 }
 
 export function formatDate(d?: string | Date): string {

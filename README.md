@@ -264,3 +264,7 @@ et la liste complète des fonctionnalités.
 ## 📝 Licence
 
 Projet propriétaire — © Oryxa. Conçu avec ❤️ pour les entrepreneurs africains.
+
+## Affiliation
+
+Le programme d'affiliation est intégré comme un rôle supplémentaire du même compte utilisateur. Voir `docs/AFFILIATION.md` pour le fonctionnement, les règles et la limite actuelle concernant la vérification automatique des numéros de téléphone.

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Headphones, Mail, Plus, Send, MessageCircle, ChevronRight } from 'lucide-react';
 import { supportApi } from '../api/support';
 import PageHeader from '../components/ui/PageHeader';
+import Select from '../components/ui/Select';
 
 interface Message { _id: string; auteurType: 'utilisateur' | 'admin'; auteurNom: string; message: string; createdAt: string; }
 interface Ticket { _id: string; numero: string; sujet: string; categorie: string; statut: string; dernierMessagePar: string; createdAt: string; updatedAt: string; messages: Message[]; }
@@ -84,7 +85,7 @@ export default function Support() {
       {creating && (
         <div className="glass-card p-5 flex flex-col gap-4">
           <div><label className="field-label">Sujet</label><input className="field" value={sujet} onChange={e => setSujet(e.target.value)} placeholder="Ex. Mon paiement n’apparaît pas" maxLength={160} /></div>
-          <div><label className="field-label">Catégorie</label><select className="field" value={categorie} onChange={e => setCategorie(e.target.value)}>{categories.map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+          <div><label className="field-label">Catégorie</label><Select value={categorie} onChange={setCategorie} options={categories.map(([value,label]) => ({value,label}))} /></div>
           <div><label className="field-label">Votre message</label><textarea className="field" rows={6} value={message} onChange={e => setMessage(e.target.value)} placeholder="Décrivez votre demande avec le plus de détails possible…" maxLength={5000} /></div>
           <div className="flex gap-2"><button className="btn-primary" disabled={busy || !sujet.trim() || !message.trim()} onClick={create}><Send size={16} /> {busy ? 'Envoi…' : 'Envoyer au support'}</button><button className="btn-ghost" onClick={() => setCreating(false)}>Annuler</button></div>
         </div>

@@ -27,7 +27,7 @@ export default function Confidentialite() {
         <p><strong>À l'inscription et dans votre profil :</strong></p>
         <ul className={ul}>
           <li>Nom, adresse email, mot de passe (stocké chiffré, jamais en clair) ;</li>
-          <li>Informations d'entreprise facultatives : raison sociale, téléphone, adresse, devise, logo, coordonnées bancaires ;</li>
+          <li>Informations d'entreprise facultatives : raison sociale, téléphone, adresse, logo, coordonnées bancaires ;</li>
         </ul>
         <p className="mt-2"><strong>Dans le cadre de l'utilisation du Service :</strong></p>
         <ul className={ul}>

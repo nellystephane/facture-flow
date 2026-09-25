@@ -12,8 +12,8 @@ const updateProfileSchema = z.object({
   nom: z.string().trim().min(1, 'Le nom est requis.').max(150).optional(),
   entreprise: optionalText(200),
   telephone: optionalText(30),
+  whatsapp: optionalText(30),
   adresse: optionalText(300),
-  devise: optionalText(10),
   banque: banqueSchema,
 }).strip();
 

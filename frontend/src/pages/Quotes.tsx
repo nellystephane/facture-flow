@@ -6,6 +6,7 @@ import type { Quote } from '../types';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import Pagination from '../components/ui/Pagination';
+import Select from '../components/ui/Select';
 import { formatFCFA, formatDate, badgeClass, QUOTE_STATUT_LABEL } from '../utils/format';
 
 const STATUTS = [
@@ -68,9 +69,7 @@ export default function Quotes() {
           </div>
           <div className="relative">
             <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
-            <select className="field pl-10 pr-10" value={statut} onChange={(e) => { setStatut(e.target.value); setPage(1); }}>
-              {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            <Select value={statut} onChange={(v) => { setStatut(v); setPage(1); }} options={STATUTS} className="pl-10" />
           </div>
         </div>
       </div>

@@ -28,16 +28,16 @@ exports.createClient = asyncHandler(async (req, res) => {
   const user = await require('../models/User').findById(req.userId);
   const limite = await verifierLimiteClients(Client, user);
   if (limite) return res.status(403).json(limite);
-  const { nom, entreprise, email, telephone, adresse, notes } = req.body;
+  const { nom, entreprise, email, telephone, whatsapp, adresse, notes } = req.body;
   if (!nom) return res.status(400).json({ message: 'Le nom du client est requis' });
   const client = await Client.create({
-    nom, entreprise, email, telephone, adresse, notes, owner: req.userId
+    nom, entreprise, email, telephone, whatsapp, adresse, notes, owner: req.userId
   });
   res.status(201).json(client);
 });
 
 exports.updateClient = asyncHandler(async (req, res) => {
-  const allowed = ['nom', 'entreprise', 'email', 'telephone', 'adresse', 'notes'];
+  const allowed = ['nom', 'entreprise', 'email', 'telephone', 'whatsapp', 'adresse', 'notes'];
   const updates = {};
   allowed.forEach((f) => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
   const client = await Client.findOneAndUpdate(

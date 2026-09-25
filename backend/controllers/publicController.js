@@ -51,7 +51,7 @@ exports.getPublicStats = asyncHandler(async (req, res) => {
 exports.getPublicInvoice = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findOne({ publicToken: req.params.token }).populate('client');
   if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
-  const user = await User.findById(invoice.owner).select('nom entreprise email telephone adresse devise banque logoUrl');
+  const user = await User.findById(invoice.owner).select('nom entreprise email telephone whatsapp adresse devise banque logoUrl');
   if (!invoice.dateVue && invoice.statut === 'envoyee') {
     invoice.dateVue = new Date();
     invoice.statut = 'vue';
@@ -70,6 +70,8 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
   if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
   if (invoice.statut === 'payee') return res.status(400).json({ message: 'Cette facture est déjà réglée.' });
   if (invoice.statut === 'annulee') return res.status(400).json({ message: 'Cette facture a été annulée.' });
+  const owner = await User.findById(invoice.owner).select('devise');
+  if (owner?.devise && !['FCFA', 'XOF'].includes(owner.devise)) return res.status(400).json({ message: 'Le paiement en ligne Oryxa/FedaPay est actuellement disponible uniquement pour les factures en FCFA (XOF).' });
 
   const { firstname, lastname, email, phone } = req.body;
   if (!email) return res.status(400).json({ message: 'Email requis pour le paiement.' });
@@ -139,7 +141,7 @@ exports.getPublicReceipt = asyncHandler(async (req, res) => {
 exports.getPublicQuote = asyncHandler(async (req, res) => {
   const quote = await Quote.findOne({ publicToken: req.params.token }).populate('client');
   if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
-  const user = await User.findById(quote.owner).select('nom entreprise email telephone adresse devise logoUrl');
+  const user = await User.findById(quote.owner).select('nom entreprise email telephone whatsapp adresse devise logoUrl');
   if (!quote.dateVue && quote.statut === 'envoye') {
     quote.dateVue = new Date();
     await quote.save();

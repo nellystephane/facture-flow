@@ -6,7 +6,7 @@ const { paginationParams, paginatedResponse } = require('../utils/pagination');
 const { buildQuotePdf } = require('../utils/pdfBuilder');
 const email = require('../utils/email');
 const { enregistrerActivite } = require('../utils/activityLog');
-const { verifierLimiteDevis } = require('../utils/permissions');
+const { verifierLimiteDevis, permissionsDe } = require('../utils/permissions');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -19,7 +19,7 @@ const nextQuoteNumber = (owner) => nextNumber(owner, 'devis');
 // coup rendrait la facture générée incohérente avec le devis d'origine.
 const LOCKED_STATUTS = ['accepte'];
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut', 'template'];
 
 function pickFields(body) {
   const o = {};
@@ -39,7 +39,7 @@ exports.getQuotes = asyncHandler(async (req, res) => {
   }
   const [items, total] = await Promise.all([
     Quote.find(filter)
-      .populate('client', 'nom entreprise email telephone')
+      .populate('client', 'nom entreprise email telephone whatsapp')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -53,6 +53,7 @@ exports.previewQuotePdf = asyncHandler(async (req, res) => {
   const data = pickFields(req.body);
   const client = await Client.findOne({ _id: data.client, owner: req.userId });
   if (!client) return res.status(404).json({ message: 'Client introuvable.' });
+  if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) data.template = 'classique';
   const quote = {
     ...data,
     numero: 'APERÇU',
@@ -78,6 +79,7 @@ exports.createQuote = asyncHandler(async (req, res) => {
   const limite = await verifierLimiteDevis(Quote, user);
   if (limite) return res.status(403).json(limite);
   const data = pickFields(req.body);
+  if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) data.template = 'classique';
   if (!data.client) return res.status(400).json({ message: 'Le client est requis' });
   data.owner = req.userId;
   data.numero = await nextQuoteNumber(req.userId);
@@ -97,6 +99,8 @@ exports.updateQuote = asyncHandler(async (req, res) => {
     });
   }
   const updates = pickFields(req.body);
+  const user = await User.findById(req.userId);
+  if (updates.template && !permissionsDe(user).peutUtiliserModele(updates.template)) updates.template = 'classique';
   const quote = await Quote.findOneAndUpdate(
     { _id: req.params.id, owner: req.userId },
     updates,

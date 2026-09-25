@@ -5,6 +5,8 @@ const subscriptionSchema = new mongoose.Schema({
   plan: { type: String, enum: ['pro', 'business'], required: true },
   duree: { type: String, enum: ['1mois', '6mois', '1an'], required: true },
   montant: { type: Number, required: true },
+  montantNormal: { type: Number, default: null },
+  remiseAffiliation: { type: Number, default: 0 },
   statut: { type: String, enum: ['en_attente', 'payee', 'echouee'], default: 'en_attente' },
   fedapayTransactionId: { type: String, default: null, index: true },
   dateDebut: { type: Date, default: null },

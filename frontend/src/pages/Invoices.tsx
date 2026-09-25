@@ -6,6 +6,7 @@ import type { Invoice, InvoiceStatut } from '../types';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import Pagination from '../components/ui/Pagination';
+import Select from '../components/ui/Select';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, formatDate, badgeClass, INVOICE_STATUT_LABEL } from '../utils/format';
@@ -62,7 +63,7 @@ export default function Invoices() {
   };
 
   const handleExport = async () => {
-    if (!permissions?.peutExporterComptabilite) return;
+    if (!permissions?.peutExporterComptabilite) { toast('Export comptable réservé au plan Pro ou Business.'); window.location.assign(`${import.meta.env.BASE_URL}app/abonnement`); return; }
     setExporting(true);
     try {
       const token = localStorage.getItem('token');
@@ -92,8 +93,8 @@ export default function Invoices() {
           <div className="flex gap-2">
             <button
               onClick={handleExport}
-              disabled={exporting || !permissions?.peutExporterComptabilite}
-              title={permissions?.peutExporterComptabilite ? 'Exporter en Excel (.xlsx)' : 'Export comptable réservé aux plans Pro et Business'}
+              disabled={exporting}
+              title="Exporter en Excel (.xlsx) — Pro/Business"
               className="btn-ghost text-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {exporting ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />} Export Excel
@@ -112,9 +113,7 @@ export default function Invoices() {
           </div>
           <div className="relative">
             <Filter size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
-            <select className="field pl-10 pr-10" value={statut} onChange={(e) => { setStatut(e.target.value); setPage(1); }}>
-              {STATUTS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            <Select value={statut} onChange={(v) => { setStatut(v); setPage(1); }} options={STATUTS} className="pl-10" />
           </div>
         </div>
       </div>

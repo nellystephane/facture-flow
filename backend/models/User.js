@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   telephone: { type: String, default: '' },
+  whatsapp: { type: String, default: '' },
   adresse: { type: String, default: '' },
   logoUrl: { type: String, default: '' },
   devise: { type: String, default: 'FCFA' },
@@ -78,5 +79,11 @@ userSchema.virtual('estPremium').get(function () {
 
 userSchema.set('toJSON', { virtuals: true });
 userSchema.set('toObject', { virtuals: true });
+
+// Oryxa est actuellement mono-devise : toute ancienne valeur est normalisée en FCFA.
+userSchema.pre('validate', function(next) {
+  this.devise = 'FCFA';
+  next();
+});
 
 module.exports = mongoose.model('User', userSchema);

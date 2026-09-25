@@ -27,6 +27,10 @@ router.patch('/payments/:id/rembourse', admin.marquerRembourse);
 router.get('/pricing', admin.getPricing);
 router.put('/pricing', admin.updatePricing);
 
+router.get('/affiliation/overview', admin.getAffiliateOverview);
+router.get('/affiliation/affiliates', admin.listAffiliates);
+router.put('/affiliation/settings', admin.updateAffiliateSettings);
+
 router.get('/support/unread-count', require('../controllers/supportController').adminUnreadCount);
 router.get('/support', require('../controllers/supportController').adminList);
 router.get('/support/:id', require('../controllers/supportController').adminGet);

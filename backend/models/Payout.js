@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const payoutSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   montant: { type: Number, required: true },
-  devise: { type: String, default: 'XOF' },
+  devise: { type: String, enum: ['XOF'], default: 'XOF' },
   mode: { type: String, enum: ['mobile_money', 'bank_transfer'], required: true },
   destination: {
     provider: { type: String, default: '' },

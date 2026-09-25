@@ -17,15 +17,24 @@ const VERT = '#16803c';
 // fonction de dessin — jamais un état de module partagé, pour rester
 // thread-safe si plusieurs PDF se génèrent en parallèle (Promise.all).
 const TEMPLATE_STYLES = {
-  classique: { accent: ACCENT, bandeArticles: NOIR, totalBox: NOIR, bandeEnTete: true },
-  moderne: { accent: '#1d4ed8', bandeArticles: '#1d4ed8', totalBox: '#1d4ed8', bandeEnTete: true },
-  minimal: { accent: '#111111', bandeArticles: '#111111', totalBox: '#111111', bandeEnTete: false },
+  // Gratuit : volontairement conservé comme référence Oryxa.
+  classique: { accent: ACCENT, bandeArticles: NOIR, totalBox: NOIR, bandeEnTete: true, variant: 'classic' },
+  // Pro : cinq directions visuelles réellement distinctes.
+  moderne: { accent: '#2563eb', bandeArticles: '#2563eb', totalBox: '#2563eb', bandeEnTete: true, variant: 'modern' },
+  minimal: { accent: '#111111', bandeArticles: '#111111', totalBox: '#111111', bandeEnTete: false, variant: 'minimal' },
+  atelier: { accent: '#0f766e', bandeArticles: '#ecfdf5', totalBox: '#0f766e', bandeEnTete: false, variant: 'atelier' },
+  horizon: { accent: '#7c3aed', bandeArticles: '#f5f3ff', totalBox: '#7c3aed', bandeEnTete: false, variant: 'horizon' },
+  // Business : styles plus institutionnels/premium, sans sacrifier la lisibilité.
+  prestige: { accent: '#a16207', bandeArticles: '#18181b', totalBox: '#18181b', bandeEnTete: true, variant: 'prestige' },
+  corporate: { accent: '#0f172a', bandeArticles: '#0f172a', totalBox: '#0f172a', bandeEnTete: true, variant: 'corporate' },
+  signature: { accent: '#be185d', bandeArticles: '#fdf2f8', totalBox: '#be185d', bandeEnTete: false, variant: 'signature' },
+  noir: { accent: '#111827', bandeArticles: '#111827', totalBox: '#111827', bandeEnTete: true, variant: 'noir' },
 };
 function styleDe(templateId) {
   return TEMPLATE_STYLES[templateId] || TEMPLATE_STYLES.classique;
 }
 
-function formatMontant(n, devise = 'FCFA') {
+function formatMontant(n, _devise = 'FCFA') {
   const rounded = Math.round(n || 0);
   // On construit le séparateur de milliers nous-mêmes avec une espace
   // normale plutôt que Intl.NumberFormat('fr-FR'), qui insère une espace
@@ -33,7 +42,7 @@ function formatMontant(n, devise = 'FCFA') {
   // l'encodage de base de la police PDF (Helvetica/WinAnsi), ce qui la
   // faisait s'afficher comme "/" dans les PDF générés.
   const str = Math.abs(rounded).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return (rounded < 0 ? '-' : '') + str + ' ' + devise;
+  return (rounded < 0 ? '-' : '') + str + ' FCFA';
 }
 
 function formatDate(d) {
@@ -104,103 +113,114 @@ async function fetchLogoBuffer(user) {
 
 function drawHeader(pdf, { user, docTitre, docNumero, docSousTitre, statutLabel, statutColor, dateEmission, echeanceLabel, echeanceDate, logoBuffer, style }) {
   const pageWidth = 595;
-  if (style.bandeEnTete) pdf.rect(0, 0, pageWidth, 6).fill(style.accent);
+  const v = style.variant;
 
-  // Si un logo Pro/Business est disponible, on le place à gauche et on
-  // décale le nom de l'entreprise pour laisser la place.
+  if (v === 'modern' || v === 'horizon' || v === 'signature') {
+    pdf.roundedRect(40, 28, 515, 106, 14).fill(v === 'horizon' ? '#faf5ff' : v === 'signature' ? '#fdf2f8' : '#eff6ff');
+    pdf.rect(40, 28, 6, 106).fill(style.accent);
+  } else if (v === 'prestige' || v === 'corporate' || v === 'noir') {
+    pdf.rect(0, 0, pageWidth, 112).fill(v === 'prestige' ? '#18181b' : '#0f172a');
+    pdf.rect(0, 108, pageWidth, 4).fill(style.accent);
+  } else if (style.bandeEnTete) {
+    pdf.rect(0, 0, pageWidth, 6).fill(style.accent);
+  }
+
+  const darkHeader = ['prestige', 'corporate', 'noir'].includes(v);
+  const textColor = darkHeader ? '#ffffff' : NOIR;
+  const mutedColor = darkHeader ? '#cbd5e1' : GRIS;
   const texteX = logoBuffer ? 106 : 50;
+
   if (logoBuffer) {
-    try {
-      pdf.image(logoBuffer, 50, 30, { fit: [46, 46] });
-    } catch (err) {
-      console.error('Logo PDF illisible:', err.message);
-    }
+    try { pdf.image(logoBuffer, 50, darkHeader ? 30 : 42, { fit: [46, 46] }); } catch (err) { console.error('Logo PDF illisible:', err.message); }
   }
 
-  // Nom de l'entreprise émettrice en en-tête (pas la marque de l'appli)
+  const topY = darkHeader ? 32 : (v === 'minimal' ? 32 : 42);
   const emetteur = user.entreprise || user.nom;
-  pdf.fillColor(NOIR).fontSize(20).font('Helvetica-Bold').text(emetteur, texteX, 36, { width: 320 - (texteX - 50) });
-  if (user.entreprise && user.nom) {
-    pdf.fillColor(GRIS).fontSize(9).font('Helvetica').text(user.nom, texteX, 58);
-  }
+  pdf.fillColor(textColor).fontSize(v === 'minimal' ? 18 : 20).font('Helvetica-Bold').text(emetteur, texteX, topY, { width: 320 - (texteX - 50) });
+  if (user.entreprise && user.nom) pdf.fillColor(mutedColor).fontSize(9).font('Helvetica').text(user.nom, texteX, topY + 24);
 
-  pdf.fillColor(style.accent).fontSize(16).font('Helvetica-Bold').text(docTitre, 380, 36, { width: 165, align: 'right' });
-  pdf.fillColor(NOIR).fontSize(11).font('Helvetica-Bold').text('N° ' + (docNumero || ''), 380, 58, { width: 165, align: 'right' });
+  pdf.fillColor(darkHeader ? '#ffffff' : style.accent).fontSize(v === 'minimal' ? 20 : 16).font('Helvetica-Bold').text(docTitre, 380, topY, { width: 165, align: 'right' });
+  pdf.fillColor(darkHeader ? '#e2e8f0' : NOIR).fontSize(11).font('Helvetica-Bold').text('N° ' + (docNumero || ''), 380, topY + 22, { width: 165, align: 'right' });
 
-  let y = 78;
-  pdf.fillColor(GRIS).fontSize(9).font('Helvetica');
+  let y = darkHeader ? 78 : 84;
+  pdf.fillColor(mutedColor).fontSize(9).font('Helvetica');
   pdf.text("Date d'émission : " + formatDate(dateEmission), 380, y, { width: 165, align: 'right' });
   y += 14;
-  if (echeanceLabel && echeanceDate) {
-    pdf.text(echeanceLabel + formatDate(echeanceDate), 380, y, { width: 165, align: 'right' });
-    y += 14;
-  }
-  if (statutLabel) {
-    pdf.fillColor(statutColor || GRIS).font('Helvetica-Bold').text(statutLabel.toUpperCase(), 380, y, { width: 165, align: 'right' });
-  }
+  if (echeanceLabel && echeanceDate) { pdf.text(echeanceLabel + formatDate(echeanceDate), 380, y, { width: 165, align: 'right' }); y += 14; }
+  if (statutLabel) pdf.fillColor(statutColor || mutedColor).font('Helvetica-Bold').text(statutLabel.toUpperCase(), 380, y, { width: 165, align: 'right' });
 
-  // Coordonnées émetteur (sous le nom)
-  pdf.fillColor(GRIS).fontSize(8.5).font('Helvetica');
-  let ey = user.entreprise && user.nom ? 72 : 60;
+  pdf.fillColor(mutedColor).fontSize(8.5).font('Helvetica');
+  let ey = darkHeader ? 72 : (user.entreprise && user.nom ? 78 : 66);
   if (user.adresse) { pdf.text(user.adresse, texteX, ey, { width: 300 - (texteX - 50) }); ey += 12; }
   const contact = [user.email, user.telephone].filter(Boolean).join('  •  ');
   if (contact) { pdf.text(contact, texteX, ey, { width: 300 - (texteX - 50) }); ey += 12; }
-  if (logoBuffer) ey = Math.max(ey, 86);
-
-  return Math.max(ey + 10, 118);
+  if (logoBuffer) ey = Math.max(ey, darkHeader ? 96 : 98);
+  return Math.max(ey + (v === 'minimal' ? 12 : 16), darkHeader ? 128 : 122);
 }
 
 function drawClientBlock(pdf, client, y, style) {
-  // Petite carte encadrée plutôt que du texte nu — plus proche d'une vraie
-  // facture professionnelle (référence fournie), tout en gardant la sobriété.
   const lignes = [client?.entreprise, client?.email, client?.telephone, client?.adresse].filter(Boolean);
   const hauteur = 40 + lignes.length * 13;
-  pdf.roundedRect(50, y, 260, hauteur, 8).fillAndStroke('#fafafa', LIGNE);
-
-  pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('FACTURÉ À', 64, y + 12);
-  pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 64, y + 24);
+  const v = style.variant;
+  if (v === 'minimal') {
+    pdf.moveTo(50, y).lineTo(310, y).strokeColor(LIGNE).stroke();
+    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('FACTURÉ À', 50, y + 10);
+    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 50, y + 23);
+  } else if (v === 'atelier' || v === 'signature' || v === 'horizon') {
+    pdf.roundedRect(50, y, 495, hauteur, 10).fillAndStroke(v === 'atelier' ? '#f0fdfa' : v === 'signature' ? '#fff1f2' : '#faf5ff', LIGNE);
+    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('CLIENT', 64, y + 12);
+    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 64, y + 24);
+  } else {
+    pdf.roundedRect(50, y, 260, hauteur, 8).fillAndStroke(v === 'prestige' || v === 'corporate' || v === 'noir' ? '#f4f4f5' : '#fafafa', LIGNE);
+    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('FACTURÉ À', 64, y + 12);
+    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 64, y + 24);
+  }
   pdf.fillColor(GRIS).font('Helvetica').fontSize(8.8);
   let cy = y + 40;
-  lignes.forEach((ligne) => { pdf.text(ligne, 64, cy, { width: 230 }); cy += 13; });
-  return y + hauteur + 14;
+  lignes.forEach((ligne) => { pdf.text(ligne, (v === 'minimal' ? 50 : 64), cy, { width: v === 'minimal' ? 495 : (v === 'atelier' || v === 'signature' || v === 'horizon' ? 465 : 230) }); cy += 13; });
+  return y + (v === 'minimal' ? Math.max(58, 36 + lignes.length * 13) : hauteur) + 14;
 }
 
 function drawItemsTable(pdf, items, devise, startY, style) {
   const pageWidth = 595;
-  const finPageUtile = 740; // au-delà, on laisse la place aux totaux + pied de page
+  const finPageUtile = 740;
   let y = startY;
+  const v = style.variant;
+  const lightHeader = ['minimal', 'atelier', 'horizon', 'signature'].includes(v);
+  const headerFill = lightHeader ? style.bandeArticles : style.bandeArticles;
+  const headerText = lightHeader ? NOIR : '#ffffff';
+  const rowFill = v === 'atelier' ? '#f7fffd' : v === 'horizon' ? '#fbfaff' : v === 'signature' ? '#fffafb' : '#f8f8fa';
 
   const dessinerEntete = () => {
-    pdf.rect(50, y, pageWidth - 100, 24).fill(style.bandeArticles);
-    pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9.5);
+    if (v === 'minimal') {
+      pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8.5);
+      pdf.text('DESCRIPTION', 50, y + 6, { width: 235 });
+      pdf.text('QTÉ', 300, y + 6, { width: 50, align: 'center' });
+      pdf.text('PRIX UNIT.', 360, y + 6, { width: 90, align: 'right' });
+      pdf.text('TOTAL', 460, y + 6, { width: 85, align: 'right' });
+      pdf.moveTo(50, y + 20).lineTo(545, y + 20).strokeColor(style.accent).stroke();
+      y += 25;
+      return;
+    }
+    pdf.roundedRect(50, y, pageWidth - 100, 24, v === 'modern' ? 6 : 3).fill(headerFill);
+    pdf.fillColor(headerText).font('Helvetica-Bold').fontSize(9.2);
     pdf.text('DESCRIPTION', 60, y + 8, { width: 235 });
     pdf.text('QTÉ', 300, y + 8, { width: 50, align: 'center' });
     pdf.text('PRIX UNIT.', 360, y + 8, { width: 90, align: 'right' });
     pdf.text('TOTAL', 460, y + 8, { width: 85, align: 'right' });
     y += 24;
   };
-
   dessinerEntete();
   pdf.font('Helvetica').fontSize(9.5);
   (items || []).forEach((item, idx) => {
-    const rowHeight = 24;
-    // Une facture avec beaucoup d'articles ne doit jamais faire déborder la
-    // table sur les totaux ou le pied de page : on passe intentionnellement
-    // à une nouvelle page (avec l'en-tête de tableau répétée) plutôt que de
-    // laisser le contenu se chevaucher.
-    if (y + rowHeight > finPageUtile) {
-      pdf.addPage();
-      y = 50;
-      dessinerEntete();
-      pdf.font('Helvetica').fontSize(9.5);
-    }
-    if (idx % 2 === 0) pdf.rect(50, y, pageWidth - 100, rowHeight).fill('#f8f8fa');
-    pdf.fillColor(NOIR);
+    const rowHeight = v === 'corporate' ? 27 : 24;
+    if (y + rowHeight > finPageUtile) { pdf.addPage(); y = 50; dessinerEntete(); pdf.font('Helvetica').fontSize(9.5); }
+    if (idx % 2 === 0 && v !== 'minimal') pdf.rect(50, y, pageWidth - 100, rowHeight).fill(rowFill);
+    pdf.fillColor(NOIR).font('Helvetica');
     pdf.text(item.description || '', 60, y + 7, { width: 235 });
     pdf.text(String(item.quantite || 0), 300, y + 7, { width: 50, align: 'center' });
     pdf.text(formatMontant(item.prixUnitaire || 0, devise), 360, y + 7, { width: 90, align: 'right' });
     pdf.font('Helvetica-Bold').text(formatMontant((item.quantite || 0) * (item.prixUnitaire || 0), devise), 460, y + 7, { width: 85, align: 'right' });
-    pdf.font('Helvetica');
     y += rowHeight;
   });
   pdf.moveTo(50, y).lineTo(pageWidth - 50, y).strokeColor(LIGNE).stroke();
@@ -209,25 +229,26 @@ function drawItemsTable(pdf, items, devise, startY, style) {
 
 function drawTotals(pdf, doc, devise, startY, style) {
   const { sousTotal, montantTva, ttc } = calcTotals(doc);
+  const v = style.variant;
   let y = startY;
   pdf.fillColor(GRIS).font('Helvetica').fontSize(10);
   pdf.text('Sous-total', 350, y, { width: 120, align: 'right' });
-  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(sousTotal, devise), 460, y, { width: 85, align: 'right' });
-  y += 18;
-  if (doc.remise > 0) {
-    pdf.fillColor(GRIS).font('Helvetica').text('Remise', 350, y, { width: 120, align: 'right' });
-    pdf.fillColor(style.accent).font('Helvetica-Bold').text('- ' + formatMontant(doc.remise, devise), 460, y, { width: 85, align: 'right' });
-    y += 18;
-  }
+  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(sousTotal, devise), 460, y, { width: 85, align: 'right' }); y += 18;
+  if (doc.remise > 0) { pdf.fillColor(GRIS).font('Helvetica').text('Remise', 350, y, { width: 120, align: 'right' }); pdf.fillColor(style.accent).font('Helvetica-Bold').text('- ' + formatMontant(doc.remise, devise), 460, y, { width: 85, align: 'right' }); y += 18; }
   pdf.fillColor(GRIS).font('Helvetica').text('TVA (' + (doc.tva || 0) + '%)', 350, y, { width: 120, align: 'right' });
-  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(montantTva, devise), 460, y, { width: 85, align: 'right' });
-  y += 26;
+  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(montantTva, devise), 460, y, { width: 85, align: 'right' }); y += 26;
 
-  pdf.roundedRect(350, y, 195, 32, 8).fill(style.totalBox);
-  pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(12.5);
-  pdf.text('TOTAL TTC', 362, y + 10);
-  pdf.text(formatMontant(ttc, devise), 355, y + 10, { width: 180, align: 'right' });
-  return { y: y + 32, ttc };
+  if (v === 'minimal') {
+    pdf.moveTo(350, y).lineTo(545, y).strokeColor(style.accent).stroke();
+    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(12).text('TOTAL TTC', 350, y + 10, { width: 95, align: 'right' });
+    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(14).text(formatMontant(ttc, devise), 450, y + 9, { width: 95, align: 'right' });
+    return { y: y + 36, ttc };
+  }
+  const boxH = v === 'prestige' || v === 'corporate' || v === 'noir' ? 38 : 34;
+  pdf.roundedRect(350, y, 195, boxH, 8).fill(style.totalBox);
+  pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11.5).text('TOTAL TTC', 362, y + 11);
+  pdf.fontSize(12.5).text(formatMontant(ttc, devise), 355, y + 10, { width: 180, align: 'right' });
+  return { y: y + boxH, ttc };
 }
 
 function drawFooter(pdf, gauche) {
@@ -294,7 +315,7 @@ const STATUT_QUOTE_LABEL = {
 };
 
 function drawInvoiceOrQuote(pdf, { doc, user, isQuote, paymentUrl, logoBuffer }) {
-  const devise = user.devise || 'FCFA';
+  const devise = 'FCFA';
   const statutLabel = isQuote ? STATUT_QUOTE_LABEL[doc.statut] : STATUT_INVOICE_LABEL[doc.statut];
   const statutColor = isQuote ? '#1d4ed8' : STATUT_INVOICE_COLOR[doc.statut];
   const style = styleDe(doc.template);
@@ -346,7 +367,7 @@ async function buildQuotePdf({ quote, user }) {
 
 /** Reçu de paiement — document distinct, remis après règlement. */
 async function buildReceiptPdf({ invoice, payment, user }) {
-  const devise = user.devise || 'FCFA';
+  const devise = 'FCFA';
   const METHODE_LABEL = {
     especes: 'Espèces', mtn_money: 'MTN Mobile Money', moov_money: 'Moov Money',
     carte: 'Carte bancaire', virement: 'Virement bancaire', autre: 'Autre'

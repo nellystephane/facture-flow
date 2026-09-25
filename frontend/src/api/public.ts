@@ -12,7 +12,7 @@ export const getPublicStats = () => api.get<PublicStats>('/public/stats');
 
 export interface PublicInvoiceResponse {
   invoice: Invoice;
-  emetteur: Pick<User, 'nom' | 'entreprise' | 'email' | 'telephone' | 'adresse' | 'devise' | 'banque' | 'logoUrl'>;
+  emetteur: Pick<User, 'nom' | 'entreprise' | 'email' | 'telephone' | 'whatsapp' | 'adresse' | 'devise' | 'banque' | 'logoUrl'>;
   totalTTC: number;
   totalPaye: number;
   payments: Payment[];
@@ -33,7 +33,7 @@ export const publicReceiptUrl = (token: string, paymentId: string) =>
 
 export interface PublicQuoteResponse {
   quote: Quote;
-  emetteur: Pick<User, 'nom' | 'entreprise' | 'email' | 'telephone' | 'adresse' | 'devise' | 'logoUrl'>;
+  emetteur: Pick<User, 'nom' | 'entreprise' | 'email' | 'telephone' | 'whatsapp' | 'adresse' | 'devise' | 'logoUrl'>;
   totalTTC: number;
 }
 

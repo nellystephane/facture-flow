@@ -6,6 +6,7 @@ const clientSchema = new mongoose.Schema({
   entreprise: { type: String, trim: true, default: '' },
   email: { type: String, trim: true, lowercase: true, default: '' },
   telephone: { type: String, default: '' },
+  whatsapp: { type: String, default: '' },
   adresse: { type: String, default: '' },
   notes: { type: String, default: '' },
 }, { timestamps: true });

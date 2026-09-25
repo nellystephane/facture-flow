@@ -6,7 +6,7 @@ import PageHeader from '../components/ui/PageHeader';
 import { useToast } from '../contexts/ToastContext';
 import { apiError } from '../utils/format';
 
-const EMPTY = { nom: '', entreprise: '', email: '', telephone: '', adresse: '', notes: '' };
+const EMPTY = { nom: '', entreprise: '', email: '', telephone: '', whatsapp: '', adresse: '', notes: '' };
 
 export default function ClientForm() {
   const { id } = useParams();
@@ -26,6 +26,7 @@ export default function ClientForm() {
         entreprise: res.data.entreprise || '',
         email: res.data.email || '',
         telephone: res.data.telephone || '',
+        whatsapp: res.data.whatsapp || '',
         adresse: res.data.adresse || '',
         notes: res.data.notes || '',
       }))
@@ -85,7 +86,12 @@ export default function ClientForm() {
           </div>
           <div>
             <label className="field-label">Téléphone</label>
-            <input className="field" value={form.telephone} onChange={(e) => update('telephone', e.target.value)} placeholder="+225 ..." />
+            <input className="field" value={form.telephone} onChange={(e) => update('telephone', e.target.value)} placeholder="+229 …" />
+          </div>
+          <div>
+            <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
+            <input className="field" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 …" />
+            <p className="text-[11px] text-gray-400 mt-1">Utilisé pour ouvrir directement la conversation WhatsApp lors des envois.</p>
           </div>
           <div className="sm:col-span-2">
             <label className="field-label">Adresse</label>

@@ -21,7 +21,7 @@ const invoiceBase = {
   tva: nonNegativeNumber('La TVA').max(100, 'La TVA ne peut pas dépasser 100%.').optional().default(0),
   notes: optionalText(2000),
   fraisSupportesPar: z.enum(['utilisateur', 'client']).optional(),
-  template: z.enum(['classique', 'moderne', 'minimal']).optional(),
+  template: z.enum(['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir']).optional(),
 };
 
 const createInvoiceSchema = z.object(invoiceBase).strip();

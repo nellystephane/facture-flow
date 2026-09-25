@@ -6,6 +6,9 @@ export interface RegisterData {
   email: string;
   password: string;
   entreprise?: string;
+  telephone?: string;
+  whatsapp?: string;
+  referralCode?: string;
 }
 
 export const login = (email: string, password: string) =>

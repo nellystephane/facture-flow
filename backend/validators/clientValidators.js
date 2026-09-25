@@ -5,6 +5,7 @@ const clientBase = {
   entreprise: optionalText(200),
   email: optionalEmail,
   telephone: optionalText(30),
+  whatsapp: optionalText(30),
   adresse: optionalText(300),
   notes: optionalText(2000),
 };

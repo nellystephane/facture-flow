@@ -8,6 +8,8 @@ import { getInvoice, patchInvoiceStatus, deleteInvoice, invoicePdfUrl, sendInvoi
 import { createPayment, getPayments, deletePayment, paymentReceiptUrl } from '../api/payments';
 import type { Invoice, Payment, MethodePaiement } from '../types';
 import Modal from '../components/ui/Modal';
+import Select from '../components/ui/Select';
+import DatePicker from '../components/ui/DatePicker';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoHint from '../components/ui/InfoHint';
@@ -126,7 +128,7 @@ export default function InvoiceDetail() {
       `Voici votre facture ${invoice.numero} de ${entreprise} : ${formatFCFA(totalTTC(invoice))}${echeance}.`,
       `Vous pouvez la consulter et la payer en ligne ici : ${lien}`,
     ].join('\n');
-    ouvrirPartageWhatsApp(message, client?.telephone);
+    ouvrirPartageWhatsApp(message, client?.whatsapp || client?.telephone);
   };
 
   const openReceipt = (paymentId: string) => {
@@ -355,13 +357,11 @@ export default function InvoiceDetail() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="field-label">Moyen</label>
-              <select className="field" value={payForm.methode} onChange={(e) => setPayForm({ ...payForm, methode: e.target.value as MethodePaiement })}>
-                {Object.entries(METHODE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
+              <Select value={payForm.methode} onChange={(v) => setPayForm({ ...payForm, methode: v as MethodePaiement })} options={Object.entries(METHODE_LABEL).map(([value,label]) => ({value,label}))} />
             </div>
             <div>
               <label className="field-label">Date</label>
-              <input type="date" className="field" value={payForm.date} onChange={(e) => setPayForm({ ...payForm, date: e.target.value })} />
+              <DatePicker value={payForm.date} onChange={(v) => setPayForm({ ...payForm, date: v })} />
             </div>
           </div>
           <div>

@@ -26,6 +26,7 @@ import ConfirmPayout from './pages/ConfirmPayout';
 import Abonnement from './pages/Abonnement';
 import Equipe from './pages/Equipe';
 import Support from './pages/Support';
+import Affiliation from './pages/Affiliation';
 import PaymentPublic from './pages/PaymentPublic';
 import DevisPublic from './pages/DevisPublic';
 import VerifyEmail from './pages/VerifyEmail';
@@ -66,6 +67,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<EntryPage />} />
       <Route path="/login" element={<PublicOnly><Login /></PublicOnly>} />
+      <Route path="/affiliation" element={<Affiliation />} />
       <Route path="/register" element={<PublicOnly><Register /></PublicOnly>} />
       <Route path="/verifier-email" element={<VerifyEmail />} />
       <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
@@ -106,6 +108,7 @@ function AppRoutes() {
         <Route path="abonnement" element={<Abonnement />} />
         <Route path="equipe" element={<Equipe />} />
         <Route path="support" element={<Support />} />
+        <Route path="affiliation" element={<Affiliation />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

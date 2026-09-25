@@ -28,7 +28,7 @@ async function creerUtilisateur(overrides) {
 describe('Nettoyage des comptes jamais confirmés', () => {
   it('supprime un compte non confirmé créé il y a plus de 24h', async () => {
     const user = await creerUtilisateur({});
-    await User.collection.updateOne({ _id: user._id }, { $set: { createdAt: new Date(Date.now() - 25 * 3600000) } });
+    await User.updateOne({ _id: user._id }, { createdAt: new Date(Date.now() - 25 * 3600000) });
 
     const n = await nettoyerComptesNonConfirmes();
     expect(n).toBe(1);
@@ -44,7 +44,7 @@ describe('Nettoyage des comptes jamais confirmés', () => {
 
   it('ne touche jamais un compte déjà confirmé, même ancien', async () => {
     const user = await creerUtilisateur({ emailVerifie: true });
-    await User.collection.updateOne({ _id: user._id }, { $set: { createdAt: new Date(Date.now() - 48 * 3600000) } });
+    await User.updateOne({ _id: user._id }, { createdAt: new Date(Date.now() - 48 * 3600000) });
 
     const n = await nettoyerComptesNonConfirmes();
     expect(n).toBe(0);

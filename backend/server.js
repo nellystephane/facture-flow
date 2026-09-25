@@ -23,6 +23,7 @@ const webhookRoutes = require('./routes/webhookRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const payoutRoutes = require('./routes/payoutRoutes');
+const affiliateRoutes = require('./routes/affiliateRoutes');
 const { isEmailConfigured } = require('./utils/email');
 
 const app = express();
@@ -67,7 +68,6 @@ app.use('/api', apiLimiter);
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  skip: () => process.env.NODE_ENV === 'test',
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Trop de tentatives, réessayez plus tard.' },
@@ -105,6 +105,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/payouts', payoutRoutes);
+app.use('/api/affiliate', affiliateRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Ressource introuvable' });
@@ -138,6 +139,14 @@ async function start() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB connecté');
+    // Oryxa est actuellement mono-devise : normalise les anciens comptes en FCFA.
+    try {
+      const User = require('./models/User');
+      const migration = await User.updateMany({ devise: { $ne: 'FCFA' } }, { $set: { devise: 'FCFA' } });
+      if (migration.modifiedCount) console.log(`Devise normalisée en FCFA pour ${migration.modifiedCount} compte(s).`);
+    } catch (err) {
+      console.error('Migration devise FCFA impossible :', err.message);
+    }
   } catch (err) {
     console.error('Échec de connexion à MongoDB:', err.message);
     process.exit(1);

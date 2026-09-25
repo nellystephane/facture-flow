@@ -10,21 +10,8 @@ import LogoEditorModal from '../components/LogoEditorModal';
 import { useToast } from '../contexts/ToastContext';
 import { apiError } from '../utils/format';
 
-// Devises courantes pour notre marché (Afrique francophone) + quelques
-// devises internationales fréquentes pour les clients qui facturent à
-// l'étranger. Une liste fermée évite les fautes de frappe ("FCA", "Fcfa"...)
-// qui cassaient l'affichage des montants sur les PDF.
-const DEVISES = [
-  { value: 'FCFA', label: 'FCFA', sublabel: 'Franc CFA (UEMOA/CEMAC)' },
-  { value: 'EUR', label: 'EUR', sublabel: 'Euro' },
-  { value: 'USD', label: 'USD', sublabel: 'Dollar américain' },
-  { value: 'GBP', label: 'GBP', sublabel: 'Livre sterling' },
-  { value: 'NGN', label: 'NGN', sublabel: 'Naira nigérian' },
-  { value: 'GHS', label: 'GHS', sublabel: 'Cedi ghanéen' },
-  { value: 'MAD', label: 'MAD', sublabel: 'Dirham marocain' },
-  { value: 'XOF', label: 'XOF', sublabel: 'Franc CFA (UEMOA) — code ISO' },
-  { value: 'XAF', label: 'XAF', sublabel: 'Franc CFA (CEMAC) — code ISO' },
-];
+// Oryxa utilise actuellement une seule devise : FCFA (XOF).
+
 
 export default function Profile() {
   const { user, setUser } = useAuth();
@@ -36,8 +23,8 @@ export default function Profile() {
     entreprise: user?.entreprise || '',
     email: user?.email || '',
     telephone: user?.telephone || '',
+    whatsapp: user?.whatsapp || '',
     adresse: user?.adresse || '',
-    devise: user?.devise || 'FCFA',
   });
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -96,7 +83,7 @@ export default function Profile() {
     finally { setSaving(false); }
   };
 
-  const handleLogoPick = () => fileInputRef.current?.click();
+  const handleLogoPick = () => { if (!estPremium) { toast('Le logo personnalisé est réservé au plan Pro ou Business.'); window.location.assign(`${import.meta.env.BASE_URL}app/abonnement`); return; } fileInputRef.current?.click(); }
 
   const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -224,21 +211,20 @@ export default function Profile() {
                   <input className="field pl-9" value={form.telephone} onChange={(e) => update('telephone', e.target.value)} />
                 </div>
               </div>
+              <div>
+                <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#25D366] z-10" />
+                  <input className="field pl-9" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 …" />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">Votre numéro WhatsApp sert à partager rapidement vos documents.</p>
+              </div>
               <div className="sm:col-span-2">
                 <label className="field-label">Adresse</label>
                 <div className="relative">
                   <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10" />
                   <input className="field pl-9" value={form.adresse} onChange={(e) => update('adresse', e.target.value)} />
                 </div>
-              </div>
-              <div>
-                <label className="field-label">Devise</label>
-                <Select
-                  value={form.devise}
-                  onChange={(v) => update('devise', v)}
-                  options={DEVISES}
-                  placeholder="Choisir une devise"
-                />
               </div>
             </div>
 
@@ -253,7 +239,7 @@ export default function Profile() {
               </p>
               <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml" className="hidden" onChange={handleLogoFile} />
               <div className="flex items-center gap-3">
-                <button type="button" onClick={handleLogoPick} disabled={uploadingLogo || !estPremium} className="btn-ghost text-sm">
+                <button type="button" onClick={handleLogoPick} disabled={uploadingLogo} className="btn-ghost text-sm">
                   {uploadingLogo ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                   {user?.logoUrl ? 'Changer le logo' : 'Ajouter un logo'}
                 </button>
@@ -283,11 +269,11 @@ export default function Profile() {
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1 flex items-center gap-2"><CreditCard size={16} /> Reversements</h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">Configurez le compte vers lequel votre solde retirable sera envoyé. Les reversements automatiques utilisent l'API FedaPay réelle.</p>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div><label className="field-label">Mode de retrait</label><select className="field" value="mobile_money" disabled><option value="mobile_money">Mobile Money</option></select></div>
-              <div><label className="field-label">Opérateur</label><select className="field" value={payout.provider} onChange={(e) => setPayout({ ...payout, provider: e.target.value })}><option value="mtn">MTN</option><option value="moov">Moov</option><option value="celtiis">Celtiis</option></select></div>
+              <div><label className="field-label">Mode de retrait</label><Select value="mobile_money" onChange={() => {}} disabled options={[{ value: 'mobile_money', label: 'Mobile Money' }]} /></div>
+              <div><label className="field-label">Opérateur</label><Select value={payout.provider} onChange={(v) => setPayout({ ...payout, provider: v })} options={[{value:'mtn',label:'MTN'},{value:'moov',label:'Moov'},{value:'celtiis',label:'Celtiis'}]} /></div>
               <div><label className="field-label">Numéro Mobile Money</label><input className="field" value={payout.phone} onChange={(e) => setPayout({ ...payout, phone: e.target.value })} placeholder="+229…" /><p className="text-[11px] text-gray-400 mt-1">Assurez-vous que ce numéro peut recevoir des paiements Mobile Money.</p></div>
               <div><label className="field-label">Titulaire</label><input className="field" value={payout.titulaire} onChange={(e) => setPayout({ ...payout, titulaire: e.target.value })} /></div>
-              <div><label className="field-label">Fréquence</label><select className="field" value={payout.schedule} onChange={(e) => setPayout({ ...payout, schedule: e.target.value as any })}><option value="weekly">Chaque semaine</option><option value="monthly">Chaque mois</option></select></div>
+              <div><label className="field-label">Fréquence</label><Select value={payout.schedule} onChange={(v) => setPayout({ ...payout, schedule: v as any })} options={[{value:'weekly',label:'Chaque semaine'},{value:'monthly',label:'Chaque mois'}]} /></div>
             </div>
             <div className="mt-4 rounded-xl border border-gray-100 dark:border-white/10 p-3 text-sm">
               {user?.payoutSettings?.status === 'active' && user?.payoutSettings?.emailConfirmed ? <p className="text-green-700 dark:text-green-400 flex items-center gap-2"><Check size={16} /> Moyen de retrait confirmé par email.</p> : <p className="text-amber-700 dark:text-amber-400">Après l’enregistrement, Oryxa vous enverra un email. Le moyen restera en attente jusqu’à sa confirmation.</p>}

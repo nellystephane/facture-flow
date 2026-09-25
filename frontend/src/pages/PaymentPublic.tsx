@@ -85,6 +85,7 @@ export default function PaymentPublic() {
   const { invoice, emetteur, totalTTC, totalPaye, payments, fraisPaiement } = data;
   const reste = Math.max(0, totalTTC - totalPaye);
   const dejaPayee = invoice.statut === 'payee' || reste <= 0.5;
+  const paiementEnLigneDisponible = true;
 
   return (
     <div className="app-bg min-h-screen py-10 px-4">
@@ -133,6 +134,12 @@ export default function PaymentPublic() {
                   <Receipt size={16} /> Télécharger le reçu — {formatFCFA(p.montant)}
                 </a>
               ))}
+            </div>
+          ) : !paiementEnLigneDisponible ? (
+            <div className="text-center py-6">
+              <AlertTriangle className="mx-auto text-amber-500 mb-3" size={32} />
+              <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Paiement en ligne indisponible</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Les paiements en ligne Oryxa sont actuellement traités en FCFA (XOF).</p>
             </div>
           ) : checkingReturn ? (
             <div className="text-center py-8">

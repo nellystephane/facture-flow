@@ -26,3 +26,13 @@ Les anciennes factures sans `fraisSupportesPar` utilisent `utilisateur` par déf
 Les fichiers JavaScript backend modifiés passent `node --check`.
 
 Le build complet frontend n'a pas pu être exécuté dans l'environnement de travail car l'installation npm a dépassé le délai disponible ; les dépendances n'étaient pas présentes initialement. Il faut donc lancer `npm ci && npm run build` dans le projet avant déploiement Render.
+
+## 2026-09-22 — Administration, abonnements et lecture financière
+
+- Le prix mensuel est désormais la valeur de référence des abonnements Pro et Business.
+- Les engagements 6 mois et 1 an sont recalculés automatiquement avec une réduction fixe de 19 % : `prix mensuel × durée × 81 %`.
+- L'API d'abonnement et l'espace administrateur utilisent la même règle afin d'éviter une divergence entre prix affiché et prix envoyé à FedaPay.
+- L'administration dispose d'une vraie sidebar responsive, cohérente avec le design Oryxa public : navigation groupée, état actif, menu mobile et accès rapide à la déconnexion.
+- Le tableau de bord admin distingue désormais le revenu propre d'Oryxa (abonnements effectivement payés) des flux financiers appartenant aux utilisateurs (paiements de factures, reversements et frais de transfert).
+- La section Finance affiche séparément les abonnements Oryxa encaissés, les frais Pay-in, les frais payout et la marge technique liée aux frais facturés aux clients.
+- Le « net estimé » des abonnements reste explicitement présenté comme une estimation basée sur le taux moyen FedaPay configuré ; il ne remplace pas les frais réellement retournés par FedaPay.

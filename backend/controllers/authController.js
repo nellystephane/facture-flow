@@ -5,6 +5,7 @@ const User = require('../models/User');
 const email = require('../utils/email');
 
 const asyncHandler = require('../middleware/asyncHandler');
+const affiliate = require('./affiliateController');
 
 const signToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -30,9 +31,10 @@ function profilReponse({ acteur, proprietaire }) {
     estCollaborateur: !!acteur.compteProprietaire,
     entreprise: proprietaire.entreprise,
     telephone: proprietaire.telephone,
+    whatsapp: proprietaire.whatsapp,
     adresse: proprietaire.adresse,
     logoUrl: proprietaire.logoUrl,
-    devise: proprietaire.devise,
+    devise: 'FCFA',
     banque: proprietaire.banque,
     payoutSettings: proprietaire.payoutSettings,
     subscription: proprietaire.subscription,
@@ -70,7 +72,7 @@ function erreurMotDePasse(password) {
 }
 
 exports.register = asyncHandler(async (req, res) => {
-  const { nom, email: emailAddr, password, entreprise } = req.body;
+  const { nom, email: emailAddr, password, entreprise, telephone, whatsapp, referralCode } = req.body;
   if (!nom || !emailAddr || !password) {
     return res.status(400).json({ message: 'Nom, email et mot de passe requis' });
   }
@@ -91,6 +93,8 @@ exports.register = asyncHandler(async (req, res) => {
     email: emailNormalise,
     password: hashed,
     entreprise: entreprise || '',
+    telephone: telephone || '',
+    whatsapp: whatsapp || '',
     emailVerifie: false,
     codeVerification: codeHash,
     codeVerificationExpire: new Date(Date.now() + DUREE_CODE_VERIFICATION_MS),
@@ -102,6 +106,14 @@ exports.register = asyncHandler(async (req, res) => {
   } catch (err) {
     emailEnvoye = false;
     console.error("Échec d'envoi du code de vérification:", err.message);
+  }
+
+  if (referralCode) {
+    try {
+      await affiliate.attributeRegistration(user._id, referralCode);
+    } catch (err) {
+      console.error('[affiliate] attribution inscription impossible:', err.message);
+    }
   }
 
   res.status(201).json({
@@ -138,6 +150,7 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   user.codeVerification = null;
   user.codeVerificationExpire = null;
   await user.save();
+  try { await affiliate.activateReferralAfterEmail(user._id); } catch (err) { console.error('[affiliate] activation referral impossible:', err.message); }
 
   const token = signToken(user._id);
   res.json({ token, user: await reponseAuth(user) });
@@ -252,10 +265,6 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   if (!match) return res.status(400).json({ message: 'Code incorrect.' });
 
   user.password = await bcrypt.hash(password, 10);
-  // Un code de réinitialisation est envoyé à l'adresse email du compte :
-  // sa validation prouve le contrôle de cette adresse. Le compte peut donc
-  // être considéré comme vérifié après une réinitialisation réussie.
-  user.emailVerifie = true;
   user.codeResetPassword = null;
   user.codeResetPasswordExpire = null;
   await user.save();
@@ -276,7 +285,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(req.actorId, { nom: req.body.nom });
   }
 
-  const champsEntreprise = ['entreprise', 'telephone', 'adresse', 'devise', 'banque'];
+  const champsEntreprise = ['entreprise', 'telephone', 'whatsapp', 'adresse', 'banque'];
   const updatesEntreprise = {};
   champsEntreprise.forEach((f) => {
     if (req.body[f] !== undefined) updatesEntreprise[f] = req.body[f];

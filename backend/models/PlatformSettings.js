@@ -9,13 +9,13 @@ const platformSettingsSchema = new mongoose.Schema({
   tarifs: {
     pro: {
       1: { type: Number, default: 3500 },
-      6: { type: Number, default: 19000 },
-      12: { type: Number, default: 34000 },
+      6: { type: Number, default: 17010 },
+      12: { type: Number, default: 34020 },
     },
     business: {
       1: { type: Number, default: 6000 },
-      6: { type: Number, default: 32000 },
-      12: { type: Number, default: 58000 },
+      6: { type: Number, default: 29160 },
+      12: { type: Number, default: 58320 },
     },
   },
   // Pourcentage moyen prélevé par FedaPay sur chaque transaction en ligne —
@@ -39,6 +39,13 @@ const platformSettingsSchema = new mongoose.Schema({
   },
   payoutMinimum: { type: Number, default: 1000 },
   payoutSchedule: { type: String, enum: ['weekly', 'monthly'], default: 'weekly' },
+  affiliate: {
+    enabled: { type: Boolean, default: true },
+    discountPercent: { type: Number, default: 30, min: 0, max: 100 },
+    discountMonths: { type: Number, default: 3, min: 1, max: 12 },
+    commissionPro: { type: Number, default: 250, min: 0 },
+    commissionBusiness: { type: Number, default: 400, min: 0 },
+  },
 }, { timestamps: true });
 
 platformSettingsSchema.statics.getOrCreate = async function () {

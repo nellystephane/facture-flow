@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Users, Package, FileSpreadsheet,
-  Wallet, User, LogOut, X, Crown, UsersRound, Headphones
+  Wallet, User, LogOut, X, Crown, UsersRound, Headphones, Zap, Gift
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../contexts/PermissionsContext';
@@ -23,6 +23,7 @@ const NAV = [
   { to: '/app/abonnement', label: 'Abonnement', icon: Crown },
   { to: '/app/profile', label: 'Mon profil', icon: User },
   { to: '/app/support', label: 'Support', icon: Headphones },
+  { to: '/app/affiliation', label: 'Affiliation', icon: Gift },
 ];
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {

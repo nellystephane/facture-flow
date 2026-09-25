@@ -74,7 +74,7 @@ async function getWalletBalance(ownerId) {
   ]);
   let balance = 0;
   for (const row of agg) {
-    if (['credit_paiement', 'credit_ajustement', 'credit_annulation'].includes(row._id)) balance += row.total;
+    if (['credit_paiement', 'credit_ajustement', 'credit_affiliation', 'credit_annulation'].includes(row._id)) balance += row.total;
     else balance -= row.total;
   }
   return Math.max(0, roundXof(balance));

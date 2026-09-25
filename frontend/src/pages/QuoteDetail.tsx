@@ -94,7 +94,7 @@ export default function QuoteDetail() {
       `Voici votre devis ${quote.numero} de ${entreprise} : ${formatFCFA(totalTTC(quote))}${validite}.`,
       `Vous pouvez le consulter et y répondre ici : ${lien}`,
     ].join('\n');
-    ouvrirPartageWhatsApp(message, clientRattache?.telephone);
+    ouvrirPartageWhatsApp(message, clientRattache?.whatsapp || clientRattache?.telephone);
   };
 
   const handleDelete = async () => {

@@ -8,6 +8,8 @@
 // Pro      = gagner du temps et automatiser
 // Business = gérer une équipe et une entreprise (= tout Pro + collaboration)
 
+const ABONNEMENT_REDUCTION_PERCENT = 19;
+
 const PLANS = {
   gratuit: {
     id: 'gratuit',
@@ -39,7 +41,7 @@ const PLANS = {
     relancesAutomatiques: true,
     statistiquesAvancees: true,
     exportComptable: true,
-    modelesFacture: ['classique', 'moderne', 'minimal'],
+    modelesFacture: ['classique', 'moderne', 'minimal', 'atelier', 'horizon'],
     multiUtilisateurs: false,
     maxMembres: 1,
     supportPrioritaire: false,
@@ -56,7 +58,7 @@ const PLANS = {
     relancesAutomatiques: true,
     statistiquesAvancees: true,
     exportComptable: true,
-    modelesFacture: ['classique', 'moderne', 'minimal'],
+    modelesFacture: ['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir'],
     multiUtilisateurs: true,
     maxMembres: 5,
     supportPrioritaire: true,
@@ -89,4 +91,4 @@ function planEffectifDe(user) {
   return planDe(user.subscription);
 }
 
-module.exports = { PLANS, FEATURES, planDe, planEffectifDe };
+module.exports = { PLANS, FEATURES, planDe, planEffectifDe, ABONNEMENT_REDUCTION_PERCENT };

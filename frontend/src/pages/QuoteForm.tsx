@@ -1,20 +1,36 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileSpreadsheet, ArrowLeft, Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Save, Plus, Trash2, GripVertical, Lock, Eye } from 'lucide-react';
 import { getQuote, createQuote, updateQuote, previewQuotePdf } from '../api/quotes';
 import { getAllClients } from '../api/clients';
 import { getServices } from '../api/services';
 import type { Client, Service, Item } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import Select from '../components/ui/Select';
+import DatePicker from '../components/ui/DatePicker';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
+import { usePermissions } from '../contexts/PermissionsContext';
+
+const TEMPLATES = [
+  { id: 'classique', label: 'Classique', tier: 'Gratuit', desc: 'Sobre et lisible.', tone: 'bg-white', accent: '#c9504b' },
+  { id: 'moderne', label: 'Moderne', tier: 'Pro', desc: 'Contemporain et structuré.', tone: 'bg-blue-50', accent: '#2563eb' },
+  { id: 'minimal', label: 'Minimal', tier: 'Pro', desc: 'Épuré et très respirant.', tone: 'bg-gray-50', accent: '#111111' },
+  { id: 'atelier', label: 'Atelier', tier: 'Pro', desc: 'Chaleureux et professionnel.', tone: 'bg-emerald-50', accent: '#0f766e' },
+  { id: 'horizon', label: 'Horizon', tier: 'Pro', desc: 'Créatif et élégant.', tone: 'bg-violet-50', accent: '#7c3aed' },
+  { id: 'prestige', label: 'Prestige', tier: 'Business', desc: 'Premium et haut de gamme.', tone: 'bg-zinc-900', accent: '#a16207' },
+  { id: 'corporate', label: 'Corporate', tier: 'Business', desc: 'Institutionnel et B2B.', tone: 'bg-slate-900', accent: '#0f172a' },
+  { id: 'signature', label: 'Signature', tier: 'Business', desc: 'Élégant et distinctif.', tone: 'bg-pink-50', accent: '#be185d' },
+  { id: 'noir', label: 'Noir', tier: 'Business', desc: 'Contraste fort et premium.', tone: 'bg-gray-900', accent: '#111827' },
+];
 
 export default function QuoteForm() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { permissions } = usePermissions();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -32,6 +48,7 @@ export default function QuoteForm() {
     remise: 0,
     tva: 0,
     notes: '',
+    template: 'classique',
   });
 
   useEffect(() => {
@@ -56,6 +73,7 @@ export default function QuoteForm() {
           remise: d.remise || 0,
           tva: d.tva || 0,
           notes: d.notes || '',
+          template: d.template || 'classique',
         });
       })
       .catch((err) => toast(apiError(err), 'error'))
@@ -121,10 +139,7 @@ export default function QuoteForm() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="field-label">Client *</label>
-                <select className="field" value={form.client} onChange={(e) => update('client', e.target.value)} required>
-                  <option value="">— Sélectionner —</option>
-                  {clients.map((c) => <option key={c._id} value={c._id}>{c.nom}{c.entreprise ? ` (${c.entreprise})` : ''}</option>)}
-                </select>
+                <Select value={form.client} onChange={(v) => update('client', v)} options={[{value:'',label:'— Sélectionner —'}, ...clients.map(c => ({value:c._id,label:`${c.nom}${c.entreprise ? ` (${c.entreprise})` : ''}`}))]} />
               </div>
               <div>
                 <label className="field-label">Objet</label>
@@ -132,11 +147,11 @@ export default function QuoteForm() {
               </div>
               <div>
                 <label className="field-label">Date d'émission</label>
-                <input type="date" className="field" value={form.dateEmission} onChange={(e) => update('dateEmission', e.target.value)} />
+                <DatePicker value={form.dateEmission} onChange={(v) => update('dateEmission', v)} />
               </div>
               <div>
                 <label className="field-label">Valable jusqu'au</label>
-                <input type="date" className="field" value={form.dateExpiration} onChange={(e) => update('dateExpiration', e.target.value)} />
+                <DatePicker value={form.dateExpiration} onChange={(v) => update('dateExpiration', v)} />
               </div>
             </div>
           </div>
@@ -170,14 +185,29 @@ export default function QuoteForm() {
                   </div>
                   {services.length > 0 && (
                     <div className="mt-2">
-                      <select className="field text-xs py-1" value="" onChange={(e) => pickService(idx, e.target.value)}>
-                        <option value="">Pré-remplir depuis un service...</option>
-                        {services.map((s) => <option key={s._id} value={s._id}>{s.nom} — {formatFCFA(s.prix)}</option>)}
-                      </select>
+                      <Select value="" onChange={(v) => pickService(idx, v)} options={[{value:'',label:'Pré-remplir depuis un service...'}, ...services.map(s => ({value:s._id,label:`${s.nom} — ${formatFCFA(s.prix)}`}))]} className="text-xs py-1" />
                     </div>
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="glass-card p-6">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div><h3 className="font-bold text-[#0a0a0c] dark:text-white">Modèle de PDF</h3><p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Les devis utilisent désormais les mêmes modèles professionnels que les factures.</p></div>
+              <Eye size={18} className="text-gray-400" />
+            </div>
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {TEMPLATES.map((t) => {
+                const disponible = permissions?.modelesFactureDisponibles.includes(t.id) ?? (t.id === 'classique');
+                const selected = form.template === t.id;
+                return <button key={t.id} type="button" disabled={!disponible} onClick={() => disponible && update('template', t.id)} className={`relative text-left rounded-2xl border overflow-hidden transition-soft ${selected ? 'border-[#d9524d] ring-1 ring-[#d9524d]/20' : 'border-gray-100 dark:border-white/10'} ${!disponible ? 'opacity-55 cursor-not-allowed' : ''}`}>
+                  <div className={`h-20 p-2.5 ${t.tone}`}><div className="h-full rounded-lg bg-white/90 dark:bg-black/20 shadow-sm p-2" style={{borderTop:`4px solid ${t.accent}`}}><div className="flex justify-between"><div className="space-y-1"><div className="h-1.5 w-14 rounded bg-gray-300"/><div className="h-1 w-20 rounded bg-gray-200"/></div><div className="h-4 w-8 rounded" style={{background:t.accent}}/></div><div className="mt-2 h-1 rounded bg-gray-200"/></div></div>
+                  <div className="p-3 bg-white dark:bg-[#121214]"><div className="flex items-center gap-2"><span className="text-sm font-semibold text-[#0a0a0c] dark:text-white">{t.label}</span><span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500">{t.tier}</span></div><p className="text-[11px] text-gray-400 mt-1">{t.desc}</p></div>
+                  {!disponible && <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-white/95 dark:bg-black/90 px-2 py-1 text-[10px] font-semibold shadow"><Lock size={11}/> {t.tier}</span>}
+                </button>;
+              })}
             </div>
           </div>
 

@@ -50,5 +50,8 @@ export function lienPartageWhatsApp(message: string, telephone?: string): string
 }
 
 export function ouvrirPartageWhatsApp(message: string, telephone?: string) {
-  window.open(lienPartageWhatsApp(message, telephone), '_blank', 'noopener,noreferrer');
+  const url = lienPartageWhatsApp(message, telephone);
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia?.('(max-width: 768px)').matches;
+  if (mobile) window.location.href = url;
+  else window.open(url, '_blank', 'noopener,noreferrer');
 }

@@ -26,9 +26,10 @@ export interface User {
   email: string;
   entreprise?: string;
   telephone?: string;
+  whatsapp?: string;
   adresse?: string;
   logoUrl?: string;
-  devise?: string;
+  devise?: 'FCFA';
   banque?: BankInfo;
   payoutSettings?: { enabled: boolean; mode: 'mobile_money' | 'bank_transfer'; provider: string; phone: string; phoneMasked?: string; country: string; titulaire: string; bank?: string; iban?: string; rib?: string; schedule: 'weekly' | 'monthly'; status?: 'pending' | 'active' | 'disabled'; emailConfirmed?: boolean; confirmedAt?: string | null };
   subscription?: 'gratuit' | 'pro' | 'business';
@@ -45,6 +46,7 @@ export interface Client {
   entreprise?: string;
   email?: string;
   telephone?: string;
+  whatsapp?: string;
   adresse?: string;
   notes?: string;
   owner: string;

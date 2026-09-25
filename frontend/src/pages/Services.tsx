@@ -11,6 +11,7 @@ import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoHint from '../components/ui/InfoHint';
 import Select from '../components/ui/Select';
+import DatePicker from '../components/ui/DatePicker';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../contexts/ToastContext';
@@ -251,10 +252,7 @@ export default function Services() {
           </p>
           <div>
             <label className="field-label">Client *</label>
-            <select className="field" value={invoiceForm.clientId} onChange={(e) => setInvoiceForm({ ...invoiceForm, clientId: e.target.value })} required autoFocus>
-              <option value="">Sélectionner...</option>
-              {clients.map((c) => <option key={c._id} value={c._id}>{c.nom}{c.entreprise ? ` — ${c.entreprise}` : ''}</option>)}
-            </select>
+            <Select value={invoiceForm.clientId} onChange={(v) => setInvoiceForm({ ...invoiceForm, clientId: v })} options={[{value:'',label:'Sélectionner...'}, ...clients.map(c => ({value:c._id,label:`${c.nom}${c.entreprise ? ` — ${c.entreprise}` : ''}`}))]} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -272,8 +270,7 @@ export default function Services() {
           </div>
           <div>
             <label className="field-label">Échéance</label>
-            <input type="date" className="field" value={invoiceForm.dateEcheance}
-              onChange={(e) => setInvoiceForm({ ...invoiceForm, dateEcheance: e.target.value })} />
+            <DatePicker value={invoiceForm.dateEcheance} onChange={(v) => setInvoiceForm({ ...invoiceForm, dateEcheance: v })} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-ghost" onClick={() => setInvoiceModal(null)}>Annuler</button>

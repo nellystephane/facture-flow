@@ -63,7 +63,7 @@ describe('Page publique de devis', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(facture.status).toBe(200);
     expect(facture.body.statut).toBe('brouillon'); // jamais envoyée automatiquement
-    expect(String(facture.body.quote?._id || facture.body.quote)).toBe(String(devis._id));
+    expect(facture.body.quote).toBe(devis._id);
 
     expect(email.sendQuoteAccepteeNotification).toHaveBeenCalledTimes(1);
   });

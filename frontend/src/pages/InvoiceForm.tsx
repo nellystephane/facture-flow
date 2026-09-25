@@ -1,20 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText, ArrowLeft, Save, Plus, Trash2, GripVertical, Lock, Send } from 'lucide-react';
+import { FileText, ArrowLeft, Save, Plus, Trash2, GripVertical, Lock, Eye, Send } from 'lucide-react';
 import { getInvoice, createInvoice, updateInvoice, sendInvoiceEmail, previewInvoicePdf } from '../api/invoices';
 import { getAllClients } from '../api/clients';
 import { getServices } from '../api/services';
 import type { Client, Service, Item, InvoiceStatut } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import Select from '../components/ui/Select';
+import DatePicker from '../components/ui/DatePicker';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
 
 const TEMPLATES = [
-  { id: 'classique', label: 'Classique', desc: 'Rouge signature Oryxa' },
-  { id: 'moderne', label: 'Moderne', desc: 'Accent bleu' },
-  { id: 'minimal', label: 'Minimal', desc: 'Noir & blanc épuré' },
+  { id: 'classique', label: 'Classique', tier: 'Gratuit', desc: 'Sobre, lisible et disponible pour tous.', tone: 'bg-white', accent: '#c9504b', layout: 'classic' },
+  { id: 'moderne', label: 'Moderne', tier: 'Pro', desc: 'Hiérarchie nette et accent bleu contemporain.', tone: 'bg-blue-50', accent: '#2563eb', layout: 'modern' },
+  { id: 'minimal', label: 'Minimal', tier: 'Pro', desc: 'Très épuré, beaucoup d’espace et peu de bruit.', tone: 'bg-gray-50', accent: '#111111', layout: 'minimal' },
+  { id: 'atelier', label: 'Atelier', tier: 'Pro', desc: 'Chaleureux et professionnel, idéal pour services et artisans.', tone: 'bg-emerald-50', accent: '#0f766e', layout: 'atelier' },
+  { id: 'horizon', label: 'Horizon', tier: 'Pro', desc: 'Créatif et élégant avec une signature violette.', tone: 'bg-violet-50', accent: '#7c3aed', layout: 'horizon' },
+  { id: 'prestige', label: 'Prestige', tier: 'Business', desc: 'Sombre, premium et pensé pour les propositions haut de gamme.', tone: 'bg-zinc-900', accent: '#a16207', layout: 'prestige' },
+  { id: 'corporate', label: 'Corporate', tier: 'Business', desc: 'Institutionnel, structuré et adapté aux clients B2B.', tone: 'bg-slate-900', accent: '#0f172a', layout: 'corporate' },
+  { id: 'signature', label: 'Signature', tier: 'Business', desc: 'Élégant et distinctif pour une identité plus affirmée.', tone: 'bg-pink-50', accent: '#be185d', layout: 'signature' },
+  { id: 'noir', label: 'Noir', tier: 'Business', desc: 'Contraste fort et rendu premium pour l’envoi numérique.', tone: 'bg-gray-900', accent: '#111827', layout: 'noir' },
 ];
 
 export default function InvoiceForm() {
@@ -167,10 +175,7 @@ export default function InvoiceForm() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
                 <label className="field-label">Client *</label>
-                <select className="field" value={form.client} onChange={(e) => update('client', e.target.value)} required>
-                  <option value="">— Sélectionner —</option>
-                  {clients.map((c) => <option key={c._id} value={c._id}>{c.nom}{c.entreprise ? ` (${c.entreprise})` : ''}</option>)}
-                </select>
+                <Select value={form.client} onChange={(v) => update('client', v)} options={[{value:'',label:'— Sélectionner —'}, ...clients.map(c => ({value:c._id,label:`${c.nom}${c.entreprise ? ` (${c.entreprise})` : ''}`}))]} />
               </div>
               <div>
                 <label className="field-label">Objet</label>
@@ -178,11 +183,11 @@ export default function InvoiceForm() {
               </div>
               <div>
                 <label className="field-label">Date d'émission</label>
-                <input type="date" className="field" value={form.dateEmission} onChange={(e) => update('dateEmission', e.target.value)} />
+                <DatePicker value={form.dateEmission} onChange={(v) => update('dateEmission', v)} />
               </div>
               <div>
                 <label className="field-label">Date d'échéance</label>
-                <input type="date" className="field" value={form.dateEcheance} onChange={(e) => update('dateEcheance', e.target.value)} />
+                <DatePicker value={form.dateEcheance} onChange={(v) => update('dateEcheance', v)} />
               </div>
             </div>
           </div>
@@ -242,10 +247,7 @@ export default function InvoiceForm() {
                   {services.length > 0 && (
                     <div className="mt-2">
                       {permissions?.peutUtiliserFacturationExpress ? (
-                        <select className="field text-xs py-1" value="" onChange={(e) => pickService(idx, e.target.value)}>
-                          <option value="">Pré-remplir depuis un service...</option>
-                          {services.map((s) => <option key={s._id} value={s._id}>{s.nom} — {formatFCFA(s.prix)}</option>)}
-                        </select>
+                        <Select value="" onChange={(v) => pickService(idx, v)} options={[{value:'',label:'Pré-remplir depuis un service...'}, ...services.map(s => ({value:s._id,label:`${s.nom} — ${formatFCFA(s.prix)}`}))]} className="text-xs py-1" />
                       ) : (
                         <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                           <Lock size={11} /> Pré-remplissage depuis vos tarifs — plan Pro
@@ -265,27 +267,38 @@ export default function InvoiceForm() {
               placeholder="Conditions de paiement, coordonnées bancaires..." />
           </div>
 
-          {/* Modèle de PDF */}
+          {/* Modèles de PDF */}
           <div className="glass-card p-6">
-            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Modèle de PDF</h3>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">L'apparence de la facture une fois téléchargée ou envoyée par email.</p>
-            <div className="grid sm:grid-cols-3 gap-3">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h3 className="font-bold text-[#0a0a0c] dark:text-white">Modèle de PDF</h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Le modèle choisi sera utilisé pour le PDF envoyé ou téléchargé. Prévisualisez-le avant l'envoi.</p>
+              </div>
+              <Eye size={18} className="text-gray-400 shrink-0" />
+            </div>
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {TEMPLATES.map((t) => {
                 const disponible = permissions?.modelesFactureDisponibles.includes(t.id) ?? (t.id === 'classique');
+                const selected = form.template === t.id;
                 return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    disabled={!disponible}
-                    onClick={() => disponible && update('template', t.id)}
-                    className={`relative p-3 rounded-xl border text-left transition-soft ${
-                      form.template === t.id ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-100 dark:border-white/10'
-                    } ${!disponible ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 dark:hover:border-white/20'}`}
-                  >
-                    {!disponible && <Lock size={13} className="absolute top-2 right-2 text-gray-400 dark:text-gray-500" />}
-                    <p className="text-sm font-semibold text-[#0a0a0c] dark:text-white">{t.label}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{disponible ? t.desc : 'Plan Pro'}</p>
-                  </button>
+                  <div key={t.id} className={`relative rounded-2xl border overflow-hidden transition-soft ${selected ? 'border-[#d9524d] ring-1 ring-[#d9524d]/20' : 'border-gray-100 dark:border-white/10'} ${!disponible ? 'opacity-55' : ''}`}>
+                    <button type="button" disabled={!disponible} onClick={() => disponible && update('template', t.id)} className="w-full text-left">
+                      <div className={`h-24 p-3 ${t.tone}`}>
+                        <div className="h-full rounded-lg bg-white/90 dark:bg-black/20 shadow-sm p-2.5" style={{ borderTop: `4px solid ${t.accent}` }}>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="space-y-1 flex-1"><div className="h-1.5 w-16 rounded bg-gray-300/80" /><div className="h-1 w-24 rounded bg-gray-200/80" /></div>
+                            <div className="h-5 w-10 rounded" style={{ background: t.accent, opacity: .9 }} />
+                          </div>
+                          <div className="mt-3 grid grid-cols-3 gap-1"><span className="h-1 rounded bg-gray-200"/><span className="h-1 rounded bg-gray-200"/><span className="h-1 rounded bg-gray-200"/></div>
+                        </div>
+                      </div>
+                      <div className="p-3 bg-white dark:bg-[#121214]">
+                        <div className="flex items-center gap-2"><p className="text-sm font-semibold text-[#0a0a0c] dark:text-white">{t.label}</p><span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500">{t.tier}</span></div>
+                        <p className="text-[11px] leading-4 text-gray-400 dark:text-gray-500 mt-1">{t.desc}</p>
+                      </div>
+                    </button>
+                    {!disponible && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="inline-flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-black/90 px-3 py-1.5 text-xs font-semibold shadow"><Lock size={12}/> Réservé au {t.tier}</span></div>}
+                  </div>
                 );
               })}
             </div>

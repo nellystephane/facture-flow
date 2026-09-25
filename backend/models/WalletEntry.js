@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 // créance/somme retirable attribuée à un utilisateur Oryxa et son historique.
 const walletEntrySchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  type: { type: String, enum: ['credit_paiement', 'debit_frais', 'debit_remboursement', 'credit_ajustement', 'debit_reversement', 'credit_annulation'], required: true },
+  type: { type: String, enum: ['credit_paiement', 'debit_frais', 'debit_remboursement', 'credit_ajustement', 'credit_affiliation', 'debit_reversement', 'credit_annulation'], required: true },
   montant: { type: Number, required: true },
   payment: { type: mongoose.Schema.Types.ObjectId, ref: 'Payment', default: null, index: true },
   payout: { type: mongoose.Schema.Types.ObjectId, ref: 'Payout', default: null, index: true },

@@ -7,8 +7,13 @@ const PlatformSettings = require('../models/PlatformSettings');
 const LegalContent = require('../models/LegalContent');
 const Payout = require('../models/Payout');
 const WalletEntry = require('../models/WalletEntry');
+const Subscription = require('../models/Subscription');
+const { ABONNEMENT_REDUCTION_PERCENT } = require('../config/plans');
 const asyncHandler = require('../middleware/asyncHandler');
 const email = require('../utils/email');
+const AffiliateProfile = require('../models/AffiliateProfile');
+const AffiliateReferral = require('../models/AffiliateReferral');
+const AffiliateCommission = require('../models/AffiliateCommission');
 
 // ===== Authentification admin =====
 // Liste blanche d'emails autorisés (voir docs/ADMIN_ACCESS.md) — jamais
@@ -60,24 +65,27 @@ exports.login = asyncHandler(async (req, res) => {
 
 // ===== Statistiques globales =====
 exports.getStats = asyncHandler(async (req, res) => {
-  const [totalUsers, parPlan, paiementsCompletes] = await Promise.all([
+  const [totalUsers, parPlan, paiementsCompletes, abonnementsPayes] = await Promise.all([
     User.countDocuments({ compteProprietaire: null }),
     User.aggregate([
       { $match: { compteProprietaire: null } },
       { $group: { _id: '$subscription', count: { $sum: 1 } } },
     ]),
     Payment.find({ statut: 'complete', rembourse: false }).select('montant origine createdAt'),
+    Subscription.find({ statut: 'payee' }).select('montant plan duree createdAt dateDebut dateFin'),
   ]);
 
   const abonnesParPlan = { gratuit: 0, pro: 0, business: 0 };
   parPlan.forEach((p) => { if (abonnesParPlan[p._id] !== undefined) abonnesParPlan[p._id] = p.count; });
 
-  const revenuBrut = paiementsCompletes.reduce((s, p) => s + p.montant, 0);
-  const revenuEnLigne = paiementsCompletes.filter((p) => p.origine === 'en_ligne').reduce((s, p) => s + p.montant, 0);
-
+  // Les paiements de factures appartiennent aux utilisateurs Oryxa et ne sont
+  // pas du chiffre d'affaires de la plateforme. Le revenu Oryxa est ici le
+  // montant réellement enregistré comme abonnement payé.
+  const revenuAbonnements = abonnementsPayes.reduce((s, sub) => s + (sub.montant || 0), 0);
+  const revenuEnLigneUtilisateurs = paiementsCompletes.filter((p) => p.origine === 'en_ligne').reduce((s, p) => s + p.montant, 0);
   const settings = await PlatformSettings.getOrCreate();
-  const fraisEstimes = Math.round(revenuEnLigne * (settings.fedapayFeePercent / 100));
-  const revenuReelEstime = revenuBrut - fraisEstimes;
+  const fraisEstimesPaiementsUtilisateurs = Math.round(revenuEnLigneUtilisateurs * (settings.fedapayFeePercent / 100));
+  const revenuAbonnementsNetEstime = Math.max(0, revenuAbonnements - Math.round(revenuAbonnements * (settings.fedapayFeePercent / 100)));
 
   // Croissance des 6 derniers mois (nouveaux comptes propriétaires par mois)
   const depuis = new Date();
@@ -93,9 +101,13 @@ exports.getStats = asyncHandler(async (req, res) => {
   res.json({
     totalUsers,
     abonnesParPlan,
-    revenuBrut,
-    fraisEstimes,
-    revenuReelEstime,
+    revenuBrut: revenuAbonnements,
+    revenuAbonnements,
+    abonnementsPayesCount: abonnementsPayes.length,
+    revenuAbonnementsNetEstime,
+    paiementsUtilisateursEnLigne: revenuEnLigneUtilisateurs,
+    fraisEstimes: fraisEstimesPaiementsUtilisateurs,
+    revenuReelEstime: revenuAbonnementsNetEstime,
     fedapayFeePercent: settings.fedapayFeePercent,
     croissanceMensuelle: nouveauxComptes.map((n) => ({ mois: n._id, nouveauxComptes: n.count })),
   });
@@ -194,6 +206,8 @@ exports.signalerLitige = asyncHandler(async (req, res) => {
   if (payment.origine !== 'en_ligne' || payment.statut !== 'complete') return res.status(409).json({ message: 'Seul un paiement en ligne confirmé peut être marqué comme remboursé.' });
   if (payment.origine === 'en_ligne' && payment.statut === 'complete') {
     const WalletEntry = require('../models/WalletEntry');
+const Subscription = require('../models/Subscription');
+const { ABONNEMENT_REDUCTION_PERCENT } = require('../config/plans');
     const exists = await WalletEntry.findOne({ payment: payment._id, type: 'debit_remboursement' });
     if (!exists && Number(payment.montantNetUtilisateur || 0) > 0) {
       await WalletEntry.create({
@@ -229,15 +243,33 @@ exports.marquerRembourse = asyncHandler(async (req, res) => {
 });
 
 // ===== Tarifs des abonnements =====
+function grilleTarifsDepuisMensuel(tarifs) {
+  const facteur = 1 - (ABONNEMENT_REDUCTION_PERCENT / 100);
+  const resultat = {};
+  for (const plan of ['pro', 'business']) {
+    const mensuel = Math.max(0, Math.round(Number(tarifs?.[plan]?.[1]) || 0));
+    resultat[plan] = {
+      1: mensuel,
+      6: Math.round(mensuel * 6 * facteur),
+      12: Math.round(mensuel * 12 * facteur),
+    };
+  }
+  return resultat;
+}
+
 exports.getPricing = asyncHandler(async (req, res) => {
   const settings = await PlatformSettings.getOrCreate();
-  res.json(settings);
+  // Normalise aussi les anciennes grilles pour qu'un ancien tarif ne puisse
+  // plus créer une incohérence entre 1, 6 et 12 mois.
+  settings.tarifs = grilleTarifsDepuisMensuel(settings.tarifs);
+  await settings.save();
+  res.json({ ...settings.toObject(), reductionAbonnementPercent: ABONNEMENT_REDUCTION_PERCENT });
 });
 
 exports.updatePricing = asyncHandler(async (req, res) => {
   const { tarifs, fedapayFeePercent, payoutFeeBrackets } = req.body;
   const settings = await PlatformSettings.getOrCreate();
-  if (tarifs) settings.tarifs = tarifs;
+  if (tarifs) settings.tarifs = grilleTarifsDepuisMensuel(tarifs);
   if (typeof fedapayFeePercent === 'number' && fedapayFeePercent >= 0 && fedapayFeePercent < 100) settings.fedapayFeePercent = fedapayFeePercent;
   if (Array.isArray(payoutFeeBrackets)) {
     const cleaned = payoutFeeBrackets
@@ -299,7 +331,7 @@ exports.updateLegalContent = asyncHandler(async (req, res) => {
 
 // ===== Finance / reversements =====
 exports.getFinancials = asyncHandler(async (req, res) => {
-  const [payments, payouts, walletAgg, payoutAgg] = await Promise.all([
+  const [payments, payouts, walletAgg, payoutAgg, subscriptions] = await Promise.all([
     Payment.find({ origine: 'en_ligne', statut: 'complete', rembourse: false })
       .select('montant montantFacture montantClientPaye fraisPayin fraisPayoutProvisionnes fraisSupportesPar owner invoice fedapayTransactionId fedapayMode createdAt')
       .populate('owner', 'nom email')
@@ -311,13 +343,18 @@ exports.getFinancials = asyncHandler(async (req, res) => {
     Payout.aggregate([
       { $group: { _id: '$statut', montant: { $sum: '$montant' }, frais: { $sum: '$fraisFedaPay' }, debite: { $sum: '$montantDebite' }, transfere: { $sum: '$montantTransfere' }, count: { $sum: 1 } } },
     ]),
+    Subscription.find({ statut: 'payee' }).select('owner plan duree montant createdAt dateDebut dateFin').populate('owner', 'nom email').sort({ createdAt: -1 }).limit(200),
   ]);
+
 
   const feesClients = payments.reduce((sum, p) => sum + Math.max(0, (p.montantClientPaye ?? p.montant) - (p.montantFacture ?? p.montant)), 0);
   const payinFees = payments.reduce((sum, p) => sum + (p.fraisPayin || 0), 0);
   const payoutFees = payouts.reduce((sum, p) => sum + (p.fraisFedaPay || 0), 0);
   const margeTechnique = feesClients - payinFees - payoutFees;
   const mouvementEntries = walletAgg.map((x) => ({ type: x._id, total: x.total, count: x.count }));
+  const revenuAbonnements = subscriptions.reduce((sum, sub) => sum + (sub.montant || 0), 0);
+  const revenuAbonnementsNetEstime = Math.max(0, revenuAbonnements - Math.round(revenuAbonnements * ((await PlatformSettings.getOrCreate()).fedapayFeePercent / 100)));
+
 
   res.json({
     synthese: {
@@ -327,10 +364,71 @@ exports.getFinancials = asyncHandler(async (req, res) => {
       fraisPayinReels: payinFees,
       fraisPayoutReels: payoutFees,
       margeTechnique: margeTechnique,
+      revenuAbonnements,
+      revenuAbonnementsNetEstime,
     },
     mouvements: mouvementEntries,
+    abonnements: subscriptions,
     payouts,
     paiements: payments,
     repartitionPayouts: payoutAgg,
   });
+});
+
+
+// ===== Programme d'affiliation =====
+exports.getAffiliateOverview = asyncHandler(async (req, res) => {
+  const settings = await PlatformSettings.getOrCreate();
+  const [affiliates, referrals, paidReferrals, commissionsAgg, clicksAgg] = await Promise.all([
+    AffiliateProfile.countDocuments({ active: true }),
+    AffiliateReferral.countDocuments(),
+    AffiliateReferral.countDocuments({ status: 'converted' }),
+    AffiliateCommission.aggregate([
+      { $match: { statut: 'creditee' } },
+      { $group: { _id: null, total: { $sum: '$montant' }, count: { $sum: 1 } } },
+    ]),
+    AffiliateProfile.aggregate([{ $group: { _id: null, total: { $sum: '$clicks' } } }]),
+  ]);
+  res.json({
+    settings: settings.affiliate,
+    stats: {
+      affiliates,
+      referrals,
+      paidReferrals,
+      clicks: clicksAgg[0]?.total || 0,
+      commissions: commissionsAgg[0]?.total || 0,
+      commissionsCount: commissionsAgg[0]?.count || 0,
+    },
+  });
+});
+
+exports.listAffiliates = asyncHandler(async (req, res) => {
+  const affiliates = await AffiliateProfile.find().populate('user', 'nom email entreprise telephone whatsapp createdAt subscription').sort({ createdAt: -1 }).limit(200).lean();
+  const enriched = await Promise.all(affiliates.map(async (a) => {
+    const [referrals, paid, commission] = await Promise.all([
+      AffiliateReferral.countDocuments({ affiliate: a._id }),
+      AffiliateReferral.countDocuments({ affiliate: a._id, status: 'converted' }),
+      AffiliateCommission.aggregate([{ $match: { affiliate: a._id, statut: 'creditee' } }, { $group: { _id: null, total: { $sum: '$montant' } } }]),
+    ]);
+    return { ...a, referrals, paidReferrals: paid, commissions: commission[0]?.total || 0 };
+  }));
+  res.json({ affiliates: enriched });
+});
+
+exports.updateAffiliateSettings = asyncHandler(async (req, res) => {
+  const settings = await PlatformSettings.getOrCreate();
+  const input = req.body || {};
+  const next = settings.affiliate.toObject ? settings.affiliate.toObject() : { ...settings.affiliate };
+  if (input.enabled !== undefined) next.enabled = !!input.enabled;
+  for (const key of ['discountPercent', 'discountMonths', 'commissionPro', 'commissionBusiness']) {
+    if (input[key] !== undefined) {
+      const value = Number(input[key]);
+      if (!Number.isFinite(value) || value < 0) return res.status(400).json({ message: `Valeur invalide pour ${key}.` });
+      next[key] = value;
+    }
+  }
+  if (next.discountPercent > 100 || next.discountMonths > 12) return res.status(400).json({ message: 'Réduction ou durée invalide.' });
+  settings.affiliate = next;
+  await settings.save();
+  res.json({ affiliate: settings.affiliate });
 });

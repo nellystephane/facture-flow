@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Sparkles, Loader2, Minus, ChevronDown, Zap, TrendingUp } from 'lucide-react';
 import { getPlans, getComparatif, subscribe } from '../api/subscription';
+import { getAffiliateMe } from '../api/affiliate';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../contexts/ToastContext';
@@ -19,12 +20,14 @@ export default function Abonnement() {
   const [loading, setLoading] = useState(true);
   const [duree, setDuree] = useState<'1mois' | '6mois' | '1an'>('1an');
   const [subscribing, setSubscribing] = useState<string | null>(null);
+  const [affiliate, setAffiliate] = useState<any>(null);
 
   useEffect(() => {
-    Promise.all([getPlans(), getComparatif()])
-      .then(([p, c]) => {
+    Promise.all([getPlans(), getComparatif(), getAffiliateMe()])
+      .then(([p, c, a]) => {
         setPlans(p.data.plans);
         setComparatif(c.data.lignes);
+        setAffiliate(a.data);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -109,6 +112,12 @@ export default function Abonnement() {
 
       {peutGererAbonnement && (
         <>
+          {affiliate?.remainingDiscountMonths > 0 && (
+            <div className="mb-6 rounded-2xl bg-[#d9524d]/10 border border-[#d9524d]/20 p-4 text-sm text-[#b23c37]">
+              <strong>Avantage partenaire actif :</strong> {affiliate.rules?.discountPercent}% de réduction sur vos {affiliate.remainingDiscountMonths} prochain{affiliate.remainingDiscountMonths > 1 ? 's mois' : ' mois'} éligibles. Le montant exact sera appliqué automatiquement au paiement.
+            </div>
+          )}
+
           <div className="text-center mb-8 animate-fade-up">
             <h1 className="text-2xl md:text-3xl font-extrabold text-[#0a0a0c] dark:text-white mb-2">Choisissez votre plan</h1>
             <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
@@ -147,6 +156,7 @@ export default function Abonnement() {
               const option = plan.options?.find((o) => o.duree === duree);
               const prixMensuel = option ? Math.round(option.prix / option.mois) : 0;
               const labelDuree = duree === '1an' ? 'an' : duree === '6mois' ? '6 mois' : 'mois';
+              const reductionDuree = duree === '1mois' ? 0 : 19;
               return (
                 <div key={plan.id} className={`glass-card p-6 animate-fade-up relative overflow-hidden ${plan.recommande ? 'ring-2 ring-[#d9524d]' : ''}`}>
                   {plan.recommande && (
@@ -165,8 +175,9 @@ export default function Abonnement() {
                         <span className="text-gray-400 dark:text-gray-500 text-sm"> / {labelDuree}</span>
                       </div>
                       {duree !== '1mois' && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">soit environ {formatFCFA(prixMensuel)} / mois</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">soit environ {formatFCFA(prixMensuel)} / mois</p>
                       )}
+                      {reductionDuree > 0 && <p className="text-[11px] font-semibold text-green-600 mb-5">− {reductionDuree}% par rapport au tarif mensuel</p>}
                       {duree === '1mois' && <div className="mb-5" />}
                     </>
                   )}

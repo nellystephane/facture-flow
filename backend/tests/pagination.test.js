@@ -1,7 +1,6 @@
 const { connect, closeDatabase, clearDatabase } = require('./setup');
 const request = require('supertest');
-const { creerUtilisateurConnecte, passerAuPlanPayant } = require('./helpers');
-const User = require('../models/User');
+const { creerUtilisateurConnecte } = require('./helpers');
 
 let app;
 
@@ -20,10 +19,7 @@ afterAll(async () => {
 
 describe('Pagination des listes', () => {
   it('pagine les clients avec la forme {items, page, limit, total, totalPages}', async () => {
-    const { token, userId } = await creerUtilisateurConnecte(app);
-    // Le plan Gratuit limite volontairement le nombre de clients ; cette
-    // suite teste la pagination au-delà de cette limite métier.
-    await passerAuPlanPayant(User, userId, 'pro');
+    const { token } = await creerUtilisateurConnecte(app);
     for (let i = 0; i < 25; i++) {
       await request(app).post('/api/clients').set('Authorization', `Bearer ${token}`).send({ nom: `Client ${i}` });
     }

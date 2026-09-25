@@ -59,7 +59,7 @@ exports.getInvoices = asyncHandler(async (req, res) => {
   }
   const [items, total] = await Promise.all([
     Invoice.find(filter)
-      .populate('client', 'nom entreprise email telephone')
+      .populate('client', 'nom entreprise email telephone whatsapp')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -311,7 +311,7 @@ function styleTitre(ligne, taille = 15) {
   });
 }
 
-const FORMAT_MONTANT = '#,##0 "FCFA"';
+const FORMAT_MONTANT = () => '#,##0 "FCFA"';
 
 exports.exportComptable = asyncHandler(async (req, res) => {
   const ExcelJS = require('exceljs');
@@ -373,9 +373,9 @@ exports.exportComptable = asyncHandler(async (req, res) => {
     ];
     row.getCell(2).numFmt = 'dd/mm/yyyy';
     row.getCell(3).numFmt = 'dd/mm/yyyy';
-    row.getCell(6).numFmt = FORMAT_MONTANT;
+    row.getCell(6).numFmt = FORMAT_MONTANT();
     row.getCell(7).numFmt = '0%';
-    row.getCell(8).numFmt = FORMAT_MONTANT;
+    row.getCell(8).numFmt = FORMAT_MONTANT();
     row.getCell(6).alignment = { horizontal: 'right' };
     row.getCell(8).alignment = { horizontal: 'right' };
     if (i % 2 === 0) {
@@ -389,8 +389,8 @@ exports.exportComptable = asyncHandler(async (req, res) => {
   const totalRow = wsFactures.getRow(ligneIdx + 1);
   totalRow.values = ['', '', '', '', `${invoices.length} facture(s)`, totalHT, '', totalTTC];
   totalRow.eachCell((cell) => { cell.font = { bold: true }; cell.border = { top: { style: 'medium', color: { argb: NOIR_ORYXA } } }; });
-  totalRow.getCell(6).numFmt = FORMAT_MONTANT;
-  totalRow.getCell(8).numFmt = FORMAT_MONTANT;
+  totalRow.getCell(6).numFmt = FORMAT_MONTANT();
+  totalRow.getCell(8).numFmt = FORMAT_MONTANT();
   totalRow.getCell(6).alignment = { horizontal: 'right' };
   totalRow.getCell(8).alignment = { horizontal: 'right' };
 
@@ -425,7 +425,7 @@ exports.exportComptable = asyncHandler(async (req, res) => {
       p.reference || '—',
     ];
     row.getCell(1).numFmt = 'dd/mm/yyyy';
-    row.getCell(4).numFmt = FORMAT_MONTANT;
+    row.getCell(4).numFmt = FORMAT_MONTANT();
     row.getCell(4).alignment = { horizontal: 'right' };
     if (i % 2 === 0) {
       row.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRIS_CLAIR } }; });
@@ -437,7 +437,7 @@ exports.exportComptable = asyncHandler(async (req, res) => {
   const totalRowP = wsPaiements.getRow(ligneP + 1);
   totalRowP.values = ['', '', `${paiements.length} paiement(s)`, totalPaye, '', ''];
   totalRowP.eachCell((cell) => { cell.font = { bold: true }; cell.border = { top: { style: 'medium', color: { argb: NOIR_ORYXA } } }; });
-  totalRowP.getCell(4).numFmt = FORMAT_MONTANT;
+  totalRowP.getCell(4).numFmt = FORMAT_MONTANT();
   totalRowP.getCell(4).alignment = { horizontal: 'right' };
 
   wsPaiements.columns = [{ width: 14 }, { width: 16 }, { width: 26 }, { width: 15 }, { width: 14 }, { width: 20 }];

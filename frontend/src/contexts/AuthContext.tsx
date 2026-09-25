@@ -21,6 +21,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user) localStorage.setItem('oryxa_user', JSON.stringify(user));
+  }, [user]);
+
+  useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       setLoading(false);
@@ -31,7 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const chargerProfil = async (tentative = 0): Promise<void> => {
       try {
         const res = await authApi.getProfile();
-        if (actif) setUser(res.data);
+        if (actif) { setUser(res.data); localStorage.setItem('oryxa_user', JSON.stringify(res.data)); }
       } catch (err: any) {
         const status = err?.response?.status;
         const timeoutOuReseau = !err?.response || err?.code === 'ECONNABORTED' || err?.code === 'ERR_NETWORK';
@@ -49,6 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (status === 401) {
           localStorage.removeItem('token');
           if (actif) setUser(null);
+          localStorage.removeItem('oryxa_user');
         }
         // Pour une panne réseau persistante, on conserve le token : les
         // prochains appels pourront fonctionner dès que le serveur revient.
@@ -70,6 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const res = await authApi.login(email, password);
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
+    localStorage.setItem('oryxa_user', JSON.stringify(res.data.user));
     return res.data.user;
   };
 
@@ -80,11 +86,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (res.data.needsVerification || !res.data.token) return null;
     localStorage.setItem('token', res.data.token);
     setUser(res.data.user);
+    localStorage.setItem('oryxa_user', JSON.stringify(res.data.user));
     return res.data.user;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('oryxa_user');
     setUser(null);
   };
 

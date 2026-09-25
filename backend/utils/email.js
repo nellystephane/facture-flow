@@ -125,7 +125,7 @@ function baseTemplate({ titre, intro, boutonUrl, boutonLabel, corps, pied }) {
 }
 
 async function sendInvoiceEmail({ to, invoice, user, pdfBuffer, paymentUrl }) {
-  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(invoice.totalTTC)) + ' ' + (user.devise || 'FCFA');
+  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(invoice.totalTTC)) + ' ' + 'FCFA';
   const html = baseTemplate({
     titre: `Facture ${invoice.numero}`,
     intro: `Bonjour,<br/>Vous trouverez ci-joint la facture <strong>${invoice.numero}</strong> émise par <strong>${user.entreprise || user.nom}</strong>, d'un montant de <strong>${montant}</strong>.`,
@@ -142,7 +142,7 @@ async function sendInvoiceEmail({ to, invoice, user, pdfBuffer, paymentUrl }) {
 }
 
 async function sendReceiptEmail({ to, invoice, user, payment, pdfBuffer }) {
-  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(payment.montant)) + ' ' + (user.devise || 'FCFA');
+  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(payment.montant)) + ' ' + 'FCFA';
   const html = baseTemplate({
     titre: 'Paiement confirmé',
     intro: `Bonjour,<br/>Nous confirmons la réception de votre paiement de <strong>${montant}</strong> pour la facture <strong>${invoice.numero}</strong>. Le reçu est joint à cet email.`,
@@ -191,7 +191,7 @@ async function sendPasswordResetCode({ to, nom, code }) {
 }
 
 async function sendQuoteEmail({ to, quote, user, pdfBuffer, quoteUrl }) {
-  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(quote.totalTTC)) + ' ' + (user.devise || 'FCFA');
+  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(quote.totalTTC)) + ' ' + 'FCFA';
   const html = baseTemplate({
     titre: `Devis ${quote.numero}`,
     intro: `Bonjour,<br/>Vous trouverez ci-joint le devis <strong>${quote.numero}</strong> de <strong>${user.entreprise || user.nom}</strong>, d'un montant de <strong>${montant}</strong>.`,
@@ -229,7 +229,7 @@ async function sendQuoteInfoRequestNotification({ to, quote, message }) {
 }
 
 async function sendPaymentReminderEmail({ to, invoice, user, paymentUrl, joursRetard }) {
-  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(invoice.totalTTC)) + ' ' + (user.devise || 'FCFA');
+  const montant = new Intl.NumberFormat('fr-FR').format(Math.round(invoice.totalTTC)) + ' ' + 'FCFA';
   const html = baseTemplate({
     titre: `Rappel — Facture ${invoice.numero}`,
     intro: `Bonjour,<br/>Sauf erreur de notre part, la facture <strong>${invoice.numero}</strong> d'un montant de <strong>${montant}</strong>, émise par <strong>${user.entreprise || user.nom}</strong>, reste impayée${joursRetard ? ` (échéance dépassée de ${joursRetard} jour${joursRetard > 1 ? 's' : ''})` : ''}.`,

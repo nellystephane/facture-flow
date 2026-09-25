@@ -1,10 +1,11 @@
 const User = require('../models/User');
 const Subscription = require('../models/Subscription');
 const fedapay = require('../utils/fedapay');
-const { PLANS, FEATURES } = require('../config/plans');
+const { PLANS, FEATURES, ABONNEMENT_REDUCTION_PERCENT } = require('../config/plans');
 const { permissionsDe, facturesCeMoisCi } = require('../utils/permissions');
 const Invoice = require('../models/Invoice');
 const PlatformSettings = require('../models/PlatformSettings');
+const AffiliateReferral = require('../models/AffiliateReferral');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -12,8 +13,8 @@ const asyncHandler = require('../middleware/asyncHandler');
 // dans /admin > Tarifs — voir getTarifsActuels() ci-dessous, qui surcharge
 // ces valeurs avec celles éventuellement enregistrées en base).
 const TARIFS = {
-  pro: { 1: 3500, 6: 19000, 12: 34000 },
-  business: { 1: 6000, 6: 32000, 12: 58000 },
+  pro: { 1: 3500, 6: 17010, 12: 34020 },
+  business: { 1: 6000, 6: 29160, 12: 58320 },
 };
 const MOIS_PAR_DUREE = { '1mois': 1, '6mois': 6, '1an': 12 };
 
@@ -22,10 +23,20 @@ const MOIS_PAR_DUREE = { '1mois': 1, '6mois': 6, '1an': 12 };
 // redéploiement.
 async function getTarifsActuels() {
   const settings = await PlatformSettings.findOne();
-  if (!settings) return TARIFS;
+  if (!settings) return { pro: tarifsAvecReduction(TARIFS.pro[1]), business: tarifsAvecReduction(TARIFS.business[1]) };
   return {
-    pro: { 1: settings.tarifs?.pro?.[1] ?? TARIFS.pro[1], 6: settings.tarifs?.pro?.[6] ?? TARIFS.pro[6], 12: settings.tarifs?.pro?.[12] ?? TARIFS.pro[12] },
-    business: { 1: settings.tarifs?.business?.[1] ?? TARIFS.business[1], 6: settings.tarifs?.business?.[6] ?? TARIFS.business[6], 12: settings.tarifs?.business?.[12] ?? TARIFS.business[12] },
+    pro: tarifsAvecReduction(settings.tarifs?.pro?.[1] ?? TARIFS.pro[1]),
+    business: tarifsAvecReduction(settings.tarifs?.business?.[1] ?? TARIFS.business[1]),
+  };
+}
+
+function tarifsAvecReduction(prixMensuel) {
+  const base = Math.max(0, Math.round(Number(prixMensuel) || 0));
+  const facteur = 1 - (ABONNEMENT_REDUCTION_PERCENT / 100);
+  return {
+    1: base,
+    6: Math.round(base * 6 * facteur),
+    12: Math.round(base * 12 * facteur),
   };
 }
 
@@ -37,9 +48,28 @@ function avantagesDe(planId) {
   return avantages;
 }
 
+async function calculerMontantAvecAffiliation({ ownerId, plan, duree, montantNormal, prixMensuel }) {
+  const referral = await AffiliateReferral.findOne({ referredUser: ownerId, status: { $in: ['active', 'converted'] } });
+  if (!referral) return { montant: montantNormal, remise: 0, referral: null };
+  const settings = await PlatformSettings.getOrCreate();
+  const pct = Math.max(0, Math.min(100, Number(settings.affiliate?.discountPercent || 0)));
+  const maxMonths = Math.max(0, Number(settings.affiliate?.discountMonths || 0));
+  if (!pct || !maxMonths) return { montant: montantNormal, remise: 0, referral };
+  const mois = MOIS_PAR_DUREE[duree] || 1;
+  const moisRestants = Math.max(0, Math.min(maxMonths - Number(referral.discountMonthsApplied || 0), mois));
+  if (!moisRestants) return { montant: montantNormal, remise: 0, referral };
+  // La remise d'engagement (19 %) reste appliquée à la durée choisie.
+  // La remise affilié porte uniquement sur les premiers mois encore éligibles.
+  const facteurEngagement = duree === '1mois' ? 1 : (1 - ABONNEMENT_REDUCTION_PERCENT / 100);
+  const remise = Math.round(prixMensuel * facteurEngagement * (pct / 100) * moisRestants);
+  return { montant: Math.max(0, montantNormal - remise), remise, referral, moisRemises: moisRestants };
+}
+
 exports.getPlans = asyncHandler(async (req, res) => {
   const TARIFS = await getTarifsActuels();
+  const affiliateSettings = await PlatformSettings.getOrCreate();
   res.json({
+    affiliate: { enabled: !!affiliateSettings.affiliate.enabled, discountPercent: affiliateSettings.affiliate.discountPercent, discountMonths: affiliateSettings.affiliate.discountMonths },
     plans: [
       {
         id: 'gratuit', nom: PLANS.gratuit.nom, accroche: PLANS.gratuit.accroche,
@@ -119,11 +149,14 @@ exports.subscribe = asyncHandler(async (req, res) => {
   if (!MOIS_PAR_DUREE[duree]) return res.status(400).json({ message: 'Durée invalide' });
 
   const mois = MOIS_PAR_DUREE[duree];
-  const montant = TARIFS[plan][mois];
+  const montantNormal = TARIFS[plan][mois];
+  const prixMensuel = TARIFS[plan][1];
+  const prix = await calculerMontantAvecAffiliation({ ownerId: req.userId, plan, duree, montantNormal, prixMensuel });
+  const montant = prix.montant;
 
   const user = await User.findById(req.userId);
   const sub = await Subscription.create({
-    owner: req.userId, plan, duree, montant, statut: 'en_attente',
+    owner: req.userId, plan, duree, montant, montantNormal, remiseAffiliation: prix.remise || 0, statut: 'en_attente',
   });
 
   const publicBase = (process.env.CLIENT_URL_PUBLIC || (process.env.CLIENT_URL || '').split(',')[0] || '').replace(/\/$/, '');
@@ -138,7 +171,7 @@ exports.subscribe = asyncHandler(async (req, res) => {
   sub.fedapayTransactionId = String(transactionId);
   await sub.save();
 
-  res.json({ paymentUrl });
+  res.json({ paymentUrl, montant, montantNormal, remiseAffiliation: prix.remise || 0 });
 });
 
 exports.getStatus = asyncHandler(async (req, res) => {

@@ -4,6 +4,7 @@ import { getMembers, inviteMember, updateMemberRole, removeMember, getActivity }
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../contexts/ToastContext';
 import PageHeader from '../components/ui/PageHeader';
+import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import LockedFeature from '../components/ui/LockedFeature';
@@ -125,14 +126,7 @@ export default function Equipe() {
                     {m.role === 'proprietaire' ? (
                       <span className="badge badge-payee"><ShieldCheck size={12} className="inline mr-1" />Propriétaire</span>
                     ) : (
-                      <select
-                        className="field !py-1.5 !text-xs w-auto"
-                        value={m.role}
-                        onChange={(e) => handleRoleChange(m.id, e.target.value as 'admin' | 'collaborateur')}
-                      >
-                        <option value="admin">Administrateur</option>
-                        <option value="collaborateur">Collaborateur</option>
-                      </select>
+                      <Select value={m.role} onChange={(v) => handleRoleChange(m.id, v as 'admin' | 'collaborateur')} options={[{value:'admin',label:'Administrateur'},{value:'collaborateur',label:'Collaborateur'}]} className="!py-1.5 !text-xs w-auto" />
                     )}
                   </td>
                   <td className="px-5 py-4">
@@ -183,10 +177,7 @@ export default function Equipe() {
           </div>
           <div>
             <label className="field-label">Rôle</label>
-            <select className="field" value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as 'admin' | 'collaborateur' }))}>
-              <option value="collaborateur">Collaborateur — utilise Oryxa au quotidien</option>
-              <option value="admin">Administrateur — peut aussi gérer l'équipe et l'abonnement</option>
-            </select>
+            <Select value={form.role} onChange={(v) => setForm((f) => ({ ...f, role: v as 'admin' | 'collaborateur' }))} options={[{value:'collaborateur',label:'Collaborateur — utilise Oryxa au quotidien'},{value:'admin',label:"Administrateur — peut aussi gérer l'équipe et l'abonnement"}]} />
           </div>
           <button type="submit" disabled={inviting} className="btn-primary w-full justify-center">
             {inviting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />} Envoyer l'invitation
