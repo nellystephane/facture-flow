@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +14,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const fromAffiliate = params.get('from') === 'affiliate';
+  const affiliateRef = params.get('ref') || '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +24,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/app');
+      navigate(fromAffiliate ? `/app/affiliation${affiliateRef ? `?ref=${encodeURIComponent(affiliateRef)}` : ''}` : '/app');
     } catch (err) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
       if (code === 'EMAIL_NON_VERIFIE') {

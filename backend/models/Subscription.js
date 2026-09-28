@@ -8,7 +8,7 @@ const subscriptionSchema = new mongoose.Schema({
   montantNormal: { type: Number, default: null },
   remiseAffiliation: { type: Number, default: 0 },
   statut: { type: String, enum: ['en_attente', 'payee', 'echouee'], default: 'en_attente' },
-  fedapayTransactionId: { type: String, default: null, index: true },
+  fedapayTransactionId: { type: String, default: null, index: true, unique: true, sparse: true },
   dateDebut: { type: Date, default: null },
   dateFin: { type: Date, default: null },
 }, { timestamps: true });

@@ -2,15 +2,23 @@ const express = require('express');
 const router = express.Router();
 const admin = require('../controllers/adminController');
 const requireAdminAuth = require('../middleware/adminAuth');
+const adminAudit = require('../middleware/adminAudit');
 
 // /api/admin/login n'est PAS protégé par requireAdminAuth (c'est justement
 // la route qui délivre le token) — mais elle passe par le même
 // rate-limiter que /api/auth/login (voir server.js) contre le brute-force.
 router.post('/login', admin.login);
+router.post('/refresh', admin.refresh);
 
 router.use(requireAdminAuth);
+router.use(adminAudit);
+router.post('/logout', admin.logout);
+router.post('/logout-all', admin.logoutAll);
+router.get('/sessions', admin.listSessions);
+router.delete('/sessions/:id', admin.revokeSession);
 
 router.get('/stats', admin.getStats);
+router.get('/security', admin.getSecurityOverview);
 router.post('/email-test', admin.testEmail);
 router.get('/finance', admin.getFinancials);
 

@@ -25,12 +25,14 @@ export default function OryxaLogo({
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`} style={style}>
       <img
-        src={`${import.meta.env.BASE_URL}icons/logo.png?v=20260922-logo-feather`}
+        src={`${import.meta.env.BASE_URL}icons/logo.png?v=20260925-oryxa-official`}
         alt="Logo Oryxa"
         width={size}
         height={size}
         className={`oryxa-brand-logo block object-contain object-center shrink-0 aspect-square ${imageClassName}`}
+        style={{ width: size, height: size, minWidth: size, minHeight: size }}
         loading="eager"
+        decoding="async"
       />
       {showName && <span className={nameClassName}>Oryxa</span>}
     </span>

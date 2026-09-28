@@ -10,6 +10,8 @@ router.post('/register', controller.register);
 router.post('/verifier-email', controller.verifyEmail);
 router.post('/renvoyer-code', controller.resendVerificationCode);
 router.post('/login', controller.login);
+router.post('/refresh', controller.refresh);
+router.post('/logout', controller.logout);
 router.post('/mot-de-passe-oublie', controller.forgotPassword);
 router.post('/reinitialiser-mot-de-passe', controller.resetPassword);
 router.get('/profile', auth, controller.getProfile);
@@ -17,5 +19,9 @@ router.put('/profile', auth, validate(updateProfileSchema), controller.updatePro
 router.post('/profile/logo', auth, requireFeature('logoPersonnalise'), controller.uploadLogo);
 router.delete('/profile/logo', auth, controller.removeLogo);
 router.put('/profile/mot-de-passe', auth, controller.changePassword);
+router.post('/logout-all', auth, controller.logoutAll);
+router.get('/sessions', auth, controller.listSessions);
+router.delete('/sessions/:id', auth, controller.revokeSession);
+router.post('/sessions/logout-autres', auth, controller.revokeOtherSessions);
 
 module.exports = router;

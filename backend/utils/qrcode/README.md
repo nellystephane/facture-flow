@@ -1,0 +1,1 @@
+This directory vendors the QRCode implementation originally published by Kazuhiko Arase (d-project.com), distributed under the MIT license and adapted for Node.js use by qrcode-terminal. It is used only to render payment URLs inside Oryxa PDFs without requiring an external QR service at runtime.

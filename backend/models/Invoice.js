@@ -30,10 +30,11 @@ const invoiceSchema = new mongoose.Schema({
     enum: ['brouillon', 'envoyee', 'vue', 'payee', 'en_retard', 'annulee'],
     default: 'brouillon'
   },
-  template: { type: String, enum: ['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir'], default: 'classique' },
-  quote: { type: mongoose.Schema.Types.ObjectId, ref: 'Quote', default: null },
+  template: { type: String, enum: ['classique', 'moderne', 'minimal'], default: 'classique' },
+  quote: { type: mongoose.Schema.Types.ObjectId, ref: 'Quote', default: null, unique: true, sparse: true },
   // Jeton public : permet au client d'accéder à la page de paiement sans compte.
   publicToken: { type: String, unique: true, sparse: true, index: true },
+  publicAccessRevoked: { type: Boolean, default: false },
   derniereRelance: { type: Date, default: null },
   dateEnvoi: { type: Date, default: null },
   dateVue: { type: Date, default: null },

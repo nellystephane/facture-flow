@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import OryxaLogo from '../../components/OryxaLogo';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
+import ThemeToggle from '../../components/ThemeToggle';
 
 export default function AdminLogin() {
   const { login } = useAdminAuth();
@@ -28,17 +29,17 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="dark">
-      <div className="app-bg !min-h-screen flex items-center justify-center px-6">
+    <div className="app-bg !min-h-screen flex items-center justify-center px-6">
         <div className="orb orb-1" />
         <div className="orb orb-2" />
 
         <div className="relative z-10 w-full max-w-sm">
+          <div className="flex justify-end mb-2"><ThemeToggle /></div>
           <div className="flex flex-col items-center gap-3 mb-8 text-center">
-            <OryxaLogo size={56} nameClassName="font-extrabold text-xl text-white" imageClassName="rounded-2xl shadow-lg" />
+            <OryxaLogo size={56} nameClassName="font-extrabold text-xl text-gray-900 dark:text-white" imageClassName="rounded-2xl shadow-lg" />
             <div>
               <h1 className="text-xl font-extrabold text-white">Administration Oryxa</h1>
-              <p className="text-sm text-gray-400 mt-1">Accès réservé — espace non lié à votre compte Oryxa habituel.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Accès réservé — espace non lié à votre compte Oryxa habituel.</p>
             </div>
           </div>
 
@@ -97,6 +98,5 @@ export default function AdminLogin() {
           </p>
         </div>
       </div>
-    </div>
   );
 }

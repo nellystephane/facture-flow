@@ -1,29 +1,15 @@
 import axios from 'axios';
+import { clearAccessToken, getAccessToken, setAccessToken } from './tokenStore';
 
-// En développement, le proxy Vite redirige /api vers le backend local.
-// En production, définissez VITE_API_URL (ex: https://api.votredomaine.com/api)
-// dans les variables d'environnement de votre hébergeur frontend.
 const baseURL = import.meta.env.VITE_API_URL || 'https://facture-flow.onrender.com/api';
-
-// Exporté pour construire des URLs absolues (PDF, reçus...) utilisées avec un
-// simple fetch() en dehors de l'instance axios. Indispensable dès que le
-// frontend et le backend ne sont PAS sur le même nom de domaine (ex :
-// frontend sur GitHub Pages / Vercel et backend sur Render) : une URL
-// relative comme "/api/..." se résoudrait alors contre l'origine du
-// frontend au lieu du backend, et renverrait une 404.
 export const API_BASE_URL = baseURL;
 
-
-// Indicateur global non bloquant : il n'apparaît que si une requête dure
-// réellement un peu longtemps, pour éviter les clignotements sur les réponses rapides.
 let pendingRequests = 0;
 let loadingTimer: ReturnType<typeof setTimeout> | null = null;
-
 const emitGlobalLoading = (loading: boolean) => {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('oryxa:network-loading', { detail: { loading } }));
 };
-
 const startGlobalLoading = () => {
   pendingRequests += 1;
   if (pendingRequests !== 1 || loadingTimer) return;
@@ -32,14 +18,10 @@ const startGlobalLoading = () => {
     if (pendingRequests > 0) emitGlobalLoading(true);
   }, 350);
 };
-
 const stopGlobalLoading = () => {
   pendingRequests = Math.max(0, pendingRequests - 1);
   if (pendingRequests > 0) return;
-  if (loadingTimer) {
-    clearTimeout(loadingTimer);
-    loadingTimer = null;
-  }
+  if (loadingTimer) { clearTimeout(loadingTimer); loadingTimer = null; }
   emitGlobalLoading(false);
 };
 
@@ -47,34 +29,45 @@ const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
+  withCredentials: true,
 });
 
-// Injecte le JWT à chaque requête
 api.interceptors.request.use((config) => {
   startGlobalLoading();
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = getAccessToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Déconnexion auto si token expiré
+let refreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken() {
+  if (refreshing && refreshPromise) return refreshPromise;
+  refreshing = true;
+  refreshPromise = axios.post<{ token: string }>(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
+    .then((res) => { setAccessToken(res.data.token); return res.data.token; })
+    .catch(() => { clearAccessToken(); return null; })
+    .finally(() => { refreshing = false; refreshPromise = null; });
+  return refreshPromise;
+}
+
 api.interceptors.response.use(
-  (res) => {
+  (res) => { stopGlobalLoading(); return res; },
+  async (err) => {
     stopGlobalLoading();
-    return res;
-  },
-  (err) => {
-    stopGlobalLoading();
-    if (err.response?.status === 401) {
-      localStorage.removeItem('token');
-      // On respecte le base path de déploiement (ex: "/facture-flow/" sur
-      // GitHub Pages) au lieu d'un "/login" absolu qui 404 hors racine.
-      const loginPath = `${import.meta.env.BASE_URL}login`.replace(/\/+/g, '/');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = loginPath;
+    const original = err.config as any;
+    if (err.response?.status === 401 && original && !original.__oryxaRetried && !String(original.url || '').includes('/auth/refresh')) {
+      original.__oryxaRetried = true;
+      const token = await refreshAccessToken();
+      if (token) {
+        original.headers = original.headers || {};
+        original.headers.Authorization = `Bearer ${token}`;
+        return api(original);
       }
+      clearAccessToken();
+      const loginPath = `${import.meta.env.BASE_URL}login`.replace(/\/+/g, '/');
+      if (!window.location.pathname.includes('/login')) window.location.href = loginPath;
     }
     return Promise.reject(err);
   }

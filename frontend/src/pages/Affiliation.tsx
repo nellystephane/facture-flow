@@ -9,6 +9,7 @@ import { activateAffiliate, getAffiliateDashboard, getAffiliateMe, getPublicAffi
 import { apiError } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
 import OryxaLogo from '../components/OryxaLogo';
+import ThemeToggle from '../components/ThemeToggle';
 
 const fmt = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(Number(n) || 0)) + ' FCFA';
 
@@ -27,8 +28,9 @@ function PublicAffiliate({ code }: { code?: string }) {
     <div className="app-bg min-h-screen flex items-center justify-center p-4 sm:p-6">
       <div className="orb orb-1" /><div className="orb orb-2" />
       <div className="relative z-10 w-full max-w-3xl">
-        <div className="flex justify-center mb-5">
-          <OryxaLogo size={44} nameClassName="font-extrabold text-xl text-[#0a0a0c] dark:text-white" imageClassName="rounded-xl shadow-md" />
+        <div className="flex items-center justify-between mb-5">
+          <OryxaLogo size={40} nameClassName="font-extrabold text-lg text-gray-900 dark:text-white" imageClassName="rounded-xl shadow-md" />
+          <ThemeToggle />
         </div>
         <div className="glass-card affiliate-public-card p-6 sm:p-9 md:p-11">
           {error ? (
@@ -65,7 +67,7 @@ function PublicAffiliate({ code }: { code?: string }) {
               <Link to={`/register?affiliate=1&ref=${encodeURIComponent(code || '')}`} className="btn-primary w-full justify-center mt-8 affiliate-main-action">
                 Devenir affilié <ArrowRight size={18} />
               </Link>
-              <Link to="/login" className="block text-center text-sm text-gray-500 mt-4 hover:text-[#d9524d]">
+              <Link to={`/login?from=affiliate${code ? `&ref=${encodeURIComponent(code)}` : ''}`} className="block text-center text-sm text-gray-500 mt-4 hover:text-[#d9524d]">
                 J’ai déjà un compte Oryxa
               </Link>
             </>
@@ -104,7 +106,7 @@ export default function Affiliation() {
     getAffiliateMe().then(r => {
       setMe(r.data);
       if (r.data.active) setMode('dashboard');
-    }).catch(() => {});
+    }).catch(e => setError(apiError(e, 'Impossible de charger votre espace affilié. Vérifiez votre connexion puis réessayez.')));
   }, [user]);
 
   const loadDashboard = async () => {
@@ -112,7 +114,11 @@ export default function Affiliation() {
     try {
       const r = await getAffiliateDashboard();
       setData(r.data);
+      setError('');
       setMode('dashboard');
+    } catch (e) {
+      setError(apiError(e, 'Impossible de charger le tableau de bord affilié.'));
+      throw e;
     } finally {
       setDashboardLoading(false);
     }
@@ -126,8 +132,8 @@ export default function Affiliation() {
   const activate = async () => {
     setLoading(true); setError('');
     try {
-      const r = await activateAffiliate({ telephone: phone, whatsapp });
-      setMe(r.data);
+      const r = await activateAffiliate({ telephone: phone.trim(), whatsapp: whatsapp.trim() });
+      setMe(r.data.affiliate ? { active: true, eligible: true, affiliate: r.data.affiliate, rules: r.data.affiliate.rules } : r.data);
       setMode('dashboard');
       await loadDashboard();
     } catch (e) {
@@ -167,6 +173,7 @@ export default function Affiliation() {
 
   if (mode === 'public') return (
     <div className="affiliate-page">
+      <div className="affiliate-topbar"><OryxaLogo size={38} nameClassName="font-extrabold text-lg text-gray-900 dark:text-white" imageClassName="rounded-xl" /><ThemeToggle /></div>
       <div className="affiliate-activation-wrap">
         <div className="affiliate-page-heading">
           <div className="affiliate-icon-large"><Gift size={24} /></div>
@@ -212,6 +219,7 @@ export default function Affiliation() {
 
   return (
     <div className="affiliate-page">
+      <div className="affiliate-topbar"><OryxaLogo size={38} nameClassName="font-extrabold text-lg text-gray-900 dark:text-white" imageClassName="rounded-xl" /><ThemeToggle /></div>
       <div className="affiliate-dashboard">
         <div className="affiliate-dashboard-header">
           <div>
@@ -276,6 +284,11 @@ export default function Affiliation() {
             </div>
           </section>
         </div>
+
+        <section className="affiliate-how-card">
+          <div><span className="affiliate-section-kicker">Comment ça fonctionne</span><h2>Un lien, des recommandations, des résultats.</h2><p>Partagez votre lien Oryxa. Une personne peut créer son compte, confirmer son email puis utiliser Oryxa. Lorsqu’un abonnement éligible est réellement payé, la relation est comptabilisée et la commission apparaît dans votre espace.</p></div>
+          <div className="affiliate-how-steps"><div><b>1</b><span>Partagez votre lien</span></div><div><b>2</b><span>Votre filleul s’inscrit</span></div><div><b>3</b><span>Email confirmé</span></div><div><b>4</b><span>Abonnement payé</span></div></div>
+        </section>
 
         <section className="glass-card affiliate-panel affiliate-table-panel">
           <div className="affiliate-panel-heading"><div><div className="affiliate-panel-icon"><Users size={18} /></div><div><h2>Mes filleuls</h2><p>Suivez les personnes apportées par votre lien.</p></div></div></div>

@@ -164,30 +164,43 @@ async function handleInvoiceRefund(transaction) {
 
 async function handleSubscriptionPaid(transaction) {
   const meta = transaction.custom_metadata || {};
-  const sub = await Subscription.findById(meta.subscriptionId);
+  const subscriptionId = meta.subscriptionId;
+  if (!subscriptionId) return;
+
+  const sub = await Subscription.findById(subscriptionId);
   if (!sub) return;
 
-  if (sub.statut !== 'payee') {
-    sub.statut = 'payee';
-    const now = new Date();
-    const DUREE_MS = { '1mois': 30 * 24 * 3600 * 1000, '6mois': 183 * 24 * 3600 * 1000, '1an': 365 * 24 * 3600 * 1000 };
-    const dureeMs = DUREE_MS[sub.duree] || DUREE_MS['1mois'];
-    sub.dateDebut = now;
-    sub.dateFin = new Date(now.getTime() + dureeMs);
-    await sub.save();
+  const DUREE_MS = { '1mois': 30 * 24 * 3600 * 1000, '6mois': 183 * 24 * 3600 * 1000, '1an': 365 * 24 * 3600 * 1000 };
+  const now = new Date();
+  const dureeMs = DUREE_MS[sub.duree] || DUREE_MS['1mois'];
 
-    await User.findByIdAndUpdate(sub.owner, {
-      subscription: sub.plan,
-      abonnement: { duree: sub.duree, dateDebut: sub.dateDebut, dateFin: sub.dateFin },
-    });
-  }
+  // Mise à jour atomique : deux retries FedaPay simultanés ne peuvent pas
+  // transformer le même abonnement deux fois ni décaler sa date de début.
+  const updated = await Subscription.findOneAndUpdate(
+    { _id: sub._id, statut: { $ne: 'payee' } },
+    {
+      $set: {
+        statut: 'payee',
+        fedapayTransactionId: String(transaction.id),
+        dateDebut: now,
+        dateFin: new Date(now.getTime() + dureeMs),
+      },
+    },
+    { new: true }
+  );
 
-  // Même lors d'un retry du webhook, on vérifie l'existence de la commission.
-  // Cela évite de perdre une commission si le paiement a été confirmé mais que
-  // le premier traitement de la commission a rencontré une panne temporaire.
+  if (!updated) return;
+
+  await User.findByIdAndUpdate(updated.owner, {
+    subscription: updated.plan,
+    abonnement: { duree: updated.duree, dateDebut: updated.dateDebut, dateFin: updated.dateFin },
+  });
+
+  // Même lors d'un retry du webhook, la commission reste protégée par son
+  // index unique sur subscription.
   try {
     const affiliate = require('./affiliateController');
-    await affiliate.applySubscriptionCommission(sub);
+    await affiliate.applySubscriptionCommission(updated);
   } catch (err) {
     console.error('[affiliate] commission abonnement impossible:', err.message);
   }

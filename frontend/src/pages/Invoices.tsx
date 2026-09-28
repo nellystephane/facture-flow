@@ -10,6 +10,7 @@ import Select from '../components/ui/Select';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, formatDate, badgeClass, INVOICE_STATUT_LABEL } from '../utils/format';
+import { authenticatedFetch } from '../api/authenticatedFetch';
 
 const STATUTS: { value: string; label: string }[] = [
   { value: '', label: 'Tous les statuts' },
@@ -52,9 +53,8 @@ export default function Invoices() {
   }, [search]);
 
   const openPdf = (id: string) => {
-    const token = localStorage.getItem('token');
-    // On ouvre le PDF via un fetch authentifié qu'on convertit en blob
-    fetch(invoicePdfUrl(id), { headers: { Authorization: `Bearer ${token}` } })
+        // On ouvre le PDF via un fetch authentifié qu'on convertit en blob
+    authenticatedFetch(invoicePdfUrl(id))
       .then((r) => r.blob())
       .then((blob) => {
         const url = URL.createObjectURL(blob);
@@ -66,8 +66,7 @@ export default function Invoices() {
     if (!permissions?.peutExporterComptabilite) { toast('Export comptable réservé au plan Pro ou Business.'); window.location.assign(`${import.meta.env.BASE_URL}app/abonnement`); return; }
     setExporting(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(invoicesExportUrl(), { headers: { Authorization: `Bearer ${token}` } });
+            const res = await authenticatedFetch(invoicesExportUrl());
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

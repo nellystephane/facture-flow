@@ -4,6 +4,7 @@ import { ShieldCheck, ArrowRight, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import * as authApi from '../api/auth';
 import { apiError } from '../utils/format';
+import { setAccessToken } from '../api/tokenStore';
 import OryxaLogo from '../components/OryxaLogo';
 
 const DUREE_CODE_S = 3 * 60; // doit rester aligné avec DUREE_CODE_VERIFICATION_MS côté backend
@@ -11,6 +12,7 @@ const DUREE_CODE_S = 3 * 60; // doit rester aligné avec DUREE_CODE_VERIFICATION
 export default function VerifyEmail() {
   const [params] = useSearchParams();
   const email = params.get('email') || '';
+  const affiliateMode = params.get('affiliate') === '1' || !!params.get('ref');
   const [digits, setDigits] = useState<string[]>(Array(6).fill(''));
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -78,9 +80,9 @@ export default function VerifyEmail() {
     setLoading(true);
     try {
       const res = await authApi.verifyEmail(email, code);
-      localStorage.setItem('token', res.data.token);
+      setAccessToken(res.data.token);
       setUser(res.data.user);
-      navigate('/app');
+      navigate(affiliateMode ? '/app/affiliation' : '/app');
     } catch (err) {
       setError(apiError(err, 'Code invalide'));
       setDigits(Array(6).fill(''));

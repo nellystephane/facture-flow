@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 
 // Doit être importé tôt : initialise Sentry si SENTRY_DSN est configuré
 // (no-op silencieux sinon — voir utils/monitoring.js).
@@ -38,6 +39,19 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
 
 console.log('CORS — origines autorisées :', allowedOrigins);
 
+app.use((req, res, next) => {
+  const header = req.headers.cookie || '';
+  req.cookies = {};
+  header.split(';').forEach((part) => {
+    const idx = part.indexOf('=');
+    if (idx === -1) return;
+    const key = part.slice(0, idx).trim();
+    const value = part.slice(idx + 1).trim();
+    if (key) req.cookies[key] = decodeURIComponent(value);
+  });
+  next();
+});
+
 app.use(cors({
   origin(origin, callback) {
     if (!origin) return callback(null, true); // requêtes sans origine (curl, health check…)
@@ -70,7 +84,26 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String(req.body?.email || '').trim().toLowerCase()}`,
   message: { message: 'Trop de tentatives, réessayez plus tard.' },
+});
+
+const sensitiveActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String(req.params?.token || req.body?.email || '').trim().toLowerCase()}`,
+  message: { message: 'Trop de tentatives pour cette opération. Réessayez plus tard.' },
+});
+
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String(req.params?.token || '').trim()}`,
+  message: { message: 'Trop de tentatives de paiement. Réessayez plus tard.' },
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
@@ -78,10 +111,15 @@ app.use('/api/auth/verifier-email', authLimiter);
 app.use('/api/auth/renvoyer-code', authLimiter);
 app.use('/api/auth/mot-de-passe-oublie', authLimiter);
 app.use('/api/auth/reinitialiser-mot-de-passe', authLimiter);
+app.use('/api/auth/refresh', sensitiveActionLimiter);
 // Même limiteur que la connexion utilisateur : l'espace admin n'a qu'un
 // mot de passe partagé (voir docs/ADMIN_ACCESS.md), donc le brute-force
 // doit être freiné au moins aussi agressivement qu'ailleurs.
 app.use('/api/admin/login', authLimiter);
+app.use('/api/admin/refresh', sensitiveActionLimiter);
+app.use('/api/public/invoices/:token/pay', paymentLimiter);
+app.use('/api/public/quotes/:token/repondre', sensitiveActionLimiter);
+app.use('/api/subscription', paymentLimiter);
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -121,7 +159,9 @@ if (Sentry) Sentry.setupExpressErrorHandler(app);
 app.use((err, req, res, next) => {
   console.error('Erreur non gérée:', err);
   captureException(err, { path: req.originalUrl, method: req.method });
-  res.status(err.status || 500).json({ message: err.message || 'Erreur serveur' });
+  const status = Number(err.status) >= 400 && Number(err.status) < 500 ? Number(err.status) : 500;
+  const message = process.env.NODE_ENV === 'production' ? (status < 500 ? (err.publicMessage || err.message || 'Requête invalide.') : 'Une erreur interne est survenue.') : (err.message || 'Erreur serveur');
+  res.status(status).json({ message });
 });
 
 const { demarrerNettoyageAbonnements } = require('./jobs/cleanExpiredSubscriptions');
@@ -132,6 +172,26 @@ const { demarrerReversementsAutomatiques } = require('./jobs/payouts');
 const PORT = process.env.PORT || 5000;
 
 async function start() {
+  if (process.env.NODE_ENV === 'production') {
+    const requiredSecrets = [
+      ['JWT_SECRET', process.env.JWT_SECRET],
+      ['ADMIN_JWT_SECRET', process.env.ADMIN_JWT_SECRET],
+    ];
+    const weak = requiredSecrets.filter(([, value]) => !value || value.length < 32).map(([name]) => name);
+    if (weak.length) {
+      console.error(`Secrets de production invalides ou absents : ${weak.join(', ')}. Chaque secret doit être indépendant et faire au moins 32 caractères.`);
+      process.exit(1);
+    }
+    if (!process.env.ADMIN_PASSWORD_HASH) {
+      console.error('ADMIN_PASSWORD_HASH est obligatoire en production. Le mot de passe admin en clair est désactivé.');
+      process.exit(1);
+    }
+    const { getConfiguredAdminEmail } = require('./utils/adminConfig');
+    if (!getConfiguredAdminEmail()) {
+      console.error('Un seul administrateur doit être configuré : ADMIN_EMAIL (ou temporairement ADMIN_EMAILS avec exactement une adresse).');
+      process.exit(1);
+    }
+  }
   if (!process.env.MONGO_URI) {
     console.error("MONGO_URI manquant dans les variables d'environnement.");
     process.exit(1);

@@ -18,7 +18,6 @@ const quoteSchema = new mongoose.Schema({
   remise: { type: Number, default: 0 },
   tva: { type: Number, default: 0 },
   notes: { type: String, default: '' },
-  template: { type: String, enum: ['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir'], default: 'classique' },
   statut: {
     type: String,
     enum: ['brouillon', 'envoye', 'accepte', 'refuse', 'expire'],
@@ -27,6 +26,7 @@ const quoteSchema = new mongoose.Schema({
   // Jeton public : permet au client d'ouvrir le devis et d'y répondre
   // (approuver / demander des infos) sans compte, comme pour les factures.
   publicToken: { type: String, unique: true, sparse: true, index: true },
+  publicAccessRevoked: { type: Boolean, default: false },
   dateEnvoi: { type: Date, default: null },
   dateVue: { type: Date, default: null },
   // Message du client quand il demande des précisions avant de se décider.

@@ -8,6 +8,7 @@ import EmptyState from '../components/ui/EmptyState';
 import Pagination from '../components/ui/Pagination';
 import Select from '../components/ui/Select';
 import { formatFCFA, formatDate, badgeClass, QUOTE_STATUT_LABEL } from '../utils/format';
+import { authenticatedFetch } from '../api/authenticatedFetch';
 
 const STATUTS = [
   { value: '', label: 'Tous' },
@@ -46,8 +47,7 @@ export default function Quotes() {
   }, [search]);
 
   const openPdf = (id: string) => {
-    const token = localStorage.getItem('token');
-    fetch(quotePdfUrl(id), { headers: { Authorization: `Bearer ${token}` } })
+        authenticatedFetch(quotePdfUrl(id))
       .then((r) => r.blob())
       .then((blob) => window.open(URL.createObjectURL(blob), '_blank'));
   };

@@ -164,17 +164,25 @@ async function getTransaction(transactionId) {
  * @param {string} signatureHeader
  * @param {string} secret - FEDAPAY_WEBHOOK_SECRET
  */
-function verifyWebhookSignature(rawBody, signatureHeader, secret) {
+function verifyWebhookSignature(rawBody, signatureHeader, secret, maxAgeSeconds = 300) {
   if (!signatureHeader || !secret) return false;
-  // Format d'en-tête FedaPay : "t=timestamp,s=signature"
+  // Format d'en-tête FedaPay : "t=timestamp,s=signature".
   const parts = Object.fromEntries(
     signatureHeader.split(',').map((p) => p.split('=').map((s) => s.trim()))
   );
   if (!parts.t || !parts.s) return false;
+
+  const timestamp = Number(parts.t);
+  if (!Number.isFinite(timestamp)) return false;
+  const timestampMs = timestamp > 1e12 ? timestamp : timestamp * 1000;
+  if (Math.abs(Date.now() - timestampMs) > maxAgeSeconds * 1000) return false;
+
   const payload = `${parts.t}.${rawBody}`;
   const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+  const received = String(parts.s).toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(received)) return false;
   try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.s));
+    return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(received, 'hex'));
   } catch {
     return false;
   }

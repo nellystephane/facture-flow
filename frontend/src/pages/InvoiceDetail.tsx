@@ -4,6 +4,7 @@ import {
   ArrowLeft, Download, Pencil, Wallet, Trash2,
   XCircle, Mail, Link2, Receipt, Loader2, Lock, MessageCircle
 } from 'lucide-react';
+import { authenticatedFetch } from '../api/authenticatedFetch';
 import { getInvoice, patchInvoiceStatus, deleteInvoice, invoicePdfUrl, sendInvoiceEmail } from '../api/invoices';
 import { createPayment, getPayments, deletePayment, paymentReceiptUrl } from '../api/payments';
 import type { Invoice, Payment, MethodePaiement } from '../types';
@@ -52,8 +53,7 @@ export default function InvoiceDetail() {
   const previewPdf = () => { if (id) setPreview({ url: invoicePdfUrl(id), title: `Aperçu de ${invoice?.numero || 'la facture'}`, filename: `Facture-${invoice?.numero || id}.pdf` }); };
 
   const openPdf = () => {
-    const token = localStorage.getItem('token');
-    fetch(invoicePdfUrl(id!), { headers: { Authorization: `Bearer ${token}` } })
+        authenticatedFetch(invoicePdfUrl(id!))
       .then((r) => r.blob())
       .then((blob) => window.open(URL.createObjectURL(blob), '_blank'));
   };

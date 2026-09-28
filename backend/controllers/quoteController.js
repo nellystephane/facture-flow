@@ -6,7 +6,7 @@ const { paginationParams, paginatedResponse } = require('../utils/pagination');
 const { buildQuotePdf } = require('../utils/pdfBuilder');
 const email = require('../utils/email');
 const { enregistrerActivite } = require('../utils/activityLog');
-const { verifierLimiteDevis, permissionsDe } = require('../utils/permissions');
+const { verifierLimiteDevis } = require('../utils/permissions');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -19,7 +19,7 @@ const nextQuoteNumber = (owner) => nextNumber(owner, 'devis');
 // coup rendrait la facture générée incohérente avec le devis d'origine.
 const LOCKED_STATUTS = ['accepte'];
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut', 'template'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut'];
 
 function pickFields(body) {
   const o = {};
@@ -53,7 +53,6 @@ exports.previewQuotePdf = asyncHandler(async (req, res) => {
   const data = pickFields(req.body);
   const client = await Client.findOne({ _id: data.client, owner: req.userId });
   if (!client) return res.status(404).json({ message: 'Client introuvable.' });
-  if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) data.template = 'classique';
   const quote = {
     ...data,
     numero: 'APERÇU',
@@ -79,7 +78,6 @@ exports.createQuote = asyncHandler(async (req, res) => {
   const limite = await verifierLimiteDevis(Quote, user);
   if (limite) return res.status(403).json(limite);
   const data = pickFields(req.body);
-  if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) data.template = 'classique';
   if (!data.client) return res.status(400).json({ message: 'Le client est requis' });
   data.owner = req.userId;
   data.numero = await nextQuoteNumber(req.userId);
@@ -99,8 +97,6 @@ exports.updateQuote = asyncHandler(async (req, res) => {
     });
   }
   const updates = pickFields(req.body);
-  const user = await User.findById(req.userId);
-  if (updates.template && !permissionsDe(user).peutUtiliserModele(updates.template)) updates.template = 'classique';
   const quote = await Quote.findOneAndUpdate(
     { _id: req.params.id, owner: req.userId },
     updates,
@@ -120,6 +116,25 @@ exports.patchQuoteStatus = asyncHandler(async (req, res) => {
   ).populate('client');
   if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
   res.json(quote);
+});
+
+
+exports.revokePublicLink = asyncHandler(async (req, res) => {
+  const quote = await Quote.findOne({ _id: req.params.id, owner: req.userId });
+  if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
+  quote.publicAccessRevoked = true;
+  await quote.save();
+  res.json({ message: 'Lien public révoqué.', quote });
+});
+
+exports.regeneratePublicLink = asyncHandler(async (req, res) => {
+  const quote = await Quote.findOne({ _id: req.params.id, owner: req.userId });
+  if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
+  const crypto = require('crypto');
+  quote.publicToken = crypto.randomBytes(32).toString('hex');
+  quote.publicAccessRevoked = false;
+  await quote.save();
+  res.json({ message: 'Nouveau lien public généré.', quote });
 });
 
 exports.deleteQuote = asyncHandler(async (req, res) => {
@@ -163,7 +178,8 @@ exports.sendQuoteEmail = asyncHandler(async (req, res) => {
         code: 'EMAIL_NOT_CONFIGURED',
       });
     }
-    return res.status(502).json({ message: "Échec de l'envoi de l'email : " + err.message });
+    console.error("Échec d'envoi email:", err.message);
+    return res.status(502).json({ message: "Échec de l'envoi de l'email. Réessayez plus tard." });
   }
 
   if (quote.statut === 'brouillon') quote.statut = 'envoye';

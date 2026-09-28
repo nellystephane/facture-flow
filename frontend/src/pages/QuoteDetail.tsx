@@ -4,6 +4,7 @@ import {
   ArrowLeft, Download, Pencil, Trash2,
   FileText, Send, CheckCircle2, XCircle, Clock, Lock, Mail, Loader2, Link2, MessageCircleQuestion, MessageCircle
 } from 'lucide-react';
+import { authenticatedFetch } from '../api/authenticatedFetch';
 import { getQuote, patchQuoteStatus, deleteQuote, quotePdfUrl, sendQuoteEmail } from '../api/quotes';
 import { createInvoiceFromQuote } from '../api/invoices';
 import type { Quote, QuoteStatut } from '../types';
@@ -40,8 +41,7 @@ export default function QuoteDetail() {
   const previewPdf = () => setPreview(true);
 
   const openPdf = () => {
-    const token = localStorage.getItem('token');
-    fetch(quotePdfUrl(id!), { headers: { Authorization: `Bearer ${token}` } })
+        authenticatedFetch(quotePdfUrl(id!))
       .then((r) => r.blob())
       .then((blob) => window.open(URL.createObjectURL(blob), '_blank'));
   };

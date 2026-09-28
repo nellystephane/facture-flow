@@ -2,9 +2,10 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%icons/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%icons/favicon-16.png" />
-    <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%icons/oryxa-favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%icons/oryxa-favicon-16.png" />
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/oryxa-apple-touch.png" />
+    <link rel="preload" as="image" href="%BASE_URL%icons/logo.png" fetchpriority="high" />
     <meta name="theme-color" content="#db0201" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Oryxa — La plateforme de facturation et de gestion pour freelances, artisans et PME d'Afrique francophone. Devis, factures, paiements Mobile Money." />
@@ -12,35 +13,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Oryxa — Facturation & Gestion pour PME</title>
-    <!-- Applique le thème sombre/clair AVANT le premier rendu React, pour
-         éviter un flash de mauvais thème (FOUC) au chargement. -->
-    <script>
-      (function () {
-        try {
-          var stocke = localStorage.getItem('oryxa-theme');
-          var sombre = stocke ? stocke === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (sombre) document.documentElement.classList.add('dark');
-        } catch (e) {}
-      })();
-    </script>
-    <!-- GitHub Pages ne sait servir que des fichiers statiques : un lien direct
-         ou un rafraîchissement sur une route interne (ex: /facture-flow/app/factures/123)
-         renverrait une vraie 404 sans ce script. Il restaure la bonne URL après le
-         redirect fait par public/404.html, avant que React Router ne démarre.
-         Voir https://github.com/rafgraph/spa-github-pages -->
-    <script type="text/javascript">
-      (function (l) {
-        if (l.search[1] === '/') {
-          var decoded = l.search.slice(1).split('&').map(function (s) {
-            return s.replace(/~and~/g, '&');
-          }).join('?');
-          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
-        }
-      }(window.location));
-    </script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://facture-flow.onrender.com https://*.sentry.io; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
+    <script src="%BASE_URL%theme-init.js"></script>
+    <script src="%BASE_URL%spa-redirect.js"></script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="%BASE_URL%src/main.tsx"></script>
   </body>
 </html>

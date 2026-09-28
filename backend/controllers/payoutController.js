@@ -189,7 +189,8 @@ exports.requestPayout = asyncHandler(async (req, res) => {
     res.status(201).json(payout);
   } catch (err) {
     const status = ['FEDAPAY_NOT_CONFIGURED', 'FEDAPAY_PAYOUTS_DISABLED'].includes(err.code) ? 503 : 400;
-    res.status(status).json({ message: err.message, code: err.code });
+    if (status >= 500) console.error('Erreur reversement:', err.message);
+    res.status(status).json({ message: status >= 500 ? 'Impossible de traiter le reversement pour le moment.' : err.message, code: err.code });
   }
 });
 

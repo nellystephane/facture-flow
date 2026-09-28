@@ -12,7 +12,7 @@ export default function PaymentPublic() {
   const [data, setData] = useState<PublicInvoiceResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ firstname: '', lastname: '', email: '', phone: '' });
+  const [form, setForm] = useState({ firstname: '', lastname: '', email: '', phone: '', montant: 0 });
   const [submitting, setSubmitting] = useState(false);
   const [checkingReturn, setCheckingReturn] = useState(false);
 
@@ -25,6 +25,25 @@ export default function PaymentPublic() {
   };
 
   useEffect(load, [token]);
+
+  // Le QR code ouvre directement cette page. Les informations déjà présentes
+  // sur la facture servent donc de valeurs initiales, tout en restant
+  // modifiables par le payeur avant de poursuivre.
+  useEffect(() => {
+    if (!data) return;
+    const client = typeof data.invoice.client === 'object' ? data.invoice.client : null;
+    const parts = (client?.nom || '').trim().split(/\s+/).filter(Boolean);
+    const firstname = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
+    const lastname = parts.length > 1 ? parts[parts.length - 1] : (parts[0] || '');
+    const reste = Math.max(0, data.totalTTC - data.totalPaye);
+    setForm((current) => ({
+      firstname: current.firstname || firstname,
+      lastname: current.lastname || lastname,
+      email: current.email || client?.email || '',
+      phone: current.phone || client?.whatsapp || client?.telephone || '',
+      montant: current.montant > 0 ? current.montant : Math.round(reste),
+    }));
+  }, [data]);
 
   // Après un retour depuis FedaPay (callback_url), on vérifie le statut réel
   // via l'API plutôt que de faire confiance au simple retour du navigateur —
@@ -57,7 +76,7 @@ export default function PaymentPublic() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await initiateOnlinePayment(token, form);
+      const res = await initiateOnlinePayment(token, { ...form, montant: Number(form.montant) });
       window.location.href = res.data.paymentUrl;
     } catch (err) {
       setError(apiError(err, "Impossible de démarrer le paiement pour le moment."));
@@ -106,8 +125,8 @@ export default function PaymentPublic() {
             <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500 font-semibold mb-1">
               {dejaPayee ? 'Montant réglé' : 'Montant à payer'}
             </p>
-            <p className="text-3xl font-extrabold text-[#0a0a0c] dark:text-white">{formatFCFA(dejaPayee ? totalTTC : (fraisPaiement?.montantClientPaye || reste))}</p>
-            {!dejaPayee && fraisPaiement && fraisPaiement.fraisTransfertClient > 0 && (
+            <p className="text-3xl font-extrabold text-[#0a0a0c] dark:text-white">{formatFCFA(dejaPayee ? totalTTC : (form.montant || reste))}</p>
+            {!dejaPayee && fraisPaiement && fraisPaiement.fraisTransfertClient > 0 && form.montant === Math.round(reste) && (
               <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                 <div className="flex justify-between"><span>Montant de la facture</span><span>{formatFCFA(reste)}</span></div>
                 <div className="flex justify-between"><span>Frais de transfert</span><span>{formatFCFA(fraisPaiement.fraisTransfertClient)}</span></div>
@@ -161,6 +180,20 @@ export default function PaymentPublic() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-3">
+                <div>
+                  <label className="field-label">Montant à régler (FCFA)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={Math.max(1, Math.round(reste))}
+                    step="1"
+                    required
+                    className="field"
+                    value={form.montant || ''}
+                    onChange={(e) => setForm({ ...form, montant: Math.min(Math.max(1, Number(e.target.value) || 0), Math.round(reste)) })}
+                  />
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Pré-rempli avec le solde de la facture. Vous pouvez modifier le montant pour effectuer un paiement partiel.</p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="field-label">Prénom</label>

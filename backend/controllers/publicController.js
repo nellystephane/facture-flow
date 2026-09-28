@@ -12,6 +12,8 @@ const { calculatePaymentQuote } = require('../utils/financial');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
+function tokenPublicValide(token) { return /^[a-f0-9]{40,64}$/i.test(String(token || '')); }
+
 function computeTTC(invoice) {
   const sousTotal = (invoice.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);
   const ht = sousTotal - (invoice.remise || 0);
@@ -49,8 +51,9 @@ exports.getPublicStats = asyncHandler(async (req, res) => {
 
 // GET /api/public/invoices/:token
 exports.getPublicInvoice = asyncHandler(async (req, res) => {
+  if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const invoice = await Invoice.findOne({ publicToken: req.params.token }).populate('client');
-  if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const user = await User.findById(invoice.owner).select('nom entreprise email telephone whatsapp adresse devise banque logoUrl');
   if (!invoice.dateVue && invoice.statut === 'envoyee') {
     invoice.dateVue = new Date();
@@ -66,8 +69,9 @@ exports.getPublicInvoice = asyncHandler(async (req, res) => {
 
 // POST /api/public/invoices/:token/pay  { firstname, lastname, email, phone }
 exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
+  if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const invoice = await Invoice.findOne({ publicToken: req.params.token }).populate('client');
-  if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   if (invoice.statut === 'payee') return res.status(400).json({ message: 'Cette facture est déjà réglée.' });
   if (invoice.statut === 'annulee') return res.status(400).json({ message: 'Cette facture a été annulée.' });
   const owner = await User.findById(invoice.owner).select('devise');
@@ -82,7 +86,21 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
   ]))[0]?.total || 0);
   if (reste <= 0.5) return res.status(400).json({ message: 'Cette facture est déjà réglée.' });
   const fraisSupportesPar = invoice.fraisSupportesPar || 'utilisateur';
-  const quote = await calculatePaymentQuote(reste, fraisSupportesPar);
+
+  // The payment page pre-fills the outstanding invoice balance, but the payer
+  // may intentionally make a partial payment. Never trust the browser: the
+  // requested amount is checked against the actual remaining balance here.
+  const requestedAmount = req.body.montant === undefined || req.body.montant === ''
+    ? reste
+    : Number(req.body.montant);
+  if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+    return res.status(400).json({ message: 'Le montant à régler doit être supérieur à 0 FCFA.' });
+  }
+  if (requestedAmount > reste + 0.5) {
+    return res.status(400).json({ message: `Le montant ne peut pas dépasser le solde restant de ${Math.round(reste)} FCFA.` });
+  }
+
+  const quote = await calculatePaymentQuote(requestedAmount, fraisSupportesPar);
   const montant = quote.montantClientPaye;
   const publicBase = (process.env.CLIENT_URL_PUBLIC || (process.env.CLIENT_URL || '').split(',')[0] || '').replace(/\/$/, '');
 
@@ -91,14 +109,14 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
     description: `Facture ${invoice.numero}`,
     customer: { email, firstname, lastname, phone },
     callbackUrl: `${publicBase}/payer/${invoice.publicToken}?statut=retour`,
-    metadata: { type: 'invoice', invoiceId: String(invoice._id), publicToken: invoice.publicToken, fraisSupportesPar, montantFacture: reste },
+    metadata: { type: 'invoice', invoiceId: String(invoice._id), publicToken: invoice.publicToken, fraisSupportesPar, montantFacture: requestedAmount },
   });
 
   await Payment.create({
     owner: invoice.owner,
     invoice: invoice._id,
     montant,
-    montantFacture: reste,
+    montantFacture: requestedAmount,
     montantClientPaye: montant,
     fraisPayin: quote.fraisPayinEstimes,
     fraisPayoutProvisionnes: quote.fraisPayoutEstimes,
@@ -111,21 +129,23 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
     note: `Initié en ligne par ${email}`,
   });
 
-  res.json({ paymentUrl, montantFacture: reste, montantClientPaye: montant, fraisTransfert: quote.fraisTransfertClient });
+  res.json({ paymentUrl, montantFacture: requestedAmount, montantClientPaye: montant, fraisTransfert: quote.fraisTransfertClient });
 });
 
 // GET /api/public/invoices/:token/statut — pour le polling front après retour de paiement
 exports.getPublicPaymentStatus = asyncHandler(async (req, res) => {
+  if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const invoice = await Invoice.findOne({ publicToken: req.params.token });
-  if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const dernierPaiement = await Payment.findOne({ invoice: invoice._id }).sort({ createdAt: -1 });
   res.json({ statutFacture: invoice.statut, dernierPaiement });
 });
 
 // GET /api/public/invoices/:token/receipt/:paymentId — reçu téléchargeable par le client
 exports.getPublicReceipt = asyncHandler(async (req, res) => {
+  if (!tokenPublicValide(req.params.token) || !/^[a-f0-9]{24}$/i.test(String(req.params.paymentId || ''))) return res.status(404).json({ message: 'Lien public invalide.' });
   const invoice = await Invoice.findOne({ publicToken: req.params.token }).populate('client');
-  if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const payment = await Payment.findOne({ _id: req.params.paymentId, invoice: invoice._id, statut: 'complete' });
   if (!payment) return res.status(404).json({ message: 'Reçu indisponible' });
   const user = await User.findById(invoice.owner);
@@ -139,8 +159,9 @@ exports.getPublicReceipt = asyncHandler(async (req, res) => {
 
 // GET /api/public/quotes/:token
 exports.getPublicQuote = asyncHandler(async (req, res) => {
+  if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const quote = await Quote.findOne({ publicToken: req.params.token }).populate('client');
-  if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
+  if (!quote || quote.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const user = await User.findById(quote.owner).select('nom entreprise email telephone whatsapp adresse devise logoUrl');
   if (!quote.dateVue && quote.statut === 'envoye') {
     quote.dateVue = new Date();
@@ -151,13 +172,14 @@ exports.getPublicQuote = asyncHandler(async (req, res) => {
 
 // POST /api/public/quotes/:token/repondre  { action: 'accepter' | 'demander_infos', message? }
 exports.respondPublicQuote = asyncHandler(async (req, res) => {
+  if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const { action, message } = req.body;
   if (!['accepter', 'demander_infos'].includes(action)) {
     return res.status(400).json({ message: 'Action invalide.' });
   }
 
   const quote = await Quote.findOne({ publicToken: req.params.token });
-  if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
+  if (!quote || quote.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   if (quote.statut === 'accepte') {
     return res.status(409).json({ message: 'Ce devis a déjà été accepté.' });
   }
@@ -170,10 +192,27 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
     // accepté — jamais envoyée automatiquement au client : le propriétaire
     // du compte la relit et l'envoie lui-même quand il est prêt (voir
     // utils/email.sendQuoteAccepteeNotification).
-    const invoice = await creerFactureDepuisDevis(quote, quote.owner);
-    quote.statut = 'accepte';
-    quote.invoiceGeneree = invoice._id;
-    await quote.save();
+    // Verrou atomique : un seul appel concurrent peut faire passer le devis
+    // de `envoye`/`brouillon` à `accepte`. Cela empêche deux clics rapides ou
+    // deux retries réseau de créer deux factures.
+    const verrou = await Quote.findOneAndUpdate(
+      { _id: quote._id, statut: { $ne: 'accepte' }, publicAccessRevoked: { $ne: true } },
+      { $set: { statut: 'accepte' } },
+      { new: true }
+    );
+    if (!verrou) return res.status(409).json({ message: 'Ce devis a déjà été accepté.' });
+
+    let invoice;
+    try {
+      invoice = await creerFactureDepuisDevis(verrou, verrou.owner);
+      verrou.invoiceGeneree = invoice._id;
+      await verrou.save();
+    } catch (err) {
+      // Si la génération échoue, on libère le verrou pour qu'un retry légitime
+      // puisse reprendre sans laisser le devis dans un état incohérent.
+      await Quote.updateOne({ _id: verrou._id, invoiceGeneree: null }, { $set: { statut: 'envoye' } });
+      throw err;
+    }
 
     if (owner) {
       try {

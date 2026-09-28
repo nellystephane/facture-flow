@@ -127,17 +127,17 @@ function baseTemplate({ titre, intro, boutonUrl, boutonLabel, corps, pied }) {
 async function sendInvoiceEmail({ to, invoice, user, pdfBuffer, paymentUrl }) {
   const montant = new Intl.NumberFormat('fr-FR').format(Math.round(invoice.totalTTC)) + ' ' + 'FCFA';
   const html = baseTemplate({
-    titre: `Facture ${invoice.numero}`,
-    intro: `Bonjour,<br/>Vous trouverez ci-joint la facture <strong>${invoice.numero}</strong> émise par <strong>${user.entreprise || user.nom}</strong>, d'un montant de <strong>${montant}</strong>.`,
+    titre: `Facture ${escapeHtml(invoice.numero)}`,
+    intro: `Bonjour,<br/>Vous trouverez ci-joint la facture <strong>${escapeHtml(invoice.numero)}</strong> émise par <strong>${escapeHtml(user.entreprise || user.nom)}</strong>, d'un montant de <strong>${montant}</strong>.`,
     boutonUrl: paymentUrl,
     boutonLabel: 'Payer cette facture en ligne',
-    pied: `${user.entreprise || user.nom} — ${user.email}${user.telephone ? ' — ' + user.telephone : ''}`,
+    pied: `${escapeHtml(user.entreprise || user.nom)} — ${user.email}${user.telephone ? ' — ' + user.telephone : ''}`,
   });
   return sendMail({
     to,
-    subject: `Facture ${invoice.numero} — ${user.entreprise || user.nom}`,
+    subject: `Facture ${escapeHtml(invoice.numero)} — ${escapeHtml(user.entreprise || user.nom)}`,
     html,
-    attachments: [{ filename: `Facture-${invoice.numero}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+    attachments: [{ filename: `Facture-${escapeHtml(invoice.numero)}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
   });
 }
 
@@ -145,14 +145,14 @@ async function sendReceiptEmail({ to, invoice, user, payment, pdfBuffer }) {
   const montant = new Intl.NumberFormat('fr-FR').format(Math.round(payment.montant)) + ' ' + 'FCFA';
   const html = baseTemplate({
     titre: 'Paiement confirmé',
-    intro: `Bonjour,<br/>Nous confirmons la réception de votre paiement de <strong>${montant}</strong> pour la facture <strong>${invoice.numero}</strong>. Le reçu est joint à cet email.`,
-    pied: `${user.entreprise || user.nom} — ${user.email}`,
+    intro: `Bonjour,<br/>Nous confirmons la réception de votre paiement de <strong>${montant}</strong> pour la facture <strong>${escapeHtml(invoice.numero)}</strong>. Le reçu est joint à cet email.`,
+    pied: `${escapeHtml(user.entreprise || user.nom)} — ${user.email}`,
   });
   return sendMail({
     to,
-    subject: `Reçu de paiement — Facture ${invoice.numero}`,
+    subject: `Reçu de paiement — Facture ${escapeHtml(invoice.numero)}`,
     html,
-    attachments: [{ filename: `Recu-${invoice.numero}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+    attachments: [{ filename: `Recu-${escapeHtml(invoice.numero)}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
   });
 }
 
@@ -160,16 +160,16 @@ async function sendOwnerPaymentNotification({ to, invoice, payment, clientNom })
   const montant = new Intl.NumberFormat('fr-FR').format(Math.round(payment.montant)) + ' FCFA';
   const html = baseTemplate({
     titre: 'Nouveau paiement reçu',
-    intro: `${clientNom} vient de régler <strong>${montant}</strong> sur la facture <strong>${invoice.numero}</strong> (${payment.methode}).`,
+    intro: `${escapeHtml(clientNom)} vient de régler <strong>${montant}</strong> sur la facture <strong>${escapeHtml(invoice.numero)}</strong> (${escapeHtml(payment.methode)}).`,
     pied: 'Oryxa',
   });
-  return sendMail({ to, subject: `Paiement reçu — Facture ${invoice.numero}`, html });
+  return sendMail({ to, subject: `Paiement reçu — Facture ${escapeHtml(invoice.numero)}`, html });
 }
 
 async function sendVerificationCode({ to, nom, code }) {
   const html = baseTemplate({
     titre: 'Confirmez votre adresse email',
-    intro: `Bonjour ${nom},<br/>Voici votre code de confirmation Oryxa. Il est valable 15 minutes.`,
+    intro: `Bonjour ${escapeHtml(nom)},<br/>Voici votre code de confirmation Oryxa. Il est valable 15 minutes.`,
     corps: `<div style="text-align:center; margin: 24px 0;">
       <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0a0a0c;">${code}</span>
     </div>`,
@@ -181,7 +181,7 @@ async function sendVerificationCode({ to, nom, code }) {
 async function sendPasswordResetCode({ to, nom, code }) {
   const html = baseTemplate({
     titre: 'Réinitialisation de votre mot de passe',
-    intro: `Bonjour ${nom},<br/>Voici votre code pour réinitialiser votre mot de passe Oryxa. Il est valable 15 minutes.`,
+    intro: `Bonjour ${escapeHtml(nom)},<br/>Voici votre code pour réinitialiser votre mot de passe Oryxa. Il est valable 15 minutes.`,
     corps: `<div style="text-align:center; margin: 24px 0;">
       <span style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #0a0a0c;">${code}</span>
     </div>`,
@@ -193,67 +193,67 @@ async function sendPasswordResetCode({ to, nom, code }) {
 async function sendQuoteEmail({ to, quote, user, pdfBuffer, quoteUrl }) {
   const montant = new Intl.NumberFormat('fr-FR').format(Math.round(quote.totalTTC)) + ' ' + 'FCFA';
   const html = baseTemplate({
-    titre: `Devis ${quote.numero}`,
-    intro: `Bonjour,<br/>Vous trouverez ci-joint le devis <strong>${quote.numero}</strong> de <strong>${user.entreprise || user.nom}</strong>, d'un montant de <strong>${montant}</strong>.`,
+    titre: `Devis ${escapeHtml(quote.numero)}`,
+    intro: `Bonjour,<br/>Vous trouverez ci-joint le devis <strong>${escapeHtml(quote.numero)}</strong> de <strong>${escapeHtml(user.entreprise || user.nom)}</strong>, d'un montant de <strong>${montant}</strong>.`,
     boutonUrl: quoteUrl,
     boutonLabel: 'Consulter et répondre au devis',
-    pied: `${user.entreprise || user.nom} — ${user.email}${user.telephone ? ' — ' + user.telephone : ''}`,
+    pied: `${escapeHtml(user.entreprise || user.nom)} — ${user.email}${user.telephone ? ' — ' + user.telephone : ''}`,
   });
   return sendMail({
     to,
-    subject: `Devis ${quote.numero} — ${user.entreprise || user.nom}`,
+    subject: `Devis ${escapeHtml(quote.numero)} — ${escapeHtml(user.entreprise || user.nom)}`,
     html,
-    attachments: [{ filename: `Devis-${quote.numero}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+    attachments: [{ filename: `Devis-${escapeHtml(quote.numero)}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
   });
 }
 
 async function sendQuoteAccepteeNotification({ to, quote, invoiceUrl }) {
   const html = baseTemplate({
     titre: 'Devis accepté 🎉',
-    intro: `Votre client a accepté le devis <strong>${quote.numero}</strong>. Une facture brouillon a été créée automatiquement à partir de ce devis — relisez-la puis envoyez-la à votre client quand vous êtes prêt.`,
+    intro: `Votre client a accepté le devis <strong>${escapeHtml(quote.numero)}</strong>. Une facture brouillon a été créée automatiquement à partir de ce devis — relisez-la puis envoyez-la à votre client quand vous êtes prêt.`,
     boutonUrl: invoiceUrl,
     boutonLabel: 'Voir la facture brouillon',
     pied: 'Oryxa',
   });
-  return sendMail({ to, subject: `Devis ${quote.numero} accepté par le client`, html });
+  return sendMail({ to, subject: `Devis ${escapeHtml(quote.numero)} accepté par le client`, html });
 }
 
 async function sendQuoteInfoRequestNotification({ to, quote, message }) {
   const html = baseTemplate({
     titre: "Demande d'informations sur un devis",
-    intro: `Votre client souhaite des précisions avant de se décider sur le devis <strong>${quote.numero}</strong> :`,
+    intro: `Votre client souhaite des précisions avant de se décider sur le devis <strong>${escapeHtml(quote.numero)}</strong> :`,
     corps: `<div style="background:#f8f8fa; border-radius:8px; padding:16px; margin:16px 0; font-style:italic;">${message}</div>`,
     pied: 'Oryxa',
   });
-  return sendMail({ to, subject: `Question du client sur le devis ${quote.numero}`, html });
+  return sendMail({ to, subject: `Question du client sur le devis ${escapeHtml(quote.numero)}`, html });
 }
 
 async function sendPaymentReminderEmail({ to, invoice, user, paymentUrl, joursRetard }) {
   const montant = new Intl.NumberFormat('fr-FR').format(Math.round(invoice.totalTTC)) + ' ' + 'FCFA';
   const html = baseTemplate({
-    titre: `Rappel — Facture ${invoice.numero}`,
-    intro: `Bonjour,<br/>Sauf erreur de notre part, la facture <strong>${invoice.numero}</strong> d'un montant de <strong>${montant}</strong>, émise par <strong>${user.entreprise || user.nom}</strong>, reste impayée${joursRetard ? ` (échéance dépassée de ${joursRetard} jour${joursRetard > 1 ? 's' : ''})` : ''}.`,
+    titre: `Rappel — Facture ${escapeHtml(invoice.numero)}`,
+    intro: `Bonjour,<br/>Sauf erreur de notre part, la facture <strong>${escapeHtml(invoice.numero)}</strong> d'un montant de <strong>${montant}</strong>, émise par <strong>${escapeHtml(user.entreprise || user.nom)}</strong>, reste impayée${joursRetard ? ` (échéance dépassée de ${joursRetard} jour${joursRetard > 1 ? 's' : ''})` : ''}.`,
     boutonUrl: paymentUrl,
     boutonLabel: 'Payer cette facture en ligne',
-    pied: `${user.entreprise || user.nom} — ${user.email}${user.telephone ? ' — ' + user.telephone : ''}. Si le paiement a déjà été effectué, merci d'ignorer ce message.`,
+    pied: `${escapeHtml(user.entreprise || user.nom)} — ${user.email}${user.telephone ? ' — ' + user.telephone : ''}. Si le paiement a déjà été effectué, merci d'ignorer ce message.`,
   });
   return sendMail({
     to,
-    subject: `Rappel — Facture ${invoice.numero} en attente de paiement`,
+    subject: `Rappel — Facture ${escapeHtml(invoice.numero)} en attente de paiement`,
     html,
   });
 }
 
 async function sendTeamInviteEmail({ to, nomInvite, nomInvitant, entreprise, code, roleLabel }) {
   const html = baseTemplate({
-    titre: `${nomInvitant} vous invite à rejoindre ${entreprise || 'son espace'} sur Oryxa`,
-    intro: `Bonjour ${nomInvite},<br/>${nomInvitant} vous a ajouté à son équipe sur Oryxa avec le rôle <strong>${roleLabel}</strong>. Utilisez le code ci-dessous pour définir votre mot de passe et accéder au compte.`,
+    titre: `${escapeHtml(nomInvitant)} vous invite à rejoindre ${entreprise || 'son espace'} sur Oryxa`,
+    intro: `Bonjour ${escapeHtml(nomInvite)},<br/>${escapeHtml(nomInvitant)} vous a ajouté à son équipe sur Oryxa avec le rôle <strong>${escapeHtml(roleLabel)}</strong>. Utilisez le code ci-dessous pour définir votre mot de passe et accéder au compte.`,
     corps: `<div style="text-align:center;font-size:28px;font-weight:800;letter-spacing:4px;color:#0a0a0c;background:#f7f7f8;border-radius:12px;padding:18px 0;margin:20px 0;">${code}</div><p style="color:#6b7280;font-size:13px;">Ce code expire dans 15 minutes. Rendez-vous sur la page "Mot de passe oublié" avec votre adresse email pour définir votre mot de passe et vous connecter.</p>`,
     pied: 'Si vous ne vous attendiez pas à cette invitation, vous pouvez ignorer cet email.',
   });
   return sendMail({
     to,
-    subject: `Invitation à rejoindre ${entreprise || 'une équipe'} sur Oryxa`,
+    subject: `Invitation à rejoindre ${escapeHtml(entreprise || 'une équipe')} sur Oryxa`,
     html,
   });
 }
@@ -286,6 +286,17 @@ async function sendSupportReplyNotification({ to, ticket }) {
   return sendMail({ to, subject: `Réponse du support — ${ticket.numero}`, html });
 }
 
+
+async function sendSecurityAlert({ to, ip, userAgent, action = 'connexion admin' }) {
+  const html = baseTemplate({
+    titre: 'Alerte de sécurité Oryxa',
+    intro: `Une ${action} a été détectée depuis une nouvelle adresse réseau.`,
+    corps: `<p><strong>Adresse IP :</strong> ${escapeHtml(ip || 'inconnue')}</p><p><strong>Appareil :</strong> ${escapeHtml(userAgent || 'inconnu')}</p><p style="font-size:13px;color:#6b7280;">Si vous n'êtes pas à l'origine de cette activité, déconnectez toutes les sessions depuis l'administration et changez immédiatement le mot de passe concerné.</p>`,
+    pied: 'Oryxa — alerte de sécurité',
+  });
+  return sendMail({ to, subject: 'Alerte de sécurité — nouvelle connexion Oryxa', html });
+}
+
 module.exports = {
   isEmailConfigured,
   sendMail,
@@ -302,6 +313,7 @@ module.exports = {
   sendPayoutDestinationConfirmation,
   sendSupportTicketNotification,
   sendSupportReplyNotification,
+  sendSecurityAlert,
 };
 
 /**

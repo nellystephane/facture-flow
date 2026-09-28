@@ -39,7 +39,7 @@ export default function Register() {
       if (user) {
         navigate('/app'); // compte déjà vérifié (cas legacy) — connexion directe
       } else {
-        navigate(`/verifier-email?email=${encodeURIComponent(form.email)}`);
+        navigate(`/verifier-email?email=${encodeURIComponent(form.email)}&affiliate=${affiliateMode ? '1' : '0'}&ref=${encodeURIComponent(referralCode)}`);
       }
     } catch (err) {
       setError(apiError(err, "Erreur lors de l'inscription"));

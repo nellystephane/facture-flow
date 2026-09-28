@@ -22,7 +22,7 @@ export interface PublicInvoiceResponse {
 export const getPublicInvoice = (token: string) =>
   api.get<PublicInvoiceResponse>(`/public/invoices/${token}`);
 
-export const initiateOnlinePayment = (token: string, data: { firstname?: string; lastname?: string; email: string; phone?: string }) =>
+export const initiateOnlinePayment = (token: string, data: { firstname?: string; lastname?: string; email: string; phone?: string; montant?: number }) =>
   api.post<{ paymentUrl: string; montantFacture: number; montantClientPaye: number; fraisTransfert: number }>(`/public/invoices/${token}/pay`, data);
 
 export const getPublicPaymentStatus = (token: string) =>

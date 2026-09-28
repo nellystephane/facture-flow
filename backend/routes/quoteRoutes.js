@@ -17,5 +17,7 @@ router.patch('/:id/statut', validate(patchQuoteStatusSchema), controller.patchQu
 router.delete('/:id', controller.deleteQuote);
 router.get('/:id/pdf', pdfController.quotePdf);
 router.post('/:id/envoyer', controller.sendQuoteEmail);
+router.post('/:id/lien-public/revoquer', controller.revokePublicLink);
+router.post('/:id/lien-public/regenerer', controller.regeneratePublicLink);
 
 module.exports = router;

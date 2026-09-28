@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import * as authApi from '../api/auth';
 import { apiError } from '../utils/format';
 import OryxaLogo from '../components/OryxaLogo';
+import { setAccessToken } from '../api/tokenStore';
 
 function erreurMotDePasse(password: string): string | null {
   if (!password || password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
@@ -47,7 +48,7 @@ export default function ForgotPassword() {
     setLoading(true);
     try {
       const res = await authApi.resetPassword(email.trim(), code.trim(), password);
-      localStorage.setItem('token', res.data.token);
+      setAccessToken(res.data.token);
       setUser(res.data.user);
       navigate('/app');
     } catch (err) {

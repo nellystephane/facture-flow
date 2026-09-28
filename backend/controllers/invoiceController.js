@@ -156,6 +156,25 @@ exports.patchInvoiceStatus = asyncHandler(async (req, res) => {
   res.json(existing);
 });
 
+
+exports.revokePublicLink = asyncHandler(async (req, res) => {
+  const invoice = await Invoice.findOne({ _id: req.params.id, owner: req.userId });
+  if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  invoice.publicAccessRevoked = true;
+  await invoice.save();
+  res.json({ message: 'Lien public révoqué.', invoice });
+});
+
+exports.regeneratePublicLink = asyncHandler(async (req, res) => {
+  const invoice = await Invoice.findOne({ _id: req.params.id, owner: req.userId });
+  if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  const crypto = require('crypto');
+  invoice.publicToken = crypto.randomBytes(32).toString('hex');
+  invoice.publicAccessRevoked = false;
+  await invoice.save();
+  res.json({ message: 'Nouveau lien public généré.', invoice });
+});
+
 exports.deleteInvoice = asyncHandler(async (req, res) => {
   const existing = await Invoice.findOne({ _id: req.params.id, owner: req.userId });
   if (!existing) return res.status(404).json({ message: 'Facture introuvable' });
@@ -269,7 +288,8 @@ exports.sendInvoiceEmail = asyncHandler(async (req, res) => {
         code: 'EMAIL_NOT_CONFIGURED',
       });
     }
-    return res.status(502).json({ message: "Échec de l'envoi de l'email : " + err.message });
+    console.error("Échec d'envoi email:", err.message);
+    return res.status(502).json({ message: "Échec de l'envoi de l'email. Réessayez plus tard." });
   }
 
   if (invoice.statut === 'brouillon') invoice.statut = 'envoyee';

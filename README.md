@@ -176,14 +176,19 @@ Authorization: Bearer <token>
 
 ## 🔒 Sécurité
 
-- Mots de passe hachés avec **bcrypt** (10 rounds)
-- Authentification **JWT** expirant après 7 jours
-- Chaque donnée est **isolée par utilisateur** (`owner: req.userId`)
-- Déconnexion automatique côté client si token invalide
-- En-têtes HTTP sécurisés via **helmet**
-- Limitation du débit (**rate limiting**) sur `/api/auth/login` et `/api/auth/register` — 30 tentatives / 15 min / IP
-- L'API renvoie un `503` explicite (au lieu d'une erreur silencieuse) tant que MongoDB n'est pas connecté
-- La route `/api/public/stats` n'expose que des compteurs agrégés — jamais de données propres à un utilisateur
+- Mots de passe hachés avec **bcrypt**.
+- JWT d'accès courts (15 min par défaut) + refresh tokens rotatifs en cookies **httpOnly** ; aucun JWT n'est persistant dans `localStorage`.
+- Révocation serveur des sessions : changement de mot de passe, déconnexion et déconnexion globale invalident immédiatement les sessions concernées.
+- Secret utilisateur `JWT_SECRET` et secret admin `ADMIN_JWT_SECRET` séparés ; en production, chacun doit être long et indépendant.
+- **Un seul administrateur plateforme**, défini hors base par `ADMIN_EMAIL` + `ADMIN_PASSWORD_HASH`.
+- Journal d'audit admin et événements de sécurité (connexions, échecs, nouvelles IP).
+- Rate limiting renforcé sur authentification, paiement, abonnement et actions publiques sensibles, avec clé IP + identifiant/jeton.
+- Signature FedaPay vérifiée avec contrôle de fraîcheur du timestamp ; traitements de paiement idempotents et indexés contre les doublons.
+- Liens publics facture/devis révocables et régénérables.
+- En-têtes HTTP sécurisés via **helmet** et CSP côté frontend.
+- Les erreurs internes ne révèlent plus les détails serveur en production.
+- Chaque donnée métier reste **isolée par espace propriétaire** (`owner: req.userId`).
+- Le MFA administrateur est volontairement prévu pour une phase ultérieure, pas activé ici.
 
 ---
 

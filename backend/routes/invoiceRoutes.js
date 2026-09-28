@@ -23,5 +23,7 @@ router.get('/:id/paiements', pdfController.invoiceStatus);
 router.post('/from-quote/:id', controller.createFromQuote);
 router.post('/from-service', requireFeature('facturationExpress'), controller.createFromService);
 router.post('/:id/envoyer', controller.sendInvoiceEmail);
+router.post('/:id/lien-public/revoquer', controller.revokePublicLink);
+router.post('/:id/lien-public/regenerer', controller.regeneratePublicLink);
 
 module.exports = router;

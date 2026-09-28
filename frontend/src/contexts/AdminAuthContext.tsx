@@ -1,8 +1,10 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
-import adminApi, { ADMIN_TOKEN_KEY } from '../api/adminAxios';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import adminApi from '../api/adminAxios';
+import { clearAdminAccessToken, setAdminAccessToken } from '../api/adminTokenStore';
 
 interface AdminAuthValue {
   adminEmail: string | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -10,28 +12,38 @@ interface AdminAuthValue {
 const AdminAuthContext = createContext<AdminAuthValue | undefined>(undefined);
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
-  const [adminEmail, setAdminEmail] = useState<string | null>(
-    localStorage.getItem('oryxa_admin_email')
-  );
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let actif = true;
+    adminApi.post<{ token: string; email: string }>('/admin/refresh', {})
+      .then((res) => {
+        if (!actif) return;
+        setAdminAccessToken(res.data.token);
+        setAdminEmail(res.data.email);
+      })
+      .catch(() => {
+        clearAdminAccessToken();
+        if (actif) setAdminEmail(null);
+      })
+      .finally(() => { if (actif) setLoading(false); });
+    return () => { actif = false; };
+  }, []);
 
   const login = async (email: string, password: string) => {
     const res = await adminApi.post('/admin/login', { email, password });
-    localStorage.setItem(ADMIN_TOKEN_KEY, res.data.token);
-    localStorage.setItem('oryxa_admin_email', res.data.email);
+    setAdminAccessToken(res.data.token);
     setAdminEmail(res.data.email);
   };
 
   const logout = () => {
-    localStorage.removeItem(ADMIN_TOKEN_KEY);
-    localStorage.removeItem('oryxa_admin_email');
+    adminApi.post('/admin/logout').catch(() => undefined);
+    clearAdminAccessToken();
     setAdminEmail(null);
   };
 
-  return (
-    <AdminAuthContext.Provider value={{ adminEmail, login, logout }}>
-      {children}
-    </AdminAuthContext.Provider>
-  );
+  return <AdminAuthContext.Provider value={{ adminEmail, loading, login, logout }}>{children}</AdminAuthContext.Provider>;
 }
 
 export function useAdminAuth() {

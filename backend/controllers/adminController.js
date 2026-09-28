@@ -1,5 +1,4 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const Invoice = require('../models/Invoice');
@@ -14,53 +13,158 @@ const email = require('../utils/email');
 const AffiliateProfile = require('../models/AffiliateProfile');
 const AffiliateReferral = require('../models/AffiliateReferral');
 const AffiliateCommission = require('../models/AffiliateCommission');
+const Session = require('../models/Session');
+const AdminAuditLog = require('../models/AdminAuditLog');
+const SecurityEvent = require('../models/SecurityEvent');
+const {
+  createSession,
+  signAccessToken,
+  setRefreshCookie,
+  clearRefreshCookie,
+  getRefreshToken,
+  hashToken,
+  revokeSession,
+  revokeAllForAdmin,
+} = require('../utils/sessionSecurity');
+const { getConfiguredAdminEmail } = require('../utils/adminConfig');
 
 // ===== Authentification admin =====
-// Liste blanche d'emails autorisés (voir docs/ADMIN_ACCESS.md) — jamais
-// stockée en base, uniquement en variable d'environnement Render.
-function emailsAutorises() {
-  return (process.env.ADMIN_EMAILS || '')
-    .split(',')
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
+// Oryxa ne possède qu'un seul compte administrateur plateforme. Son email et
+// son hash de mot de passe restent hors de MongoDB, dans les secrets Render.
 async function motDePasseValide(motDePasseFourni) {
   if (process.env.ADMIN_PASSWORD_HASH) {
     return bcrypt.compare(motDePasseFourni, process.env.ADMIN_PASSWORD_HASH);
   }
-  if (process.env.ADMIN_PASSWORD) {
-    // Repli en clair pour démarrer rapidement — voir docs/ADMIN_ACCESS.md
-    // pour passer à ADMIN_PASSWORD_HASH (recommandé) dès que possible.
+  // Le mot de passe en clair est toléré uniquement hors production pour le
+  // développement. Il est refusé par le démarrage production.
+  if (process.env.NODE_ENV !== 'production' && process.env.ADMIN_PASSWORD) {
     return motDePasseFourni === process.env.ADMIN_PASSWORD;
   }
   return false;
 }
 
 exports.login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email et mot de passe requis' });
+  const { email: emailAddr, password } = req.body;
+  if (!emailAddr || !password) return res.status(400).json({ message: 'Email et mot de passe requis' });
+
+  const configuredEmail = getConfiguredAdminEmail();
+  if (!configuredEmail) {
+    return res.status(500).json({ message: 'Espace admin non configuré.' });
   }
 
-  const autorises = emailsAutorises();
-  if (autorises.length === 0) {
-    return res.status(500).json({ message: "Espace admin non configuré (ADMIN_EMAILS absent) — voir docs/ADMIN_ACCESS.md" });
-  }
-
-  const emailNormalise = email.trim().toLowerCase();
-  if (!autorises.includes(emailNormalise) || !(await motDePasseValide(password))) {
-    // Message volontairement identique dans les deux cas (email inconnu ou
-    // mot de passe faux) pour ne pas révéler quels emails sont admin.
+  const emailNormalise = emailAddr.trim().toLowerCase();
+  if (emailNormalise !== configuredEmail || !(await motDePasseValide(password))) {
+    await SecurityEvent.create({
+      scope: 'admin', type: 'admin_login_failed', identifier: configuredEmail,
+      ip: req.ip || '', userAgent: String(req.get('user-agent') || '').slice(0, 1000),
+      severity: 'warning', details: 'Identifiants admin invalides',
+    }).catch(() => {});
+    // Le même message empêche l'énumération de l'email admin.
     return res.status(401).json({ message: 'Identifiants admin invalides' });
   }
 
-  const token = jwt.sign(
-    { platformAdmin: true, email: emailNormalise },
-    process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET,
-    { expiresIn: '12h' }
-  );
-  res.json({ token, email: emailNormalise });
+  const previousSession = await Session.findOne({ type: 'admin', adminEmail: configuredEmail, lastIp: { $ne: req.ip || '' } }).sort({ lastSeenAt: -1 });
+  const nouvelleAdresse = !!previousSession && previousSession.lastIp && previousSession.lastIp !== (req.ip || '');
+  const { session, raw } = await createSession({ type: 'admin', adminEmail: configuredEmail, req });
+  const token = signAccessToken({ platformAdmin: true, email: configuredEmail, sid: session._id }, process.env.ADMIN_JWT_SECRET);
+  setRefreshCookie(res, 'admin', raw);
+
+  // La création de session est également notre point de départ pour les
+  // futures alertes de connexion inhabituelle : IP + user-agent sont conservés
+  // sans jamais enregistrer le mot de passe ou le token brut.
+  await AdminAuditLog.create({
+    adminEmail: configuredEmail,
+    action: 'admin_login',
+    method: req.method,
+    path: req.originalUrl,
+    status: 200,
+    ip: req.ip || '',
+    userAgent: String(req.get('user-agent') || '').slice(0, 1000),
+    success: true,
+  });
+  if (nouvelleAdresse) {
+    await SecurityEvent.create({
+      scope: 'admin', type: 'admin_login_new_ip', identifier: configuredEmail,
+      ip: req.ip || '', userAgent: String(req.get('user-agent') || '').slice(0, 1000),
+      severity: 'warning', details: 'Connexion depuis une adresse IP non observée auparavant.',
+    }).catch(() => {});
+    try {
+      await email.sendSecurityAlert({ to: configuredEmail, ip: req.ip, userAgent: String(req.get('user-agent') || '').slice(0, 500) });
+    } catch (err) {
+      console.error('Alerte sécurité admin non envoyée:', err.message);
+    }
+  }
+
+  res.json({ token, email: configuredEmail });
+});
+
+exports.listSessions = asyncHandler(async (req, res) => {
+  const sessions = await Session.find({ type: 'admin', adminEmail: req.adminEmail, revokedAt: null, expiresAt: { $gt: new Date() } })
+    .select('_id createdIp lastIp userAgent createdAt lastSeenAt expiresAt')
+    .sort({ lastSeenAt: -1 });
+  res.json(sessions.map((session) => ({
+    id: session._id,
+    ip: session.lastIp || session.createdIp,
+    userAgent: session.userAgent,
+    createdAt: session.createdAt,
+    lastSeenAt: session.lastSeenAt,
+    expiresAt: session.expiresAt,
+    current: String(session._id) === String(req.adminSessionId || ''),
+  })));
+});
+
+exports.revokeSession = asyncHandler(async (req, res) => {
+  const session = await Session.findOne({ _id: req.params.id, type: 'admin', adminEmail: req.adminEmail, revokedAt: null });
+  if (!session) return res.status(404).json({ message: 'Session admin introuvable.' });
+  await revokeSession(session);
+  res.json({ message: 'Session admin révoquée.' });
+});
+
+exports.refresh = asyncHandler(async (req, res) => {
+  const raw = getRefreshToken(req, 'admin');
+  const configuredEmail = getConfiguredAdminEmail();
+  if (!raw || !configuredEmail) return res.status(401).json({ message: 'Session admin expirée.' });
+
+  const session = await Session.findOne({ type: 'admin', tokenHash: hashToken(raw), adminEmail: configuredEmail });
+  if (!session) {
+    clearRefreshCookie(res, 'admin');
+    return res.status(401).json({ message: 'Session admin invalide.' });
+  }
+  if (session.revokedAt || session.expiresAt <= new Date()) {
+    clearRefreshCookie(res, 'admin');
+    return res.status(401).json({ message: 'Session admin expirée ou révoquée.' });
+  }
+
+  const next = await createSession({ type: 'admin', adminEmail: configuredEmail, req });
+  await revokeSession(session, next.session);
+  setRefreshCookie(res, 'admin', next.raw);
+  const token = signAccessToken({ platformAdmin: true, email: configuredEmail, sid: next.session._id }, process.env.ADMIN_JWT_SECRET);
+  res.json({ token, email: configuredEmail });
+});
+
+exports.logout = asyncHandler(async (req, res) => {
+  const raw = getRefreshToken(req, 'admin');
+  if (raw) {
+    const session = await Session.findOne({ type: 'admin', tokenHash: hashToken(raw) });
+    if (session) await revokeSession(session);
+  }
+  clearRefreshCookie(res, 'admin');
+  res.json({ message: 'Déconnexion admin effectuée.' });
+});
+
+exports.logoutAll = asyncHandler(async (req, res) => {
+  const configuredEmail = getConfiguredAdminEmail();
+  if (configuredEmail) await revokeAllForAdmin(configuredEmail);
+  clearRefreshCookie(res, 'admin');
+  res.json({ message: 'Toutes les sessions admin ont été déconnectées.' });
+});
+
+exports.getSecurityOverview = asyncHandler(async (req, res) => {
+  const [events, audits] = await Promise.all([
+    SecurityEvent.find().sort({ createdAt: -1 }).limit(100),
+    AdminAuditLog.find().sort({ createdAt: -1 }).limit(200),
+  ]);
+  res.json({ events, audits });
 });
 
 // ===== Statistiques globales =====

@@ -3,6 +3,7 @@ import { Download, ExternalLink, Loader2 } from 'lucide-react';
 import Modal from './ui/Modal';
 import { apiError } from '../utils/format';
 import { useToast } from '../contexts/ToastContext';
+import { authenticatedFetch } from '../api/authenticatedFetch';
 
 interface Props {
   open: boolean;
@@ -28,7 +29,7 @@ export default function PdfPreviewModal({ open, onClose, title, url, filename = 
     let objectUrl: string | null = null;
     setLoading(true);
     setBlobUrl(null);
-    fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` } })
+    authenticatedFetch(url)
       .then(async (res) => {
         if (!res.ok) throw new Error((await res.json().catch(() => null))?.message || `Impossible de charger le PDF (${res.status}).`);
         return res.blob();

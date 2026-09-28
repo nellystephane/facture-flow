@@ -13,7 +13,7 @@ export default defineConfig({
       // src/components/PwaUpdatePrompt.tsx) pour afficher une bannière
       // "Mettre à jour" au lieu d'un rechargement automatique silencieux.
       injectRegister: false,
-      includeAssets: ['icons/favicon-32.png', 'icons/favicon-16.png', 'icons/apple-touch-icon.png'],
+      includeAssets: ['icons/oryxa-favicon-32.png', 'icons/oryxa-favicon-16.png', 'icons/oryxa-apple-touch.png'],
       manifest: {
         name: 'Oryxa — Facturation & Gestion',
         short_name: 'Oryxa',
@@ -29,9 +29,9 @@ export default defineConfig({
         theme_color: '#db0201',
         background_color: '#0a0a0c',
         icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: 'icons/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icons/oryxa-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/oryxa-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icons/oryxa-icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

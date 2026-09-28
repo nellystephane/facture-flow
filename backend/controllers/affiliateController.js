@@ -88,14 +88,29 @@ exports.activate = asyncHandler(async (req, res) => {
   const telephone = String(req.body.telephone ?? user.telephone ?? '').trim();
   const whatsapp = String(req.body.whatsapp ?? user.whatsapp ?? '').trim();
   if (!telephone && !whatsapp) return res.status(400).json({ message: 'Un numéro de téléphone ou WhatsApp est requis pour participer au programme.' });
-  const other = await User.findOne({
+  // La règle porte sur l'affiliation, pas sur l'existence d'un numéro dans
+  // un compte Oryxa classique. Une personne qui possède déjà un compte doit
+  // pouvoir devenir affiliée ; en revanche, un même numéro ne doit pas servir
+  // à créer plusieurs profils affiliés actifs.
+  const candidates = await User.find({
     _id: { $ne: user._id },
     $or: [
       ...(telephone ? [{ telephone }] : []),
       ...(whatsapp ? [{ whatsapp }] : []),
     ],
-  }).select('_id');
-  if (other) return res.status(409).json({ message: 'Ce numéro est déjà rattaché à un autre compte. Un seul compte affilié par numéro est autorisé.', code: 'PHONE_ALREADY_USED' });
+  }).select('_id').lean();
+  if (candidates.length) {
+    const affiliateOwner = await AffiliateProfile.exists({
+      user: { $in: candidates.map((candidate) => candidate._id) },
+      active: true,
+    });
+    if (affiliateOwner) {
+      return res.status(409).json({
+        message: 'Ce numéro est déjà rattaché à un profil affilié actif. Un seul compte affilié par numéro est autorisé.',
+        code: 'PHONE_ALREADY_USED',
+      });
+    }
+  }
   if (req.body.telephone !== undefined || req.body.whatsapp !== undefined) {
     user.telephone = telephone;
     user.whatsapp = whatsapp;

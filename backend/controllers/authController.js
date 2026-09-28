@@ -3,12 +3,23 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const email = require('../utils/email');
+const Session = require('../models/Session');
+const {
+  createSession,
+  signAccessToken,
+  setRefreshCookie,
+  clearRefreshCookie,
+  getRefreshToken,
+  hashToken,
+  revokeSession,
+  revokeAllForUser,
+} = require('../utils/sessionSecurity');
 
 const asyncHandler = require('../middleware/asyncHandler');
 const affiliate = require('./affiliateController');
 
-const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const signToken = (id, sid) =>
+  signAccessToken({ id, sid }, process.env.JWT_SECRET);
 
 // Un compte "collaborateur" (plan Business, voir models/User.js) n'a pas sa
 // propre entreprise/logo/abonnement : ceux-ci sont ceux de son propriétaire.
@@ -135,7 +146,9 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   if (!user) return res.status(400).json({ message: 'Compte introuvable' });
 
   if (user.emailVerifie) {
-    const token = signToken(user._id);
+    const { session, raw } = await createSession({ type: 'user', userId: user._id, req });
+    const token = signToken(user._id, session._id);
+    setRefreshCookie(res, 'user', raw);
     return res.json({ token, user: await reponseAuth(user) });
   }
 
@@ -152,7 +165,9 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   await user.save();
   try { await affiliate.activateReferralAfterEmail(user._id); } catch (err) { console.error('[affiliate] activation referral impossible:', err.message); }
 
-  const token = signToken(user._id);
+  const { session, raw } = await createSession({ type: 'user', userId: user._id, req });
+  const token = signToken(user._id, session._id);
+  setRefreshCookie(res, 'user', raw);
   res.json({ token, user: await reponseAuth(user) });
 });
 
@@ -178,7 +193,8 @@ exports.resendVerificationCode = asyncHandler(async (req, res) => {
         code: 'EMAIL_NOT_CONFIGURED',
       });
     }
-    return res.status(502).json({ message: "Échec de l'envoi de l'email : " + err.message });
+    console.error("Échec d'envoi email:", err.message);
+    return res.status(502).json({ message: "Échec de l'envoi de l'email. Réessayez plus tard." });
   }
 
   res.json({ message: 'Un nouveau code vous a été envoyé.' });
@@ -219,7 +235,9 @@ exports.login = asyncHandler(async (req, res) => {
     });
   }
 
-  const token = signToken(user._id);
+  const { session, raw } = await createSession({ type: 'user', userId: user._id, req });
+  const token = signToken(user._id, session._id);
+  setRefreshCookie(res, 'user', raw);
   res.json({ token, user: await reponseAuth(user) });
 });
 
@@ -269,7 +287,10 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   user.codeResetPasswordExpire = null;
   await user.save();
 
-  const token = signToken(user._id);
+  await revokeAllForUser(user._id);
+  const { session, raw } = await createSession({ type: 'user', userId: user._id, req });
+  const token = signToken(user._id, session._id);
+  setRefreshCookie(res, 'user', raw);
   res.json({ token, user: await reponseAuth(user), message: 'Mot de passe réinitialisé.' });
 });
 
@@ -353,8 +374,97 @@ exports.changePassword = asyncHandler(async (req, res) => {
 
   acteur.password = await bcrypt.hash(nouveauMotDePasse, 10);
   await acteur.save();
+  await revokeAllForUser(acteur._id);
+  const { session, raw } = await createSession({ type: 'user', userId: acteur._id, req });
+  const token = signToken(acteur._id, session._id);
+  setRefreshCookie(res, 'user', raw);
 
-  res.json({ message: 'Mot de passe mis à jour.' });
+  res.json({ message: 'Mot de passe mis à jour.', token, user: await reponseAuth(acteur) });
+});
+
+
+exports.listSessions = asyncHandler(async (req, res) => {
+  const sessions = await Session.find({ type: 'user', user: req.actorId, revokedAt: null, expiresAt: { $gt: new Date() } })
+    .select('_id createdIp lastIp userAgent createdAt lastSeenAt expiresAt')
+    .sort({ lastSeenAt: -1 });
+  res.json(sessions.map((session) => ({
+    id: session._id,
+    ip: session.lastIp || session.createdIp,
+    userAgent: session.userAgent,
+    createdAt: session.createdAt,
+    lastSeenAt: session.lastSeenAt,
+    expiresAt: session.expiresAt,
+    current: String(session._id) === String(req.sessionId || ''),
+  })));
+});
+
+exports.revokeSession = asyncHandler(async (req, res) => {
+  const session = await Session.findOne({ _id: req.params.id, type: 'user', user: req.actorId, revokedAt: null });
+  if (!session) return res.status(404).json({ message: 'Session introuvable.' });
+  await revokeSession(session);
+  res.json({ message: 'Session révoquée.' });
+});
+
+exports.revokeOtherSessions = asyncHandler(async (req, res) => {
+  const filter = { type: 'user', user: req.actorId, revokedAt: null };
+  if (req.sessionId) filter._id = { $ne: req.sessionId };
+  await Session.updateMany(filter, { $set: { revokedAt: new Date() } });
+  res.json({ message: 'Les autres sessions ont été déconnectées.' });
+});
+
+exports.refresh = asyncHandler(async (req, res) => {
+  const raw = getRefreshToken(req, 'user');
+  if (!raw) return res.status(401).json({ message: 'Session expirée. Veuillez vous reconnecter.' });
+
+  const session = await Session.findOne({
+    type: 'user',
+    tokenHash: hashToken(raw),
+  });
+  if (!session) {
+    clearRefreshCookie(res, 'user');
+    return res.status(401).json({ message: 'Session invalide.' });
+  }
+
+  if (session.revokedAt) {
+    if (session.user) await revokeAllForUser(session.user);
+    clearRefreshCookie(res, 'user');
+    return res.status(401).json({ message: 'Session révoquée. Veuillez vous reconnecter.' });
+  }
+  if (session.expiresAt <= new Date()) {
+    clearRefreshCookie(res, 'user');
+    return res.status(401).json({ message: 'Session expirée. Veuillez vous reconnecter.' });
+  }
+
+  const user = await User.findById(session.user);
+  if (!user || user.suspendu || !user.emailVerifie) {
+    await revokeSession(session);
+    clearRefreshCookie(res, 'user');
+    return res.status(401).json({ message: 'Session invalide.' });
+  }
+
+  const next = await createSession({ type: 'user', userId: user._id, req });
+  await revokeSession(session, next.session);
+  setRefreshCookie(res, 'user', next.raw);
+  session.lastIp = req.ip || session.lastIp;
+  session.lastSeenAt = new Date();
+  const token = signToken(user._id, next.session._id);
+  res.json({ token, user: await reponseAuth(user) });
+});
+
+exports.logout = asyncHandler(async (req, res) => {
+  const raw = getRefreshToken(req, 'user');
+  if (raw) {
+    const session = await Session.findOne({ type: 'user', tokenHash: hashToken(raw) });
+    if (session) await revokeSession(session);
+  }
+  clearRefreshCookie(res, 'user');
+  res.json({ message: 'Déconnexion effectuée.' });
+});
+
+exports.logoutAll = asyncHandler(async (req, res) => {
+  await revokeAllForUser(req.actorId);
+  clearRefreshCookie(res, 'user');
+  res.json({ message: 'Toutes les sessions ont été déconnectées.' });
 });
 
 module.exports.resoudreEspace = resoudreEspace;
