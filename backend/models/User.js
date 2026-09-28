@@ -81,9 +81,8 @@ userSchema.set('toJSON', { virtuals: true });
 userSchema.set('toObject', { virtuals: true });
 
 // Oryxa est actuellement mono-devise : toute ancienne valeur est normalisée en FCFA.
-userSchema.pre('validate', function(next) {
+userSchema.pre('validate', function() {
   this.devise = 'FCFA';
-  next();
 });
 
 module.exports = mongoose.model('User', userSchema);

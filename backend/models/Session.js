@@ -5,7 +5,7 @@ const sessionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
   adminEmail: { type: String, default: null, lowercase: true, trim: true, index: true },
   tokenHash: { type: String, required: true, unique: true, index: true },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
   revokedAt: { type: Date, default: null, index: true },
   replacedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Session', default: null },
   createdIp: { type: String, default: '' },
