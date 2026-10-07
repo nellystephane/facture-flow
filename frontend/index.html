@@ -14,11 +14,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <title>Oryxa — Facturation & Gestion pour PME</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://facture-flow.onrender.com https://*.sentry.io; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" />
-    <script src="%BASE_URL%theme-init.js"></script>
-    <script src="%BASE_URL%spa-redirect.js"></script>
+    <script src="%BASE_URL%theme-init.js" defer></script>
+    <script src="%BASE_URL%spa-redirect.js" defer></script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="%BASE_URL%src/main.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
