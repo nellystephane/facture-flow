@@ -198,7 +198,7 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
     const verrou = await Quote.findOneAndUpdate(
       { _id: quote._id, statut: { $ne: 'accepte' }, publicAccessRevoked: { $ne: true } },
       { $set: { statut: 'accepte' } },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!verrou) return res.status(409).json({ message: 'Ce devis a déjà été accepté.' });
 

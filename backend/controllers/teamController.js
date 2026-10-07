@@ -114,7 +114,7 @@ exports.updateMemberRole = asyncHandler(async (req, res) => {
   const membre = await User.findOneAndUpdate(
     { _id: req.params.id, compteProprietaire: req.userId },
     { role },
-    { new: true }
+    { returnDocument: 'after' }
   ).select('nom email role');
   if (!membre) return res.status(404).json({ message: 'Membre introuvable' });
   res.json({ membre });

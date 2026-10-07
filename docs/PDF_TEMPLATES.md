@@ -1,33 +1,31 @@
-# Système de modèles PDF Oryxa
+# Modèles PDF Oryxa
 
-## Philosophie
+Oryxa conserve **Classique** comme modèle par défaut et comme seul modèle du plan Gratuit.
 
-Le PDF classique reste le seul modèle du plan Gratuit. Les plans Pro et Business disposent d'une bibliothèque de modèles distincts, prévisualisables avant téléchargement ou envoi.
+Les plans **Pro** et **Business** disposent des neuf modèles suivants, utilisables aussi bien pour les factures que pour les devis :
 
-Les mêmes modèles sont utilisés par les **factures et les devis**. Le type du document change les libellés et les informations métier, tandis que le modèle contrôle la présentation visuelle. Cela garantit qu'un devis puis sa facture issue de son acceptation peuvent conserver une identité visuelle cohérente.
+- **Classique** — référence Oryxa, sobre et universelle.
+- **Moderne** — composition structurée avec en-tête visuel et hiérarchie contemporaine.
+- **Minimal** — typographie légère, lignes fines et espaces généreux.
+- **Atelier** — composition éditoriale chaleureuse, avec bloc client élargi.
+- **Horizon** — mise en page aérée avec carte latérale et accents distinctifs.
+- **Prestige** — en-tête sombre et contraste haut de gamme.
+- **Corporate** — présentation institutionnelle, dense mais très lisible.
+- **Signature** — identité éditoriale raffinée, avec cartes et accents doux.
+- **Noir** — contraste fort et présence visuelle premium.
 
-## Modèles
+## Prévisualisation
 
-### Gratuit
-- **Classique** — référence Oryxa, sobre et lisible.
+Le sélecteur de modèle est présent dans la création/modification des **factures et devis**. Le bouton d'aperçu utilise le même moteur PDF que le document final : le rendu aperçu est donc le rendu réellement envoyé ou téléchargé.
 
-### Pro
-- **Moderne** — accent bleu, hiérarchie contemporaine.
-- **Minimal** — typographique, beaucoup d'espace, sans surcharge.
-- **Atelier** — vert doux, chaleureux et professionnel.
-- **Horizon** — violet, créatif et élégant.
+## Paiement dans les factures
 
-### Business
-Inclut tous les modèles Pro et ajoute :
-- **Prestige** — sombre et premium avec accent doré.
-- **Corporate** — institutionnel, structuré et B2B.
-- **Signature** — élégant avec accent rose profond.
-- **Noir** — contraste fort, orienté envoi numérique.
+Lorsqu'un lien de paiement public est disponible, la facture contient :
 
-## Règles
+- un bouton **Payer en ligne** cliquable ;
+- un QR code cliquable encodant exactement le même lien ;
+- une présentation réservée dans une carte dédiée afin que le QR ne chevauche jamais le bouton, les totaux, les notes ou le pied de page.
 
-- Le serveur reste la source de vérité des droits d'accès.
-- Un modèle non autorisé est ramené au modèle `classique` côté serveur.
-- Les données financières et le contenu du document ne dépendent pas du design.
-- Les montants restent en FCFA dans tous les modèles.
-- Une prévisualisation PDF réelle est générée avant l'envoi afin que l'utilisateur voie le rendu final, pas une simple maquette frontend.
+Le PDF ne contient **aucun domaine codé en dur**. Le lien est construit côté serveur depuis `CLIENT_URL_PUBLIC` (avec repli sur `CLIENT_URL`). Pour passer plus tard sur un domaine personnalisé, il suffit donc de mettre à jour la variable publique côté backend sans modifier les templates PDF.
+
+Le lien de paiement reste également indépendant des liens envoyés par email ou WhatsApp : l'ajout du QR ne remplace ni ne supprime ces canaux.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FileSpreadsheet, ArrowLeft, Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import { FileSpreadsheet, ArrowLeft, Save, Plus, Trash2, GripVertical, Lock } from 'lucide-react';
 import { getQuote, createQuote, updateQuote, previewQuotePdf } from '../api/quotes';
 import { getAllClients } from '../api/clients';
 import { getServices } from '../api/services';
@@ -11,12 +11,26 @@ import DatePicker from '../components/ui/DatePicker';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
+import { usePermissions } from '../contexts/PermissionsContext';
+
+const TEMPLATES = [
+  { id: 'classique', label: 'Classique', desc: 'Référence Oryxa, sobre et universelle' },
+  { id: 'moderne', label: 'Moderne', desc: 'En-tête structuré et accents contemporains' },
+  { id: 'minimal', label: 'Minimal', desc: 'Typographie légère et espaces généreux' },
+  { id: 'atelier', label: 'Atelier', desc: 'Éditorial, chaleureux et artisanal' },
+  { id: 'horizon', label: 'Horizon', desc: 'Carte latérale et hiérarchie élégante' },
+  { id: 'prestige', label: 'Prestige', desc: 'En-tête sombre et présentation haut de gamme' },
+  { id: 'corporate', label: 'Corporate', desc: 'Institutionnel, structuré et très lisible' },
+  { id: 'signature', label: 'Signature', desc: 'Identité éditoriale raffinée et distinctive' },
+  { id: 'noir', label: 'Noir', desc: 'Contraste premium et présence visuelle forte' },
+];
 
 export default function QuoteForm() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { permissions } = usePermissions();
 
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -34,6 +48,7 @@ export default function QuoteForm() {
     remise: 0,
     tva: 0,
     notes: '',
+    template: 'classique',
   });
 
   useEffect(() => {
@@ -58,6 +73,7 @@ export default function QuoteForm() {
           remise: d.remise || 0,
           tva: d.tva || 0,
           notes: d.notes || '',
+          template: d.template || 'classique',
         });
       })
       .catch((err) => toast(apiError(err), 'error'))
@@ -174,6 +190,26 @@ export default function QuoteForm() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Modèle de PDF */}
+          <div className="glass-card p-6">
+            <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Modèle de PDF</h3>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Le même système de templates que les factures, avec prévisualisation avant envoi.</p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {TEMPLATES.map((t) => {
+                const disponible = permissions?.modelesFactureDisponibles.includes(t.id) ?? (t.id === 'classique');
+                return (
+                  <button key={t.id} type="button" disabled={!disponible}
+                    onClick={() => disponible && update('template', t.id)}
+                    className={`relative p-3 rounded-xl border text-left transition-soft ${form.template === t.id ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-100 dark:border-white/10'} ${!disponible ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 dark:hover:border-white/20'}`}>
+                    {!disponible && <Lock size={13} className="absolute top-2 right-2 text-gray-400 dark:text-gray-500" />}
+                    <p className="text-sm font-semibold text-[#0a0a0c] dark:text-white">{t.label}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{disponible ? t.desc : 'Plan Pro ou Business'}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

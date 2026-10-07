@@ -186,7 +186,7 @@ async function handleSubscriptionPaid(transaction) {
         dateFin: new Date(now.getTime() + dureeMs),
       },
     },
-    { new: true }
+    { returnDocument: 'after' }
   );
 
   if (!updated) return;

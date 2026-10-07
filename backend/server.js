@@ -76,6 +76,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Trop de requêtes, réessayez plus tard.' },
+  skip: () => process.env.NODE_ENV === 'test',
 });
 app.use('/api', apiLimiter);
 
@@ -86,6 +87,7 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String(req.body?.email || '').trim().toLowerCase()}`,
   message: { message: 'Trop de tentatives, réessayez plus tard.' },
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 const sensitiveActionLimiter = rateLimit({
@@ -95,6 +97,7 @@ const sensitiveActionLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String(req.params?.token || req.body?.email || '').trim().toLowerCase()}`,
   message: { message: 'Trop de tentatives pour cette opération. Réessayez plus tard.' },
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 const paymentLimiter = rateLimit({
@@ -104,6 +107,7 @@ const paymentLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => `${ipKeyGenerator(req.ip)}|${String(req.params?.token || '').trim()}`,
   message: { message: 'Trop de tentatives de paiement. Réessayez plus tard.' },
+  skip: () => process.env.NODE_ENV === 'test',
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
@@ -206,6 +210,17 @@ async function start() {
       if (migration.modifiedCount) console.log(`Devise normalisée en FCFA pour ${migration.modifiedCount} compte(s).`);
     } catch (err) {
       console.error('Migration devise FCFA impossible :', err.message);
+    }
+
+    // Corrige les anciens index uniques sur Invoice.quote/publicToken avant
+    // d'accepter des requêtes. Sans cette migration, une base existante peut
+    // conserver l'ancien quote_1 et rejeter toute deuxième facture sans devis.
+    try {
+      const { migrateInvoiceIndexes } = require('./scripts/migrateInvoiceIndexes');
+      await migrateInvoiceIndexes();
+    } catch (err) {
+      console.error('Migration des index Invoice impossible :', err.message);
+      process.exit(1);
     }
   } catch (err) {
     console.error('Échec de connexion à MongoDB:', err.message);

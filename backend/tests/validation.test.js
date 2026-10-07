@@ -141,7 +141,8 @@ describe('Validation — paiements', () => {
 
 describe('Validation — profil', () => {
   it('refuse un logo qui n\'est pas une image en base64', async () => {
-    const { token } = await creerUtilisateurConnecte(app);
+    const { token, userId } = await creerUtilisateurConnecte(app);
+    await passerAuPlanPayant(User, userId, 'pro');
     const res = await request(app)
       .post('/api/auth/profile/logo')
       .set('Authorization', `Bearer ${token}`)
@@ -150,7 +151,8 @@ describe('Validation — profil', () => {
   });
 
   it('refuse un logo trop volumineux', async () => {
-    const { token } = await creerUtilisateurConnecte(app);
+    const { token, userId } = await creerUtilisateurConnecte(app);
+    await passerAuPlanPayant(User, userId, 'pro');
     // ~1.3 Mo décodé une fois la chaîne base64 générée, au-delà de la limite de 900 Ko.
     const grosBuffer = Buffer.alloc(1_300_000, 1);
     const res = await request(app)
@@ -162,7 +164,8 @@ describe('Validation — profil', () => {
   });
 
   it('accepte un logo PNG valide et permet de le retirer ensuite', async () => {
-    const { token } = await creerUtilisateurConnecte(app);
+    const { token, userId } = await creerUtilisateurConnecte(app);
+    await passerAuPlanPayant(User, userId, 'pro');
     // 1x1 PNG transparent valide (quelques dizaines d'octets)
     const petitPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
     const up = await request(app)

@@ -132,7 +132,7 @@ exports.updateInvoice = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findOneAndUpdate(
     { _id: req.params.id, owner: req.userId },
     updates,
-    { new: true }
+    { returnDocument: 'after' }
   ).populate('client');
   res.json(invoice);
 });

@@ -14,9 +14,15 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
 
 const TEMPLATES = [
-  { id: 'classique', label: 'Classique', desc: 'Rouge signature Oryxa' },
-  { id: 'moderne', label: 'Moderne', desc: 'Accent bleu' },
-  { id: 'minimal', label: 'Minimal', desc: 'Noir & blanc épuré' },
+  { id: 'classique', label: 'Classique', desc: 'Référence Oryxa, sobre et universelle' },
+  { id: 'moderne', label: 'Moderne', desc: 'En-tête structuré et accents contemporains' },
+  { id: 'minimal', label: 'Minimal', desc: 'Typographie légère et espaces généreux' },
+  { id: 'atelier', label: 'Atelier', desc: 'Éditorial, chaleureux et artisanal' },
+  { id: 'horizon', label: 'Horizon', desc: 'Carte latérale et hiérarchie élégante' },
+  { id: 'prestige', label: 'Prestige', desc: 'En-tête sombre et présentation haut de gamme' },
+  { id: 'corporate', label: 'Corporate', desc: 'Institutionnel, structuré et très lisible' },
+  { id: 'signature', label: 'Signature', desc: 'Identité éditoriale raffinée et distinctive' },
+  { id: 'noir', label: 'Noir', desc: 'Contraste premium et présence visuelle forte' },
 ];
 
 export default function InvoiceForm() {
@@ -265,7 +271,7 @@ export default function InvoiceForm() {
           <div className="glass-card p-6">
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Modèle de PDF</h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">L'apparence de la facture une fois téléchargée ou envoyée par email.</p>
-            <div className="grid sm:grid-cols-3 gap-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {TEMPLATES.map((t) => {
                 const disponible = permissions?.modelesFactureDisponibles.includes(t.id) ?? (t.id === 'classique');
                 return (

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "migrate:indexes": "node scripts/migrateInvoiceIndexes.js"
   },
   "keywords": [],
   "author": "",
@@ -37,6 +38,10 @@
   "jest": {
     "testEnvironment": "node",
     "testTimeout": 30000,
-    "testPathIgnorePatterns": ["/node_modules/", "/tests/setup.js", "/tests/helpers.js"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/tests/setup.js",
+      "/tests/helpers.js"
+    ]
   }
 }

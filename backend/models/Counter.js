@@ -27,7 +27,7 @@ async function nextNumber(owner, type) {
   const counter = await Counter.findOneAndUpdate(
     { owner, type, year },
     { $inc: { seq: 1 } },
-    { new: true, upsert: true }
+    { returnDocument: 'after', upsert: true }
   );
   return `${PREFIX[type]}-${year}-${String(counter.seq).padStart(4, '0')}`;
 }

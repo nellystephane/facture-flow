@@ -147,7 +147,7 @@ exports.adminReply = asyncHandler(async (req, res) => {
 exports.adminSetStatus = asyncHandler(async (req, res) => {
   const statut = clean(req.body.statut, 30);
   if (!['nouveau', 'en_cours', 'resolu', 'ferme'].includes(statut)) return res.status(400).json({ message: 'Statut invalide.' });
-  const ticket = await SupportTicket.findByIdAndUpdate(req.params.id, { statut, dernierMessageLuAdmin: true }, { new: true })
+  const ticket = await SupportTicket.findByIdAndUpdate(req.params.id, { statut, dernierMessageLuAdmin: true }, { returnDocument: 'after' })
     .populate('owner', 'nom email entreprise');
   if (!ticket) return res.status(404).json({ message: 'Demande introuvable.' });
   res.json({ ticket });

@@ -247,7 +247,7 @@ exports.suspendreUtilisateur = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { suspendu: true, suspensionMotif: motif },
-    { new: true }
+    { returnDocument: 'after' }
   ).select('nom email suspendu suspensionMotif');
   if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
   res.json(user);
@@ -257,7 +257,7 @@ exports.reactiverUtilisateur = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { suspendu: false, suspensionMotif: '' },
-    { new: true }
+    { returnDocument: 'after' }
   ).select('nom email suspendu');
   if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
   res.json(user);
@@ -277,7 +277,7 @@ exports.changerPlanUtilisateur = asyncHandler(async (req, res) => {
       // tant qu'un admin ne repasse pas le compte en gratuit.
       'abonnement.dateFin': subscription === 'gratuit' ? null : null,
     },
-    { new: true }
+    { returnDocument: 'after' }
   ).select('nom email subscription');
   if (!user) return res.status(404).json({ message: 'Utilisateur introuvable' });
   res.json(user);
@@ -304,7 +304,7 @@ exports.listPayments = asyncHandler(async (req, res) => {
 
 exports.signalerLitige = asyncHandler(async (req, res) => {
   const { note = '' } = req.body;
-  const payment = await Payment.findByIdAndUpdate(req.params.id, { litige: true, litigeNote: note }, { new: true });
+  const payment = await Payment.findByIdAndUpdate(req.params.id, { litige: true, litigeNote: note }, { returnDocument: 'after' });
   if (!payment) return res.status(404).json({ message: 'Paiement introuvable' });
   if (payment.rembourse) return res.status(409).json({ message: 'Ce paiement est déjà marqué comme remboursé.' });
   if (payment.origine !== 'en_ligne' || payment.statut !== 'complete') return res.status(409).json({ message: 'Seul un paiement en ligne confirmé peut être marqué comme remboursé.' });
@@ -328,7 +328,7 @@ const { ABONNEMENT_REDUCTION_PERCENT } = require('../config/plans');
 });
 
 exports.resoudreLitige = asyncHandler(async (req, res) => {
-  const payment = await Payment.findByIdAndUpdate(req.params.id, { litige: false }, { new: true });
+  const payment = await Payment.findByIdAndUpdate(req.params.id, { litige: false }, { returnDocument: 'after' });
   if (!payment) return res.status(404).json({ message: 'Paiement introuvable' });
   res.json(payment);
 });
@@ -340,7 +340,7 @@ exports.marquerRembourse = asyncHandler(async (req, res) => {
   const payment = await Payment.findByIdAndUpdate(
     req.params.id,
     { rembourse: true, rembourseLe: new Date() },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!payment) return res.status(404).json({ message: 'Paiement introuvable' });
   res.json(payment);
@@ -427,7 +427,7 @@ exports.updateLegalContent = asyncHandler(async (req, res) => {
   const doc = await LegalContent.findOneAndUpdate(
     { slug },
     { titre, contenu, modifiePar: req.adminEmail },
-    { new: true, upsert: true }
+    { returnDocument: 'after', upsert: true }
   );
   res.json(doc);
 });

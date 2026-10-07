@@ -30,15 +30,30 @@ const invoiceSchema = new mongoose.Schema({
     enum: ['brouillon', 'envoyee', 'vue', 'payee', 'en_retard', 'annulee'],
     default: 'brouillon'
   },
-  template: { type: String, enum: ['classique', 'moderne', 'minimal'], default: 'classique' },
-  quote: { type: mongoose.Schema.Types.ObjectId, ref: 'Quote', default: null, unique: true, sparse: true },
+  template: { type: String, enum: ['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir'], default: 'classique' },
+  quote: { type: mongoose.Schema.Types.ObjectId, ref: 'Quote', default: null },
   // Jeton public : permet au client d'accéder à la page de paiement sans compte.
-  publicToken: { type: String, unique: true, sparse: true, index: true },
+  publicToken: { type: String, default: null },
   publicAccessRevoked: { type: Boolean, default: false },
   derniereRelance: { type: Date, default: null },
   dateEnvoi: { type: Date, default: null },
   dateVue: { type: Date, default: null },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
+
+// Une facture peut être créée sans devis. L'unicité ne doit s'appliquer
+// qu'aux factures réellement liées à un devis : un index unique classique
+// sur `quote` provoquerait E11000 dès la deuxième valeur null.
+invoiceSchema.index(
+  { quote: 1 },
+  { unique: true, partialFilterExpression: { quote: { $type: 'objectId' } } }
+);
+
+// Même principe pour le lien public : on n'indexe que les tokens réellement
+// présents afin d'éviter les collisions sur des valeurs null explicites.
+invoiceSchema.index(
+  { publicToken: 1 },
+  { unique: true, partialFilterExpression: { publicToken: { $type: 'string' } } }
+);
 
 invoiceSchema.virtual('totalHT').get(function () {
   const sousTotal = (this.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);

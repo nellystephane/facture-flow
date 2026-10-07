@@ -42,7 +42,7 @@ exports.updateService = asyncHandler(async (req, res) => {
   const service = await Service.findOneAndUpdate(
     { _id: req.params.id, owner: req.userId },
     updates,
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!service) return res.status(404).json({ message: 'Service introuvable' });
   res.json(service);

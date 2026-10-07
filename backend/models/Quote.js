@@ -18,6 +18,9 @@ const quoteSchema = new mongoose.Schema({
   remise: { type: Number, default: 0 },
   tva: { type: Number, default: 0 },
   notes: { type: String, default: '' },
+  // Même système de modèles que les factures : le Gratuit reste classique,
+  // Pro/Business peuvent choisir un modèle avant l'envoi.
+  template: { type: String, enum: ['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir'], default: 'classique' },
   statut: {
     type: String,
     enum: ['brouillon', 'envoye', 'accepte', 'refuse', 'expire'],

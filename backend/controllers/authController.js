@@ -283,6 +283,10 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   if (!match) return res.status(400).json({ message: 'Code incorrect.' });
 
   user.password = await bcrypt.hash(password, 10);
+  // La validation du code de réinitialisation prouve que l'utilisateur
+  // contrôle l'adresse email associée au compte. Le compte peut donc être
+  // considéré comme email-vérifié après une réinitialisation réussie.
+  user.emailVerifie = true;
   user.codeResetPassword = null;
   user.codeResetPasswordExpire = null;
   await user.save();
@@ -338,14 +342,14 @@ exports.uploadLogo = asyncHandler(async (req, res) => {
       message: `Image trop lourde (${Math.round(raw.length / 1024)} Ko). Maximum autorisé : ${MAX_LOGO_BYTES / 1024} Ko — essayez de la compresser.`,
     });
   }
-  const proprietaire = await User.findByIdAndUpdate(req.userId, { logoUrl: logoBase64 }, { new: true }).select('-password');
+  const proprietaire = await User.findByIdAndUpdate(req.userId, { logoUrl: logoBase64 }, { returnDocument: 'after' }).select('-password');
   if (!proprietaire) return res.status(404).json({ message: 'Utilisateur introuvable' });
   const acteur = req.actorId === req.userId ? proprietaire : await User.findById(req.actorId).select('-password');
   res.json(profilReponse({ acteur: acteur || proprietaire, proprietaire }));
 });
 
 exports.removeLogo = asyncHandler(async (req, res) => {
-  const proprietaire = await User.findByIdAndUpdate(req.userId, { logoUrl: '' }, { new: true }).select('-password');
+  const proprietaire = await User.findByIdAndUpdate(req.userId, { logoUrl: '' }, { returnDocument: 'after' }).select('-password');
   if (!proprietaire) return res.status(404).json({ message: 'Utilisateur introuvable' });
   const acteur = req.actorId === req.userId ? proprietaire : await User.findById(req.actorId).select('-password');
   res.json(profilReponse({ acteur: acteur || proprietaire, proprietaire }));

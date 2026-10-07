@@ -43,7 +43,7 @@ exports.updateClient = asyncHandler(async (req, res) => {
   const client = await Client.findOneAndUpdate(
     { _id: req.params.id, owner: req.userId },
     updates,
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!client) return res.status(404).json({ message: 'Client introuvable' });
   res.json(client);

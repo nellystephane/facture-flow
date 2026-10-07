@@ -110,6 +110,7 @@ export interface Quote {
   remise?: number;
   tva: number;
   notes?: string;
+  template?: string;
   statut: QuoteStatut;
   owner: string;
   totalHT?: number;
