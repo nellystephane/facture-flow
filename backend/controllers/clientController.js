@@ -29,9 +29,14 @@ exports.createClient = asyncHandler(async (req, res) => {
   const limite = await verifierLimiteClients(Client, user);
   if (limite) return res.status(403).json(limite);
   const { nom, entreprise, email, telephone, whatsapp, adresse, notes } = req.body;
+  const { normalizeBeninPhone } = require('../utils/beninPhone');
+  const telephoneNormalise = telephone ? normalizeBeninPhone(telephone) : '';
+  const whatsappNormalise = whatsapp ? normalizeBeninPhone(whatsapp) : '';
+  if (telephone && telephoneNormalise === null) return res.status(400).json({ message: 'Utilisez un numéro béninois au format +229 01 XX XX XX XX.' });
+  if (whatsapp && whatsappNormalise === null) return res.status(400).json({ message: 'Utilisez un numéro WhatsApp béninois au format +229 01 XX XX XX XX.' });
   if (!nom) return res.status(400).json({ message: 'Le nom du client est requis' });
   const client = await Client.create({
-    nom, entreprise, email, telephone, whatsapp, adresse, notes, owner: req.userId
+    nom, entreprise, email, telephone: telephoneNormalise, whatsapp: whatsappNormalise, adresse, notes, owner: req.userId
   });
   res.status(201).json(client);
 });
@@ -40,6 +45,14 @@ exports.updateClient = asyncHandler(async (req, res) => {
   const allowed = ['nom', 'entreprise', 'email', 'telephone', 'whatsapp', 'adresse', 'notes'];
   const updates = {};
   allowed.forEach((f) => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+  const { normalizeBeninPhone } = require('../utils/beninPhone');
+  for (const field of ['telephone', 'whatsapp']) {
+    if (updates[field]) {
+      const normalized = normalizeBeninPhone(updates[field]);
+      if (normalized === null) return res.status(400).json({ message: 'Utilisez un numéro béninois au format +229 01 XX XX XX XX.' });
+      updates[field] = normalized;
+    }
+  }
   const client = await Client.findOneAndUpdate(
     { _id: req.params.id, owner: req.userId },
     updates,

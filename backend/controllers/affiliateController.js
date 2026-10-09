@@ -85,8 +85,12 @@ exports.activate = asyncHandler(async (req, res) => {
   if (!user) return res.status(404).json({ message: 'Utilisateur introuvable.' });
   if (!user.emailVerifie) return res.status(403).json({ message: 'Confirmez votre adresse email avant d’activer l’affiliation.', code: 'EMAIL_NON_VERIFIE' });
 
-  const telephone = String(req.body.telephone ?? user.telephone ?? '').trim();
-  const whatsapp = String(req.body.whatsapp ?? user.whatsapp ?? '').trim();
+  const { normalizeBeninPhone } = require('../utils/beninPhone');
+  const rawTelephone = String(req.body.telephone ?? user.telephone ?? '').trim();
+  const rawWhatsapp = String(req.body.whatsapp ?? user.whatsapp ?? '').trim();
+  const telephone = rawTelephone ? normalizeBeninPhone(rawTelephone) : '';
+  const whatsapp = rawWhatsapp ? normalizeBeninPhone(rawWhatsapp) : '';
+  if (telephone === null || whatsapp === null) return res.status(400).json({ message: 'Utilisez un numéro béninois au format +229 01 XX XX XX XX.' });
   if (!telephone && !whatsapp) return res.status(400).json({ message: 'Un numéro de téléphone ou WhatsApp est requis pour participer au programme.' });
   // La règle porte sur l'affiliation, pas sur l'existence d'un numéro dans
   // un compte Oryxa classique. Une personne qui possède déjà un compte doit

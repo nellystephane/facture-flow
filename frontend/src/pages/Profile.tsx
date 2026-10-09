@@ -215,7 +215,7 @@ export default function Profile() {
                 <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#25D366] z-10" />
-                  <input className="field pl-9" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 …" />
+                  <input className="field pl-9" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 01 XX XX XX XX" />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">Votre numéro WhatsApp sert à partager rapidement vos documents.</p>
               </div>
@@ -267,11 +267,11 @@ export default function Profile() {
           {/* Reversements */}
           <div className="glass-card p-6 animate-fade-up">
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1 flex items-center gap-2"><CreditCard size={16} /> Reversements</h3>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">Configurez le compte vers lequel votre solde retirable sera envoyé. Les reversements automatiques utilisent l'API FedaPay réelle.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Choisissez où recevoir votre solde disponible. Les versements seront envoyés sur ce numéro selon la fréquence choisie.</p>
             <div className="grid sm:grid-cols-2 gap-4">
               <div><label className="field-label">Mode de retrait</label><Select value="mobile_money" onChange={() => {}} disabled options={[{ value: 'mobile_money', label: 'Mobile Money' }]} /></div>
               <div><label className="field-label">Opérateur</label><Select value={payout.provider} onChange={(v) => setPayout({ ...payout, provider: v })} options={[{value:'mtn',label:'MTN'},{value:'moov',label:'Moov'},{value:'celtiis',label:'Celtiis'}]} /></div>
-              <div><label className="field-label">Numéro Mobile Money</label><input className="field" value={payout.phone} onChange={(e) => setPayout({ ...payout, phone: e.target.value })} placeholder="+229…" /><p className="text-[11px] text-gray-400 mt-1">Assurez-vous que ce numéro peut recevoir des paiements Mobile Money.</p></div>
+              <div><label className="field-label">Numéro Mobile Money</label><input className="field" value={payout.phone} onChange={(e) => setPayout({ ...payout, phone: e.target.value })} placeholder="+229 01 XX XX XX XX" /><p className="text-[11px] text-gray-400 mt-1">Saisissez le numéro Mobile Money qui doit recevoir vos versements.</p></div>
               <div><label className="field-label">Titulaire</label><input className="field" value={payout.titulaire} onChange={(e) => setPayout({ ...payout, titulaire: e.target.value })} /></div>
               <div><label className="field-label">Fréquence</label><Select value={payout.schedule} onChange={(v) => setPayout({ ...payout, schedule: v as any })} options={[{value:'weekly',label:'Chaque semaine'},{value:'monthly',label:'Chaque mois'}]} /></div>
             </div>
@@ -282,7 +282,6 @@ export default function Profile() {
               {user?.payoutSettings?.status === 'pending' && <button type="button" className="btn-ghost text-sm" disabled={resendingPayoutConfirmation} onClick={async () => { setResendingPayoutConfirmation(true); try { await resendPayoutConfirmation(); toast('Email de confirmation renvoyé'); } catch (err) { toast(apiError(err), 'error'); } finally { setResendingPayoutConfirmation(false); } }}>{resendingPayoutConfirmation ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <Mail size={16} />} Renvoyer l’email</button>}
               <button type="button" className="btn-primary" disabled={savingPayout} onClick={async () => { setSavingPayout(true); try { const res = await updatePayoutSettings({ ...payout, enabled: true }); if (res.data?.payoutSettings) setUser({ ...(user as any), payoutSettings: res.data.payoutSettings }); toast(res.data?.confirmationRequired ? 'Moyen enregistré. Vérifiez votre email pour le confirmer.' : 'Paramètres de reversement enregistrés'); } catch (err) { toast(apiError(err), 'error'); } finally { setSavingPayout(false); } }}>{savingPayout ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <Save size={16} />} Enregistrer le moyen</button>
             </div>
-            <p className="text-[11px] text-gray-500 mt-3">Les cartes bancaires sont proposées au client sur le Checkout FedaPay pour les paiements entrants. Elles ne sont pas utilisées comme destination de reversement : FedaPay indique actuellement que les retraits par carte bancaire ne sont pas disponibles.</p>
           </div>
 
           {/* Sécurité — changer le mot de passe */}

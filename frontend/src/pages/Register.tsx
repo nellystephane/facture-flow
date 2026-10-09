@@ -99,7 +99,7 @@ export default function Register() {
 
             <div>
               <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
-              <input type="tel" placeholder="+229 …" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} className="field" />
+              <input type="tel" placeholder="+229 01 XX XX XX XX" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} className="field" />
               <p className="text-[11px] text-gray-400 mt-1">Pour faciliter le partage de vos factures et devis.</p>
             </div>
 

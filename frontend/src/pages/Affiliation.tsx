@@ -41,9 +41,9 @@ function PublicAffiliate({ code }: { code?: string }) {
               <p className="text-sm text-[#d9524d] font-bold mt-5">
                 {data?.nom ? `${data.nom} vous invite sur Oryxa` : 'Rejoignez le programme partenaire Oryxa'}
               </p>
-              <h1 className="affiliate-public-title">Recommandez Oryxa. Gagnez lorsque vos recommandations deviennent clientes.</h1>
+              <h1 className="affiliate-public-title">Faites découvrir Oryxa. Recevez une commission quand vos recommandations deviennent clientes.</h1>
               <p className="affiliate-public-lead">
-                Le programme est ouvert aux personnes qui souhaitent recommander Oryxa, qu’elles utilisent déjà la plateforme ou non.
+                Vous connaissez des indépendants ou des petites entreprises qui jonglent avec leurs devis et leurs factures ? Partagez Oryxa avec eux. Vous pouvez participer même si vous n’utilisez pas encore l’application.
               </p>
 
               <div className="affiliate-benefits-grid">
@@ -80,7 +80,7 @@ function PublicAffiliate({ code }: { code?: string }) {
 }
 
 const shareMessage = (link: string) =>
-  `Je te recommande Oryxa pour gérer plus simplement ton activité, tes devis et tes factures. Découvre la plateforme ici : ${link}`;
+  `Salut ! Je te partage Oryxa, un outil pour préparer tes devis et factures et suivre les paiements au même endroit. Tu peux regarder tranquillement si ça peut te faire gagner du temps : ${link}`;
 
 export default function Affiliation() {
   const { user } = useAuth();
@@ -166,21 +166,24 @@ export default function Affiliation() {
 
   const shareWhatsApp = () => {
     if (!link) return;
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage(link))}`, '_blank', 'noopener,noreferrer');
+    const url = `https://wa.me/?text=${encodeURIComponent(shareMessage(link))}`;
+    const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia?.('(max-width: 768px)').matches;
+    if (mobile) { window.location.href = url; return; }
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) window.location.href = url;
   };
 
   if (!user) return <PublicAffiliate code={ref} />;
 
   if (mode === 'public') return (
-    <div className="affiliate-page">
-      <div className="affiliate-topbar"><OryxaLogo size={38} nameClassName="font-extrabold text-lg text-gray-900 dark:text-white" imageClassName="rounded-xl" /><ThemeToggle /></div>
+    <div className="affiliate-page affiliate-authenticated">
       <div className="affiliate-activation-wrap">
         <div className="affiliate-page-heading">
           <div className="affiliate-icon-large"><Gift size={24} /></div>
           <div>
             <p className="affiliate-eyebrow">Programme partenaire</p>
             <h1>Devenez affilié Oryxa</h1>
-            <p>Votre compte Oryxa peut aussi devenir votre espace affilié. Aucun deuxième compte à créer.</p>
+            <p>Vous connaissez des personnes à qui Oryxa pourrait simplifier la gestion des devis et des factures ? Activez votre espace affilié avec ce compte, sans en créer un deuxième.</p>
           </div>
         </div>
 
@@ -206,8 +209,8 @@ export default function Affiliation() {
             <p className="text-sm text-gray-500 mt-1">Le numéro sert à identifier votre compte. La confirmation d’éligibilité reste liée à la vérification email existante d’Oryxa.</p>
           </div>
           <div className="grid sm:grid-cols-2 gap-3 mt-5">
-            <label className="affiliate-field-wrap"><span>Téléphone</span><input className="field" placeholder="+229…" value={phone} onChange={e => setPhone(e.target.value)} /></label>
-            <label className="affiliate-field-wrap"><span>WhatsApp <em>de préférence</em></span><input className="field" placeholder="+229…" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></label>
+            <label className="affiliate-field-wrap"><span>Téléphone</span><input className="field" placeholder="+229 01 XX XX XX XX" value={phone} onChange={e => setPhone(e.target.value)} /></label>
+            <label className="affiliate-field-wrap"><span>WhatsApp <em>de préférence</em></span><input className="field" placeholder="+229 01 XX XX XX XX" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} /></label>
           </div>
           <button disabled={loading || !me?.eligible} onClick={activate} className="btn-primary mt-5 w-full justify-center affiliate-main-action">
             {loading ? 'Activation…' : 'Activer mon espace affilié'} <ArrowRight size={18} />
@@ -218,14 +221,13 @@ export default function Affiliation() {
   );
 
   return (
-    <div className="affiliate-page">
-      <div className="affiliate-topbar"><OryxaLogo size={38} nameClassName="font-extrabold text-lg text-gray-900 dark:text-white" imageClassName="rounded-xl" /><ThemeToggle /></div>
+    <div className="affiliate-page affiliate-authenticated">
       <div className="affiliate-dashboard">
         <div className="affiliate-dashboard-header">
           <div>
             <div className="affiliate-eyebrow"><Gift size={15} /> Programme partenaire</div>
             <h1>Mon affiliation</h1>
-            <p>Une interface simple pour suivre votre réseau et vos commissions.</p>
+            <p>Retrouvez votre lien, les personnes inscrites grâce à vous et les commissions générées.</p>
           </div>
           <div className="affiliate-status-pill"><CheckCircle2 size={15} /> Affilié actif</div>
         </div>

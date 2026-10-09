@@ -23,14 +23,17 @@ export function numeroWhatsApp(telephone?: string): string | null {
 
   // Déjà saisi en format international ("+229...", "00229...")
   if (brut.startsWith('+') || brut.startsWith('00')) {
-    return chiffres.replace(/^00/, '');
+    const international = chiffres.replace(/^00/, '');
+    // Ne cibler directement que les numéros béninois reconnus.
+    if (international.startsWith('229') && international.length === 13 && international.startsWith('22901')) return international;
+    return null;
   }
-  // Numéro local béninois classique (8 chiffres, ex: 97 XX XX XX)
-  if (chiffres.length === 8) {
+  // Numéro béninois au nouveau format : 10 chiffres, préfixe national 01.
+  if (chiffres.length === 10 && chiffres.startsWith('01')) {
     return INDICATIF_PAR_DEFAUT + chiffres;
   }
-  // Déjà 11 chiffres et commence par l'indicatif (ex: saisi sans le "+")
-  if (chiffres.length === 11 && chiffres.startsWith(INDICATIF_PAR_DEFAUT)) {
+  // Indicatif béninois saisi sans le signe + : 229 suivi des 10 chiffres.
+  if (chiffres.length === 13 && chiffres.startsWith(INDICATIF_PAR_DEFAUT + '01')) {
     return chiffres;
   }
   // Format non reconnu — on ne devine pas, par sécurité.
@@ -52,6 +55,11 @@ export function lienPartageWhatsApp(message: string, telephone?: string): string
 export function ouvrirPartageWhatsApp(message: string, telephone?: string) {
   const url = lienPartageWhatsApp(message, telephone);
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia?.('(max-width: 768px)').matches;
-  if (mobile) window.location.href = url;
-  else window.open(url, '_blank', 'noopener,noreferrer');
+  if (mobile) {
+    window.location.href = url;
+    return;
+  }
+  const opened = window.open(url, '_blank', 'noopener,noreferrer');
+  // Certains navigateurs bloquent les fenêtres secondaires : utiliser l'onglet courant en secours.
+  if (!opened) window.location.href = url;
 }

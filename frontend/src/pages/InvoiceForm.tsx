@@ -195,15 +195,15 @@ export default function InvoiceForm() {
           {/* Frais de paiement en ligne */}
           <div className="glass-card p-6">
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Frais de paiement en ligne</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Choisissez qui supporte les frais techniques. Oryxa calculera automatiquement le montant affiché au client.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Des frais peuvent s’appliquer lorsqu’un client paie en ligne. Choisissez si vous les prenez à votre charge ou s’ils sont ajoutés au paiement du client. Ces frais sont liés au traitement du paiement et ne sont pas prélevés par Oryxa.</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <button type="button" onClick={() => update('fraisSupportesPar', 'utilisateur')} className={`text-left rounded-2xl p-4 border transition-soft ${form.fraisSupportesPar === 'utilisateur' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
-                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Je supporte les frais</p>
-                <p className="text-xs text-gray-500 mt-1">Le client paie uniquement le montant de la facture.</p>
+                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Je prends les frais à ma charge</p>
+                <p className="text-xs text-gray-500 mt-1">Votre client paie exactement le montant de la facture.</p>
               </button>
               <button type="button" onClick={() => update('fraisSupportesPar', 'client')} className={`text-left rounded-2xl p-4 border transition-soft ${form.fraisSupportesPar === 'client' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
-                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Mon client supporte les frais</p>
-                <p className="text-xs text-gray-500 mt-1">Le total à payer inclut automatiquement les frais de transfert.</p>
+                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Les frais sont ajoutés au paiement</p>
+                <p className="text-xs text-gray-500 mt-1">Votre client voit le montant de la facture, les frais et le total à payer avant de régler.</p>
               </button>
             </div>
           </div>

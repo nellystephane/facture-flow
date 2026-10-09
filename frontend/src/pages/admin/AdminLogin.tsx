@@ -22,7 +22,7 @@ export default function AdminLogin() {
       await login(email, password);
       navigate('/admin');
     } catch (err: any) {
-      setErreur(err.response?.data?.message || 'Connexion impossible');
+      setErreur(err.response?.data?.message || (err.request ? 'Le serveur ne répond pas. Vérifiez que l’API est disponible puis réessayez.' : 'Impossible de préparer la connexion. Réessayez.'));
     } finally {
       setChargement(false);
     }

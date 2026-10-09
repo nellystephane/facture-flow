@@ -110,24 +110,23 @@ export default function Landing() {
 
       <main className="relative z-10">
         <section className="landing-hero">
-          <div className="landing-eyebrow"><span className="landing-eyebrow-dot" /> Facturation • Paiement • Suivi</div>
+          <div className="landing-eyebrow"><span className="landing-eyebrow-dot" /> Pour les indépendants, commerçants et petites entreprises</div>
           <h1>
-            Vous faites le travail.<br />
-            <span>Oryxa vous aide à être payé.</span>
+            Vos devis et factures,<br />
+            <span>sans y passer vos soirées.</span>
           </h1>
           <p className="landing-hero-lead">
-            Devis, factures, clients et paiements réunis dans un seul espace pensé pour les indépendants et petites entreprises.
-            Moins de recherche. Moins de ressaisie. Plus de visibilité sur votre activité.
+            Créez un devis, envoyez votre facture et voyez ce qui a été payé — sans fouiller dans vos messages ni reprendre les mêmes informations à chaque fois. Oryxa vous aide à garder votre activité bien organisée, sur téléphone comme sur ordinateur.
           </p>
           <div className="landing-hero-actions">
             <Link to="/register" className="btn-primary landing-main-cta">
-              Commencer gratuitement <ArrowRight size={19} />
+              Créer mon compte gratuitement <ArrowRight size={19} />
             </Link>
             <a href="#comment-ca-marche" className="landing-secondary-cta">
               Voir comment ça marche
             </a>
           </div>
-          <p className="landing-trust-line">Pas besoin d’être expert en comptabilité pour commencer.</p>
+          <p className="landing-trust-line">Vous gardez la main sur votre activité. Oryxa vous aide à suivre le reste.</p>
 
           <div className="landing-hero-preview" aria-label="Aperçu du parcours Oryxa">
             <div className="landing-preview-topbar">
@@ -252,7 +251,7 @@ export default function Landing() {
             <h2>La prochaine fois que vous faites une facture, faites-la avec Oryxa.</h2>
             <p>Créez votre espace et découvrez une façon plus structurée de gérer vos ventes et vos paiements.</p>
           </div>
-          <Link to="/register" className="btn-primary landing-main-cta">Commencer gratuitement <ArrowRight size={19} /></Link>
+          <Link to="/register" className="btn-primary landing-main-cta">Créer mon compte gratuitement <ArrowRight size={19} /></Link>
         </section>
 
         <footer className="landing-footer section-shell">

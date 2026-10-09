@@ -786,6 +786,9 @@ button { font-family: inherit; }
 
 /* L'espace affilié utilise les mêmes primitives visuelles que le reste d'Oryxa. */
 .affiliate-page { min-height: 100dvh; padding: 20px 18px 48px; color:#17181d; }
+/* Les espaces affiliés authentifiés vivent dans le shell normal de l'application. */
+.affiliate-page.affiliate-authenticated { min-height: auto; padding: 8px 0 28px; }
+.affiliate-authenticated .affiliate-dashboard, .affiliate-authenticated .affiliate-activation-wrap { width: 100%; max-width: none; margin-left: auto; margin-right: auto; }
 .affiliate-topbar { width:min(1120px,100%); margin:0 auto 18px; display:flex; align-items:center; justify-content:space-between; }
 .affiliate-activation-wrap,.affiliate-dashboard { width:min(1120px,100%); margin:0 auto; }
 .affiliate-page-heading { display:flex; gap:16px; align-items:flex-start; padding:18px 0 22px; }

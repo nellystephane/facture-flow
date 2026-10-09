@@ -129,8 +129,9 @@ export default function PaymentPublic() {
             {!dejaPayee && fraisPaiement && fraisPaiement.fraisTransfertClient > 0 && form.montant === Math.round(reste) && (
               <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
                 <div className="flex justify-between"><span>Montant de la facture</span><span>{formatFCFA(reste)}</span></div>
-                <div className="flex justify-between"><span>Frais de transfert</span><span>{formatFCFA(fraisPaiement.fraisTransfertClient)}</span></div>
-                <div className="flex justify-between font-bold text-[#0a0a0c] dark:text-white mt-1 pt-2 border-t border-gray-100 dark:border-white/10"><span>Total</span><span>{formatFCFA(fraisPaiement.montantClientPaye)}</span></div>
+                <div className="flex justify-between"><span>Frais de paiement</span><span>{formatFCFA(fraisPaiement.fraisTransfertClient)}</span></div>
+                <div className="flex justify-between font-bold text-[#0a0a0c] dark:text-white mt-1 pt-2 border-t border-gray-100 dark:border-white/10"><span>Total à payer</span><span>{formatFCFA(fraisPaiement.montantClientPaye)}</span></div>
+                <p className="text-xs mt-2">Ces frais sont liés au traitement du paiement en ligne. Ils sont affichés séparément avant le règlement.</p>
               </div>
             )}
             {totalPaye > 0 && !dejaPayee && (

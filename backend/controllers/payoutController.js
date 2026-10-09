@@ -71,7 +71,10 @@ exports.updateSettings = asyncHandler(async (req, res) => {
 
   const current = user.payoutSettings?.toObject?.() || user.payoutSettings || {};
   const nextMode = mode || current.mode || 'mobile_money';
-  const nextPhone = phone !== undefined ? String(phone).trim() : String(current.phone || '').trim();
+  const rawPhone = phone !== undefined ? String(phone).trim() : String(current.phone || '').trim();
+  const { normalizeBeninPhone } = require('../utils/beninPhone');
+  const nextPhone = nextMode === 'mobile_money' ? normalizeBeninPhone(rawPhone) : rawPhone;
+  if (nextMode === 'mobile_money' && rawPhone && nextPhone === null) return res.status(400).json({ message: 'Utilisez un numéro béninois au format +229 01 XX XX XX XX.' });
   const nextCountry = country ? String(country).toUpperCase() : (current.country || 'BJ');
 
   // Les cartes bancaires sont des moyens de paiement entrants FedaPay, pas une

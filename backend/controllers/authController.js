@@ -84,6 +84,11 @@ function erreurMotDePasse(password) {
 
 exports.register = asyncHandler(async (req, res) => {
   const { nom, email: emailAddr, password, entreprise, telephone, whatsapp, referralCode } = req.body;
+  const { normalizeBeninPhone } = require('../utils/beninPhone');
+  const telephoneNormalise = telephone ? normalizeBeninPhone(telephone) : '';
+  const whatsappNormalise = whatsapp ? normalizeBeninPhone(whatsapp) : '';
+  if (telephone && telephoneNormalise === null) return res.status(400).json({ message: 'Utilisez un numéro béninois au format +229 01 XX XX XX XX.' });
+  if (whatsapp && whatsappNormalise === null) return res.status(400).json({ message: 'Utilisez un numéro WhatsApp béninois au format +229 01 XX XX XX XX.' });
   if (!nom || !emailAddr || !password) {
     return res.status(400).json({ message: 'Nom, email et mot de passe requis' });
   }
@@ -104,8 +109,8 @@ exports.register = asyncHandler(async (req, res) => {
     email: emailNormalise,
     password: hashed,
     entreprise: entreprise || '',
-    telephone: telephone || '',
-    whatsapp: whatsapp || '',
+    telephone: telephoneNormalise,
+    whatsapp: whatsappNormalise,
     emailVerifie: false,
     codeVerification: codeHash,
     codeVerificationExpire: new Date(Date.now() + DUREE_CODE_VERIFICATION_MS),

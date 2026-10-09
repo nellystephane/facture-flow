@@ -86,11 +86,11 @@ export default function ClientForm() {
           </div>
           <div>
             <label className="field-label">Téléphone</label>
-            <input className="field" value={form.telephone} onChange={(e) => update('telephone', e.target.value)} placeholder="+229 …" />
+            <input className="field" value={form.telephone} onChange={(e) => update('telephone', e.target.value)} placeholder="+229 01 XX XX XX XX" />
           </div>
           <div>
             <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
-            <input className="field" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 …" />
+            <input className="field" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 01 XX XX XX XX" />
             <p className="text-[11px] text-gray-400 mt-1">Utilisé pour ouvrir directement la conversation WhatsApp lors des envois.</p>
           </div>
           <div className="sm:col-span-2">
