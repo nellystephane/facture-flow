@@ -19,7 +19,7 @@ const nextQuoteNumber = (owner) => nextNumber(owner, 'devis');
 // coup rendrait la facture générée incohérente avec le devis d'origine.
 const LOCKED_STATUTS = ['accepte'];
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut', 'template'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'template'];
 
 function pickFields(body) {
   const o = {};
@@ -30,6 +30,11 @@ function pickFields(body) {
 exports.getQuotes = asyncHandler(async (req, res) => {
   const { statut, q } = req.query;
   const { page, limit, skip } = paginationParams(req.query);
+  // L'expiration est un état calculé : un devis non répondu devient expiré après sa date limite.
+  await Quote.updateMany(
+    { owner: req.userId, statut: { $in: ['brouillon', 'envoye'] }, dateExpiration: { $lt: new Date() } },
+    { $set: { statut: 'expire' } }
+  );
   const filter = { owner: req.userId };
   if (statut) filter.statut = statut;
   if (q && q.trim()) {
@@ -69,6 +74,10 @@ exports.previewQuotePdf = asyncHandler(async (req, res) => {
 });
 
 exports.getQuoteById = asyncHandler(async (req, res) => {
+  await Quote.updateOne(
+    { _id: req.params.id, owner: req.userId, statut: { $in: ['brouillon', 'envoye'] }, dateExpiration: { $lt: new Date() } },
+    { $set: { statut: 'expire' } }
+  );
   const quote = await Quote.findOne({ _id: req.params.id, owner: req.userId }).populate('client');
   if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
   res.json(quote);
@@ -110,16 +119,10 @@ exports.updateQuote = asyncHandler(async (req, res) => {
 });
 
 exports.patchQuoteStatus = asyncHandler(async (req, res) => {
-  const { statut } = req.body;
-  const valid = ['brouillon', 'envoye', 'accepte', 'refuse', 'expire'];
-  if (!valid.includes(statut)) return res.status(400).json({ message: 'Statut invalide' });
-  const quote = await Quote.findOneAndUpdate(
-    { _id: req.params.id, owner: req.userId },
-    { statut },
-    { returnDocument: 'after' }
-  ).populate('client');
-  if (!quote) return res.status(404).json({ message: 'Devis introuvable' });
-  res.json(quote);
+  return res.status(409).json({
+    message: 'Le statut d’un devis est mis à jour automatiquement selon les actions réalisées. Il ne peut pas être modifié manuellement.',
+    code: 'QUOTE_STATUS_AUTOMATIC',
+  });
 });
 
 

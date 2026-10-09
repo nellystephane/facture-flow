@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Download, Pencil, Trash2,
-  FileText, Send, CheckCircle2, XCircle, Clock, Lock, Mail, Loader2, Link2, MessageCircleQuestion, MessageCircle
+  FileText, Lock, Mail, Loader2, Link2, MessageCircleQuestion, MessageCircle
 } from 'lucide-react';
 import { authenticatedFetch } from '../api/authenticatedFetch';
-import { getQuote, patchQuoteStatus, deleteQuote, quotePdfUrl, sendQuoteEmail } from '../api/quotes';
+import { getQuote, deleteQuote, quotePdfUrl, sendQuoteEmail } from '../api/quotes';
 import { createInvoiceFromQuote } from '../api/invoices';
-import type { Quote, QuoteStatut } from '../types';
+import type { Quote } from '../types';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import InfoHint from '../components/ui/InfoHint';
@@ -46,13 +46,7 @@ export default function QuoteDetail() {
       .then((blob) => window.open(URL.createObjectURL(blob), '_blank'));
   };
 
-  const changeStatus = async (statut: QuoteStatut) => {
-    try {
-      const res = await patchQuoteStatus(id!, statut);
-      setQuote(res.data);
-      toast('Statut mis à jour');
-    } catch (err) { toast(apiError(err), 'error'); }
-  };
+
 
   const convertToInvoice = async () => {
     setConverting(true);
@@ -255,13 +249,8 @@ export default function QuoteDetail() {
             )}
 
             <div className="mt-5 pt-5 border-t border-gray-100 dark:border-white/10">
-              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Statut</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => changeStatus('envoye')} className="btn-ghost text-xs py-2 justify-center"><Send size={13} /> Envoyé</button>
-                <button onClick={() => changeStatus('accepte')} className="btn-ghost text-xs py-2 justify-center"><CheckCircle2 size={13} /> Accepté</button>
-                <button onClick={() => changeStatus('refuse')} className="btn-ghost text-xs py-2 justify-center"><XCircle size={13} /> Refusé</button>
-                <button onClick={() => changeStatus('expire')} className="btn-ghost text-xs py-2 justify-center"><Clock size={13} /> Expiré</button>
-              </div>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">Suivi du devis</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Le statut se met à jour automatiquement : lors de l’envoi du devis, de la réponse de votre client ou à la date d’expiration. Vous n’avez rien à modifier manuellement.</p>
             </div>
           </div>
         </div>

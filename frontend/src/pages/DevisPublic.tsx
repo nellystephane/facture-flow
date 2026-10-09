@@ -14,7 +14,7 @@ export default function DevisPublic() {
   const [mode, setMode] = useState<'choix' | 'demande_infos'>('choix');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [resultat, setResultat] = useState<'accepte' | 'demande_envoyee' | null>(null);
+  const [resultat, setResultat] = useState<'accepte' | 'refuse' | 'demande_envoyee' | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -34,6 +34,21 @@ export default function DevisPublic() {
       setResultat('accepte');
     } catch (err) {
       setError(apiError(err, "Impossible d'accepter ce devis pour le moment."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRefuser = async () => {
+    if (!token) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await respondPublicQuote(token, { action: 'refuser' });
+      setData((d) => (d ? { ...d, quote: res.data.quote } : d));
+      setResultat('refuse');
+    } catch (err) {
+      setError(apiError(err, 'Impossible d’enregistrer votre réponse pour le moment.'));
     } finally {
       setSubmitting(false);
     }
@@ -74,7 +89,7 @@ export default function DevisPublic() {
   if (!data) return null;
   const { quote, emetteur, totalTTC } = data;
   const dejaAccepte = quote.statut === 'accepte' || resultat === 'accepte';
-  const dejaRefuse = quote.statut === 'refuse';
+  const dejaRefuse = quote.statut === 'refuse' || resultat === 'refuse';
 
   return (
     <div className="app-bg min-h-screen py-10 px-4">
@@ -153,6 +168,7 @@ export default function DevisPublic() {
               <button onClick={() => setMode('demande_infos')} className="btn-ghost w-full justify-center text-sm">
                 <MessageCircleQuestion size={16} /> Demander plus d'informations
               </button>
+              <button onClick={handleRefuser} disabled={submitting} className="w-full justify-center text-sm text-gray-500 hover:text-[#d9524d] py-2.5 rounded-xl transition-colors">Refuser ce devis</button>
             </div>
           )}
         </div>

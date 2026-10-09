@@ -174,7 +174,7 @@ exports.getPublicQuote = asyncHandler(async (req, res) => {
 exports.respondPublicQuote = asyncHandler(async (req, res) => {
   if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const { action, message } = req.body;
-  if (!['accepter', 'demander_infos'].includes(action)) {
+  if (!['accepter', 'refuser', 'demander_infos'].includes(action)) {
     return res.status(400).json({ message: 'Action invalide.' });
   }
 
@@ -182,6 +182,16 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
   if (!quote || quote.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   if (quote.statut === 'accepte') {
     return res.status(409).json({ message: 'Ce devis a déjà été accepté.' });
+  }
+
+  if (action === 'refuser') {
+    const refuse = await Quote.findOneAndUpdate(
+      { _id: quote._id, statut: { $nin: ['accepte', 'refuse', 'expire'] }, publicAccessRevoked: { $ne: true } },
+      { $set: { statut: 'refuse' } },
+      { returnDocument: 'after' }
+    );
+    if (!refuse) return res.status(409).json({ message: 'Ce devis ne peut plus recevoir de réponse.' });
+    return res.json({ message: 'Devis refusé.', quote: refuse });
   }
 
   const owner = await User.findById(quote.owner);

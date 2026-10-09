@@ -9,7 +9,7 @@ import { Info } from 'lucide-react';
 export default function InfoHint({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <span className="relative inline-flex align-middle ml-1.5">
+    <span className="relative z-[300] inline-flex align-middle ml-1.5">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -20,7 +20,7 @@ export default function InfoHint({ text }: { text: string }) {
         <Info size={11} strokeWidth={2.5} />
       </button>
       {open && (
-        <span className="absolute z-20 left-1/2 -translate-x-1/2 top-6 w-64 p-3 rounded-xl bg-[#0a0a0c] text-white text-xs leading-relaxed shadow-xl animate-fade-in">
+        <span className="absolute z-[9999] left-1/2 -translate-x-1/2 bottom-[calc(100%+8px)] w-64 p-3 rounded-xl bg-[#0a0a0c] text-white text-xs leading-relaxed shadow-xl animate-fade-in">
           {text}
         </span>
       )}

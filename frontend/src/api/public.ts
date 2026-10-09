@@ -40,5 +40,5 @@ export interface PublicQuoteResponse {
 export const getPublicQuote = (token: string) =>
   api.get<PublicQuoteResponse>(`/public/quotes/${token}`);
 
-export const respondPublicQuote = (token: string, data: { action: 'accepter' | 'demander_infos'; message?: string }) =>
+export const respondPublicQuote = (token: string, data: { action: 'accepter' | 'refuser' | 'demander_infos'; message?: string }) =>
   api.post<{ message: string; quote: Quote }>(`/public/quotes/${token}/repondre`, data);
