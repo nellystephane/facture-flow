@@ -14,7 +14,7 @@ export default function DatePicker({ value, onChange, placeholder='Choisir une d
   const days=useMemo(()=>{ const first=new Date(month.getFullYear(),month.getMonth(),1); const start=(first.getDay()+6)%7; const count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate(); const out:(number|null)[]=Array(start).fill(null); for(let i=1;i<=count;i++) out.push(i); while(out.length%7) out.push(null); return out;},[month]);
   const pick=(day:number)=>{ const d=new Date(month.getFullYear(),month.getMonth(),day); const v=iso(d); if((min&&v<min)||(max&&v>max)) return; onChange(v); setOpen(false); };
   const label=value?fromIso(value).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}):placeholder;
-  return <div className="relative" ref={ref}>
+  return <div className={`relative ${open ? 'z-[99990]' : ''}`} ref={ref}>
     <button type="button" disabled={disabled} onClick={()=>setOpen(v=>!v)} className={`field flex items-center justify-between gap-2 text-left disabled:opacity-50 disabled:cursor-not-allowed ${className}`}>
       <span className={value?'text-[#0a0a0c] dark:text-white':'text-gray-400 dark:text-gray-500'}>{label}</span><CalendarDays size={16} className="text-gray-400 shrink-0"/>
     </button>

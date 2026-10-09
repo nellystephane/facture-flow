@@ -16,6 +16,7 @@ export default function Register() {
   const [params] = useSearchParams();
   const referralCode = params.get('ref') || localStorage.getItem('oryxa_affiliate_ref') || '';
   const affiliateMode = params.get('affiliate') === '1' || !!referralCode;
+  const affiliateOnly = params.get('affiliate') === '1';
   const [form, setForm] = useState({ nom: '', entreprise: '', email: '', telephone: '', whatsapp: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -35,9 +36,9 @@ export default function Register() {
     if (!acceptedTerms) { setError('Merci d’accepter les CGU et la politique de confidentialité pour continuer.'); return; }
     setLoading(true);
     try {
-      const user = await register({ ...form, referralCode: referralCode || undefined });
+      const user = await register({ ...form, referralCode: referralCode || undefined, affiliateOnly });
       if (user) {
-        navigate('/app'); // compte déjà vérifié (cas legacy) — connexion directe
+        navigate(user.typeCompte === 'affilie' ? '/app/affiliation' : '/app'); // compte déjà vérifié (cas legacy)
       } else {
         navigate(`/verifier-email?email=${encodeURIComponent(form.email)}&affiliate=${affiliateMode ? '1' : '0'}&ref=${encodeURIComponent(referralCode)}`);
       }
@@ -59,9 +60,9 @@ export default function Register() {
         </Link>
 
         <div className="glass-card p-8">
-          <h1 className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white text-center">Créer votre compte</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 mb-6">Gratuit. Sans carte bancaire.</p>
-          {affiliateMode && <div className="mb-5 rounded-2xl bg-[#d9524d]/10 border border-[#d9524d]/20 px-4 py-3 text-sm text-[#b23c37]">Vous êtes inscrit via un lien partenaire Oryxa. Après vérification de votre email, votre avantage affilié sera pris en compte automatiquement sur les abonnements éligibles.</div>}
+          <h1 className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white text-center">{affiliateOnly ? 'Créer mon compte affilié' : 'Créer votre compte'}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-1 mb-6">{affiliateOnly ? 'Accédez au programme partenaire sans créer un espace de facturation.' : 'Gratuit. Sans carte bancaire.'}</p>
+          {affiliateMode && <div className="mb-5 rounded-2xl bg-[#d9524d]/10 border border-[#d9524d]/20 px-4 py-3 text-sm text-[#b23c37]">Vous créez un compte réservé au programme d’affiliation. Après vérification de votre e-mail, vous accéderez à votre tableau de bord partenaire. Vous pourrez activer votre espace de gestion Oryxa plus tard si vous le souhaitez.</div>}
 
           {error && (
             <div className="mb-4 px-4 py-3 rounded-xl text-sm font-medium text-[#b23c37] bg-[rgba(225,29,42,0.1)] border border-[rgba(225,29,42,0.2)] animate-fade-in">

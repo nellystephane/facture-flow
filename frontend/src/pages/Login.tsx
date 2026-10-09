@@ -23,8 +23,8 @@ export default function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
-      navigate(fromAffiliate ? `/app/affiliation${affiliateRef ? `?ref=${encodeURIComponent(affiliateRef)}` : ''}` : '/app');
+      const user = await login(email, password);
+      navigate(fromAffiliate || user.typeCompte === 'affilie' ? `/app/affiliation${affiliateRef ? `?ref=${encodeURIComponent(affiliateRef)}` : ''}` : '/app');
     } catch (err) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
       if (code === 'EMAIL_NON_VERIFIE') {

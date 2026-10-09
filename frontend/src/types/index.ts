@@ -38,6 +38,7 @@ export interface User {
   emailVerifie?: boolean;
   role?: 'proprietaire' | 'admin' | 'collaborateur';
   estCollaborateur?: boolean;
+  typeCompte?: 'classique' | 'affilie';
 }
 
 export interface Client {

@@ -40,9 +40,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   // propriétaire/admin — un collaborateur ou un compte Gratuit/Pro n'a pas
   // à voir un lien vers une page qui lui répondrait "verrouillé" ou "accès
   // refusé" à chaque clic.
-  const nav = permissions?.peutGererEquipe
-    ? [...NAV.slice(0, 6), { to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...NAV.slice(6)]
-    : NAV;
+  const nav = user?.typeCompte === 'affilie'
+    ? NAV.filter(item => item.to === '/app/affiliation')
+    : permissions?.peutGererEquipe
+      ? [...NAV.slice(0, 6), { to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...NAV.slice(6)]
+      : NAV;
 
   return (
     <>
@@ -56,11 +58,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-50 h-screen w-72 p-4 transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-[100dvh] max-h-[100dvh] w-72 p-2 sm:p-4 transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="glass-card h-full p-5 flex flex-col">
+        <div className="glass-card h-full min-h-0 overflow-hidden p-3 sm:p-5 flex flex-col">
           {/* Logo */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2.5">
@@ -76,7 +78,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
+          <nav className="flex-1 min-h-0 flex flex-col gap-1 overflow-y-auto overscroll-contain">
             {nav.map(({ to, end, label, icon: Icon }) => (
               <NavLink
                 key={to}
@@ -124,7 +126,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           )}
 
           {/* User + logout */}
-          <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="shrink-0 mt-2 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10">
             <div className="flex items-center gap-3 mb-3">
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"

@@ -40,6 +40,8 @@ const userSchema = new mongoose.Schema({
     confirmationTokenExpire: { type: Date, default: null, select: false },
     confirmedAt: { type: Date, default: null },
   },
+  // Compte affilié seul jusqu'à activation volontaire de l'espace de gestion.
+  typeCompte: { type: String, enum: ['classique', 'affilie'], default: 'classique', index: true },
   subscription: { type: String, enum: ['gratuit', 'pro', 'business'], default: 'gratuit' },
   // Vérification d'email à l'inscription : code à 6 chiffres, valable 15 minutes.
   emailVerifie: { type: Boolean, default: false },

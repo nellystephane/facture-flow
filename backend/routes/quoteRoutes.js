@@ -1,12 +1,13 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const requireBusinessAccount = require('../middleware/requireBusinessAccount');
 const validate = require('../middleware/validate');
 const { createQuoteSchema, updateQuoteSchema, patchQuoteStatusSchema } = require('../validators/quoteValidators');
 const controller = require('../controllers/quoteController');
 const pdfController = require('../controllers/pdfController');
 const router = express.Router();
 
-router.use(auth);
+router.use(auth, requireBusinessAccount);
 
 router.get('/', controller.getQuotes);
 router.post('/preview', validate(createQuoteSchema), controller.previewQuotePdf);

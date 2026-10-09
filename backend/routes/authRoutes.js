@@ -14,6 +14,7 @@ router.post('/refresh', controller.refresh);
 router.post('/logout', controller.logout);
 router.post('/mot-de-passe-oublie', controller.forgotPassword);
 router.post('/reinitialiser-mot-de-passe', controller.resetPassword);
+router.post('/activer-espace-utilisateur', auth, controller.activateUserWorkspace);
 router.get('/profile', auth, controller.getProfile);
 router.put('/profile', auth, validate(updateProfileSchema), controller.updateProfile);
 router.post('/profile/logo', auth, requireFeature('logoPersonnalise'), controller.uploadLogo);

@@ -1,11 +1,12 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const requireBusinessAccount = require('../middleware/requireBusinessAccount');
 const validate = require('../middleware/validate');
 const { createClientSchema, updateClientSchema } = require('../validators/clientValidators');
 const controller = require('../controllers/clientController');
 const router = express.Router();
 
-router.use(auth);
+router.use(auth, requireBusinessAccount);
 
 router.get('/', controller.getClients);
 router.get('/:id', controller.getClientById);

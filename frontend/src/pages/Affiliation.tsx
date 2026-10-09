@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { activateAffiliate, getAffiliateDashboard, getAffiliateMe, getPublicAffiliate } from '../api/affiliate';
+import * as authApi from '../api/auth';
 import { apiError } from '../utils/format';
 import { useAuth } from '../contexts/AuthContext';
 import OryxaLogo from '../components/OryxaLogo';
@@ -83,7 +84,9 @@ const shareMessage = (link: string) =>
   `Salut ! Je te partage Oryxa, un outil pour préparer tes devis et factures et suivre les paiements au même endroit. Tu peux regarder tranquillement si ça peut te faire gagner du temps : ${link}`;
 
 export default function Affiliation() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
+  const [converting, setConverting] = useState(false);
+  const [conversionError, setConversionError] = useState('');
   const [params] = useSearchParams();
   const ref = params.get('ref') || '';
   const [mode, setMode] = useState<'public' | 'dashboard'>('public');
@@ -144,6 +147,16 @@ export default function Affiliation() {
   };
 
   const link = data?.affiliate?.link || me?.affiliate?.link || '';
+  const convertToUser = async () => {
+    setConverting(true); setConversionError('');
+    try {
+      const response = await authApi.activateUserWorkspace();
+      setUser(response.data);
+      localStorage.setItem('oryxa_user', JSON.stringify(response.data));
+      window.location.assign('/app');
+    } catch (err) { setConversionError(apiError(err, 'Impossible d’activer votre espace utilisateur.')); }
+    finally { setConverting(false); }
+  };
   const referrals = data?.referrals || [];
   const commissions = data?.commissions || [];
   const stats = data?.affiliate || me?.affiliate;
@@ -231,6 +244,12 @@ export default function Affiliation() {
           </div>
           <div className="affiliate-status-pill"><CheckCircle2 size={15} /> Affilié actif</div>
         </div>
+
+        {user?.typeCompte === 'affilie' && <section className="glass-card affiliate-panel mb-5">
+          <div className="affiliate-panel-heading"><div><div className="affiliate-panel-icon"><ArrowRight size={18} /></div><div><h2>Vous souhaitez aussi utiliser Oryxa ?</h2><p>Activez votre espace de gestion quand vous le souhaitez. Votre compte affilié, votre lien et vos commissions seront conservés.</p></div></div></div>
+          {conversionError && <p role="alert" className="text-sm text-red-600 mb-3">{conversionError}</p>}
+          <button type="button" className="btn-primary mt-2" disabled={converting} onClick={convertToUser}>{converting ? 'Activation…' : 'Activer mon espace utilisateur'} <ArrowRight size={17}/></button>
+        </section>}
 
         <div className="affiliate-link-card">
           <div className="affiliate-link-icon"><Link2 size={21} /></div>

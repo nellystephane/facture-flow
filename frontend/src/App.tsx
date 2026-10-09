@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
@@ -43,8 +43,10 @@ import type { ReactNode } from 'react';
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <SplashScreen />;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.typeCompte === 'affilie' && location.pathname !== '/app/affiliation') return <Navigate to="/app/affiliation" replace />;
   return <>{children}</>;
 }
 

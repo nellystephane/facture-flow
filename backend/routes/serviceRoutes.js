@@ -1,11 +1,12 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const requireBusinessAccount = require('../middleware/requireBusinessAccount');
 const validate = require('../middleware/validate');
 const { createServiceSchema, updateServiceSchema } = require('../validators/serviceValidators');
 const controller = require('../controllers/serviceController');
 const router = express.Router();
 
-router.use(auth);
+router.use(auth, requireBusinessAccount);
 
 router.get('/', controller.getServices);
 router.get('/unites', controller.getUnites);

@@ -40,6 +40,7 @@ function profilReponse({ acteur, proprietaire }) {
     emailVerifie: acteur.emailVerifie,
     role: acteur.role,
     estCollaborateur: !!acteur.compteProprietaire,
+    typeCompte: acteur.typeCompte || 'classique',
     entreprise: proprietaire.entreprise,
     telephone: proprietaire.telephone,
     whatsapp: proprietaire.whatsapp,
@@ -83,7 +84,7 @@ function erreurMotDePasse(password) {
 }
 
 exports.register = asyncHandler(async (req, res) => {
-  const { nom, email: emailAddr, password, entreprise, telephone, whatsapp, referralCode } = req.body;
+  const { nom, email: emailAddr, password, entreprise, telephone, whatsapp, referralCode, affiliateOnly } = req.body;
   const { normalizeBeninPhone } = require('../utils/beninPhone');
   const telephoneNormalise = telephone ? normalizeBeninPhone(telephone) : '';
   const whatsappNormalise = whatsapp ? normalizeBeninPhone(whatsapp) : '';
@@ -111,6 +112,7 @@ exports.register = asyncHandler(async (req, res) => {
     entreprise: entreprise || '',
     telephone: telephoneNormalise,
     whatsapp: whatsappNormalise,
+    typeCompte: affiliateOnly === true ? 'affilie' : 'classique',
     emailVerifie: false,
     codeVerification: codeHash,
     codeVerificationExpire: new Date(Date.now() + DUREE_CODE_VERIFICATION_MS),
@@ -301,6 +303,16 @@ exports.resetPassword = asyncHandler(async (req, res) => {
   const token = signToken(user._id, session._id);
   setRefreshCookie(res, 'user', raw);
   res.json({ token, user: await reponseAuth(user), message: 'Mot de passe réinitialisé.' });
+});
+
+exports.activateUserWorkspace = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.actorId).select('-password');
+  if (!user) return res.status(404).json({ message: 'Utilisateur introuvable.' });
+  if (user.compteProprietaire) return res.status(403).json({ message: 'Un compte collaborateur ne peut pas activer son propre espace.' });
+  if (user.typeCompte !== 'affilie') return res.json(profilReponse({ acteur: user, proprietaire: user }));
+  user.typeCompte = 'classique';
+  await user.save();
+  return res.json(profilReponse({ acteur: user, proprietaire: user }));
 });
 
 exports.getProfile = asyncHandler(async (req, res) => {
