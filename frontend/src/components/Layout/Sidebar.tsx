@@ -41,7 +41,10 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   // à voir un lien vers une page qui lui répondrait "verrouillé" ou "accès
   // refusé" à chaque clic.
   const nav = user?.typeCompte === 'affilie'
-    ? NAV.filter(item => item.to === '/app/affiliation')
+    ? [
+        { to: '/app/affiliation', end: true, label: 'Mon espace affilié', icon: LayoutDashboard },
+        { to: '/app/support', label: 'Support affilié', icon: Headphones },
+      ]
     : permissions?.peutGererEquipe
       ? [...NAV.slice(0, 6), { to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...NAV.slice(6)]
       : NAV;
@@ -64,8 +67,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       >
         <div className="glass-card h-full min-h-0 overflow-hidden p-3 sm:p-5 flex flex-col">
           {/* Logo */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-between gap-2 mb-5 sm:mb-8 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0 shrink-0">
               <OryxaLogo size={40} nameClassName="font-extrabold text-lg text-[#0a0a0c] dark:text-white leading-none" imageClassName="rounded-xl shadow-lg" />
               <span className="sr-only">Gestion Pro</span>
             </div>
@@ -76,6 +79,14 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
               </button>
             </div>
           </div>
+
+          {/* Repère dédié aux comptes affiliés */}
+          {user?.typeCompte === 'affilie' && (
+            <div className="shrink-0 rounded-xl px-3 py-3 mb-3 bg-[#d9524d]/10 border border-[#d9524d]/15">
+              <p className="text-sm font-bold text-[#b23c37] dark:text-[#ff9a94]">Espace partenaire</p>
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300 mt-1">Votre lien, vos inscriptions et le suivi de vos commissions.</p>
+            </div>
+          )}
 
           {/* Navigation */}
           <nav className="flex-1 min-h-0 flex flex-col gap-1 overflow-y-auto overscroll-contain">
@@ -96,7 +107,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                   isActive ? { background: 'linear-gradient(135deg,#d9524d,#b23c37)' } : undefined
                 }
               >
-                <Icon size={18} />
+                <Icon size={18} className="shrink-0" />
                 {label}
               </NavLink>
             ))}
@@ -127,7 +138,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
           {/* User + logout */}
           <div className="shrink-0 mt-2 sm:mt-4 pt-3 sm:pt-4 border-t border-white/10">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center gap-3 mb-3 min-w-0">
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0"
                 style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}

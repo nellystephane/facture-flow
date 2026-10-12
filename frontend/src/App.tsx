@@ -46,7 +46,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation();
   if (loading) return <SplashScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  if (user.typeCompte === 'affilie' && location.pathname !== '/app/affiliation') return <Navigate to="/app/affiliation" replace />;
+  if (user.typeCompte === 'affilie' && !['/app/affiliation', '/app/support'].includes(location.pathname)) return <Navigate to="/app/affiliation" replace />;
   return <>{children}</>;
 }
 

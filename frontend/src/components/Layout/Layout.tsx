@@ -12,12 +12,12 @@ export default function Layout() {
       <div className="orb orb-2" />
       <div className="orb orb-3" />
 
-      <div className="relative z-10 flex min-h-screen">
+      <div className="relative z-10 flex min-h-[100dvh]">
         <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-        <div className="flex-1 flex flex-col min-w-0 lg:ml-72">
+        <div className="flex-1 flex flex-col min-w-0 min-h-[100dvh] lg:ml-72">
           {/* Topbar mobile */}
-          <div className="lg:hidden sticky top-0 z-30 glass px-4 py-3 flex items-center justify-between">
+          <div className="lg:hidden sticky top-0 z-30 glass px-4 py-3 flex items-center justify-between gap-3 shrink-0">
             <button
               className="btn-icon"
               onClick={() => setMobileOpen(true)}
@@ -28,7 +28,7 @@ export default function Layout() {
               </svg>
             </button>
             <OryxaLogo size={30} nameClassName="font-bold text-lg text-[#0a0a0c] dark:text-white" imageClassName="rounded-lg" />
-            <div className="w-9" />
+            <div className="w-9 shrink-0" />
           </div>
 
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">

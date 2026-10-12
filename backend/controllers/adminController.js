@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { timingSafeEqual } = require('crypto');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const Invoice = require('../models/Invoice');
@@ -29,18 +30,24 @@ const {
 const { getConfiguredAdminEmail } = require('../utils/adminConfig');
 
 // ===== Authentification admin =====
-// Oryxa ne possède qu'un seul compte administrateur plateforme. Son email et
-// son hash de mot de passe restent hors de MongoDB, dans les secrets Render.
+// Les identifiants admin sont configurés dans les secrets Render, indépendamment
+// de MongoDB. Le hash bcrypt est préféré ; ADMIN_PASSWORD reste un repli possible.
 async function motDePasseValide(motDePasseFourni) {
   if (process.env.ADMIN_PASSWORD_HASH) {
-    return bcrypt.compare(motDePasseFourni, process.env.ADMIN_PASSWORD_HASH);
+    try {
+      return await bcrypt.compare(motDePasseFourni, process.env.ADMIN_PASSWORD_HASH);
+    } catch (_) {
+      return false;
+    }
   }
-  // Le mot de passe en clair est toléré uniquement hors production pour le
-  // développement. Il est refusé par le démarrage production.
-  if (process.env.NODE_ENV !== 'production' && process.env.ADMIN_PASSWORD) {
-    return motDePasseFourni === process.env.ADMIN_PASSWORD;
-  }
-  return false;
+
+  // Repli pour faciliter la configuration initiale : mot de passe en variable
+  // d'environnement. Préférer ADMIN_PASSWORD_HASH en production.
+  const configuredPassword = process.env.ADMIN_PASSWORD;
+  if (!configuredPassword || typeof motDePasseFourni !== 'string') return false;
+  const supplied = Buffer.from(motDePasseFourni, 'utf8');
+  const expected = Buffer.from(configuredPassword, 'utf8');
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
 exports.login = asyncHandler(async (req, res) => {

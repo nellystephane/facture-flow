@@ -23,7 +23,7 @@ export default function OryxaLogo({
   style,
 }: OryxaLogoProps) {
   return (
-    <span className={`inline-flex items-center gap-2.5 ${className}`} style={style}>
+    <span className={`inline-flex items-center gap-2.5 min-w-0 shrink-0 ${className}`} style={style}>
       <img
         src={`${import.meta.env.BASE_URL}icons/logo.png?v=20260925-oryxa-official`}
         alt="Logo Oryxa"
@@ -34,7 +34,7 @@ export default function OryxaLogo({
         loading="eager"
         decoding="async"
       />
-      {showName && <span className={nameClassName}>Oryxa</span>}
+      {showName && <span className={`${nameClassName} whitespace-nowrap shrink-0`}>Oryxa</span>}
     </span>
   );
 }

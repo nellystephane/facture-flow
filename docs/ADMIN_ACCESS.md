@@ -28,15 +28,14 @@ Dans le service **backend** sur Render → Environment :
 
 Vous n'avez besoin **que d'une seule** des deux variables de mot de passe :
 - `ADMIN_PASSWORD_HASH` si elle est définie, elle est **toujours prioritaire**.
-- Sinon `ADMIN_PASSWORD` sert de repli (comparaison en clair — fonctionnel
-  mais moins sûr, à réserver au démarrage/tests).
+- Sinon `ADMIN_PASSWORD` sert de repli (comparaison en clair — moins sûr, à utiliser si tu ne peux pas générer le hash).
 
 ## Démarrage rapide (avec le mot de passe en clair)
 
 1. Sur Render, ajoutez :
    - `ADMIN_EMAIL = votre-email@exemple.com`
-   - `ADMIN_PASSWORD = AdminOxara` (développement seulement)
-2. En production, utilisez plutôt `ADMIN_PASSWORD_HASH` et `ADMIN_JWT_SECRET`.
+   - `ADMIN_PASSWORD = un mot de passe long et unique`
+2. `ADMIN_PASSWORD` est accepté en production comme solution de repli, mais le hash bcrypt reste recommandé.
 3. Rendez-vous sur `https://votre-app/admin/login`
 4. Connectez-vous avec cet email + le mot de passe configuré
 
@@ -82,7 +81,7 @@ nulle part.
 ## Sécurité — à retenir
 
 - En production, `JWT_SECRET` et `ADMIN_JWT_SECRET` sont obligatoires, indépendants et longs.
-- `ADMIN_PASSWORD_HASH` est obligatoire en production ; le mot de passe admin en clair est refusé.
+- En production, configurez au moins `ADMIN_PASSWORD_HASH` (recommandé) ou `ADMIN_PASSWORD` (repli moins sûr).
 - Il n'y a qu'un seul administrateur : `ADMIN_EMAIL`. Une ancienne variable `ADMIN_EMAILS` n'est tolérée que si elle contient exactement une adresse.
 - Les JWT d'accès expirent rapidement ; les refresh tokens sont rotatifs, stockés uniquement en cookie `httpOnly`, et révoqués côté serveur.
 - Les sessions peuvent être révoquées immédiatement, y compris après changement de mot de passe ou déconnexion globale.

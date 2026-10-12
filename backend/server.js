@@ -186,8 +186,8 @@ async function start() {
       console.error(`Secrets de production invalides ou absents : ${weak.join(', ')}. Chaque secret doit être indépendant et faire au moins 32 caractères.`);
       process.exit(1);
     }
-    if (!process.env.ADMIN_PASSWORD_HASH) {
-      console.error('ADMIN_PASSWORD_HASH est obligatoire en production. Le mot de passe admin en clair est désactivé.');
+    if (!process.env.ADMIN_PASSWORD_HASH && !process.env.ADMIN_PASSWORD) {
+      console.error('Configurez ADMIN_PASSWORD_HASH (recommandé) ou ADMIN_PASSWORD pour activer la connexion admin.');
       process.exit(1);
     }
     const { getConfiguredAdminEmail } = require('./utils/adminConfig');
