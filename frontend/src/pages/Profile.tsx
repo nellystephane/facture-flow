@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { User, Save, Building2, Mail, Phone, MapPin, CreditCard, Zap, Check, ImageIcon, Loader2, Upload, Trash2, Lock, KeyRound } from 'lucide-react';
+import { User, Save, Building2, Mail, Phone, MapPin, CreditCard, Zap, Check, ImageIcon, Loader2, Upload, Trash2, Lock, KeyRound, ShieldCheck, Wifi } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { updateProfile, getProfile, uploadLogo, removeLogo, changePassword } from '../api/auth';
 import { updatePayoutSettings, resendPayoutConfirmation, type PayoutSettings } from '../api/payouts';
@@ -9,6 +9,7 @@ import Select from '../components/ui/Select';
 import LogoEditorModal from '../components/LogoEditorModal';
 import { useToast } from '../contexts/ToastContext';
 import { apiError } from '../utils/format';
+import { getEmecefConfig, saveEmecefConfig, testEmecefConnection, type EmecefConfig } from '../api/emecef';
 
 // Oryxa utilise actuellement une seule devise : FCFA (XOF).
 
@@ -34,6 +35,10 @@ export default function Profile() {
   const [pwdForm, setPwdForm] = useState({ actuel: '', nouveau: '', confirmation: '' });
   const [changingPwd, setChangingPwd] = useState(false);
   const [payout, setPayout] = useState<PayoutSettings>({ enabled: user?.payoutSettings?.enabled ?? false, mode: 'mobile_money', provider: user?.payoutSettings?.provider ?? 'mtn', phone: user?.payoutSettings?.phone ?? '', country: user?.payoutSettings?.country ?? 'BJ', titulaire: user?.payoutSettings?.titulaire ?? user?.nom ?? '', schedule: user?.payoutSettings?.schedule ?? 'weekly' });
+  const [emecefConfig, setEmecefConfig] = useState<EmecefConfig | null>(null);
+  const [emecefForm, setEmecefForm] = useState({ ifu: '', operatorName: '', token: '' });
+  const [savingEmecef, setSavingEmecef] = useState(false);
+  const [testingEmecef, setTestingEmecef] = useState(false);
   const [savingPayout, setSavingPayout] = useState(false);
   const [resendingPayoutConfirmation, setResendingPayoutConfirmation] = useState(false);
 
@@ -69,6 +74,35 @@ export default function Profile() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    getEmecefConfig().then((res) => {
+      setEmecefConfig(res.data);
+      setEmecefForm((f) => ({ ...f, ifu: res.data.ifu || '', operatorName: res.data.operatorName || '' }));
+    }).catch(() => { /* L'API peut ne pas être déployée avant la mise à jour backend. */ });
+  }, []);
+
+  const handleSaveEmecef = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEmecef(true);
+    try {
+      const res = await saveEmecefConfig(emecefForm);
+      setEmecefConfig(res.data);
+      setEmecefForm((f) => ({ ...f, token: '' }));
+      toast('Configuration e-MECeF de test enregistrée. Le jeton n’est pas réaffiché.');
+    } catch (err) { toast(apiError(err), 'error'); }
+    finally { setSavingEmecef(false); }
+  };
+
+  const handleTestEmecef = async () => {
+    setTestingEmecef(true);
+    try {
+      const res = await testEmecefConnection();
+      toast(`Connexion DGI de test réussie${res.data.nim ? ` — NIM ${res.data.nim}` : ''}.`);
+      const config = await getEmecefConfig(); setEmecefConfig(config.data);
+    } catch (err) { toast(apiError(err), 'error'); }
+    finally { setTestingEmecef(false); }
+  };
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -215,7 +249,7 @@ export default function Profile() {
                 <label className="field-label">WhatsApp <span className="text-gray-400 font-normal">(recommandé)</span></label>
                 <div className="relative">
                   <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#25D366] z-10" />
-                  <input className="field pl-9" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 01 XX XX XX XX" />
+                  <input className="field pl-9" value={form.whatsapp} onChange={(e) => update('whatsapp', e.target.value)} placeholder="+229 …" />
                 </div>
                 <p className="text-[11px] text-gray-400 mt-1">Votre numéro WhatsApp sert à partager rapidement vos documents.</p>
               </div>
@@ -264,14 +298,35 @@ export default function Profile() {
             </div>
           </form>
 
+          {/* Configuration fiscale — environnement de test uniquement */}
+          {user?.role !== 'collaborateur' && <section className="glass-card p-6 animate-fade-up" aria-labelledby="emecef-title">
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck size={19} className="text-[#d9524d]" />
+              <h3 id="emecef-title" className="font-bold text-[#0a0a0c] dark:text-white">e-MECeF — environnement de test</h3>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Configurez le jeton fourni par la DGI. Il est chiffré par le serveur et n’est jamais réaffiché. La production reste désactivée.</p>
+            <form onSubmit={handleSaveEmecef} className="space-y-3">
+              <div><label className="field-label">IFU du vendeur (13 chiffres)</label><input className="field" inputMode="numeric" pattern="[0-9]{13}" maxLength={13} value={emecefForm.ifu} onChange={(e) => setEmecefForm({ ...emecefForm, ifu: e.target.value })} required /></div>
+              <div><label className="field-label">Nom de l’opérateur</label><input className="field" maxLength={150} value={emecefForm.operatorName} onChange={(e) => setEmecefForm({ ...emecefForm, operatorName: e.target.value })} required /></div>
+              <div><label className="field-label">Jeton API de test DGI</label><input className="field" type="password" autoComplete="new-password" value={emecefForm.token} onChange={(e) => setEmecefForm({ ...emecefForm, token: e.target.value })} placeholder={emecefConfig?.tokenConfigured ? 'Jeton enregistré — saisir seulement pour le remplacer' : 'Coller ici le jeton de test'} required={!emecefConfig?.tokenConfigured} minLength={20} /></div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">État du jeton : {emecefConfig?.tokenConfigured ? 'configuré' : 'non configuré'} · Environnement : Test uniquement</div>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" className="btn-primary" disabled={savingEmecef}>{savingEmecef ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Enregistrer</button>
+                <button type="button" className="btn-ghost" onClick={handleTestEmecef} disabled={testingEmecef || !emecefConfig?.tokenConfigured}>{testingEmecef ? <Loader2 size={16} className="animate-spin" /> : <Wifi size={16} />} Tester la connexion</button>
+              </div>
+              {emecefConfig?.lastConnectionStatus === 'ok' && <p className="text-sm text-green-700 dark:text-green-400">Dernière connexion : réussie.</p>}
+              {emecefConfig?.lastConnectionStatus === 'error' && <p className="text-sm text-red-600">Dernière connexion : en échec. Vérifiez le jeton et l’accès DGI.</p>}
+            </form>
+          </section>}
+
           {/* Reversements */}
           <div className="glass-card p-6 animate-fade-up">
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1 flex items-center gap-2"><CreditCard size={16} /> Reversements</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-5">Choisissez où recevoir votre solde disponible. Les versements seront envoyés sur ce numéro selon la fréquence choisie.</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-5">Configurez le compte vers lequel votre solde retirable sera envoyé. Les reversements automatiques utilisent l'API FedaPay réelle.</p>
             <div className="grid sm:grid-cols-2 gap-4">
               <div><label className="field-label">Mode de retrait</label><Select value="mobile_money" onChange={() => {}} disabled options={[{ value: 'mobile_money', label: 'Mobile Money' }]} /></div>
               <div><label className="field-label">Opérateur</label><Select value={payout.provider} onChange={(v) => setPayout({ ...payout, provider: v })} options={[{value:'mtn',label:'MTN'},{value:'moov',label:'Moov'},{value:'celtiis',label:'Celtiis'}]} /></div>
-              <div><label className="field-label">Numéro Mobile Money</label><input className="field" value={payout.phone} onChange={(e) => setPayout({ ...payout, phone: e.target.value })} placeholder="+229 01 XX XX XX XX" /><p className="text-[11px] text-gray-400 mt-1">Saisissez le numéro Mobile Money qui doit recevoir vos versements.</p></div>
+              <div><label className="field-label">Numéro Mobile Money</label><input className="field" value={payout.phone} onChange={(e) => setPayout({ ...payout, phone: e.target.value })} placeholder="+229…" /><p className="text-[11px] text-gray-400 mt-1">Assurez-vous que ce numéro peut recevoir des paiements Mobile Money.</p></div>
               <div><label className="field-label">Titulaire</label><input className="field" value={payout.titulaire} onChange={(e) => setPayout({ ...payout, titulaire: e.target.value })} /></div>
               <div><label className="field-label">Fréquence</label><Select value={payout.schedule} onChange={(v) => setPayout({ ...payout, schedule: v as any })} options={[{value:'weekly',label:'Chaque semaine'},{value:'monthly',label:'Chaque mois'}]} /></div>
             </div>
@@ -282,6 +337,7 @@ export default function Profile() {
               {user?.payoutSettings?.status === 'pending' && <button type="button" className="btn-ghost text-sm" disabled={resendingPayoutConfirmation} onClick={async () => { setResendingPayoutConfirmation(true); try { await resendPayoutConfirmation(); toast('Email de confirmation renvoyé'); } catch (err) { toast(apiError(err), 'error'); } finally { setResendingPayoutConfirmation(false); } }}>{resendingPayoutConfirmation ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <Mail size={16} />} Renvoyer l’email</button>}
               <button type="button" className="btn-primary" disabled={savingPayout} onClick={async () => { setSavingPayout(true); try { const res = await updatePayoutSettings({ ...payout, enabled: true }); if (res.data?.payoutSettings) setUser({ ...(user as any), payoutSettings: res.data.payoutSettings }); toast(res.data?.confirmationRequired ? 'Moyen enregistré. Vérifiez votre email pour le confirmer.' : 'Paramètres de reversement enregistrés'); } catch (err) { toast(apiError(err), 'error'); } finally { setSavingPayout(false); } }}>{savingPayout ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <Save size={16} />} Enregistrer le moyen</button>
             </div>
+            <p className="text-[11px] text-gray-500 mt-3">Les cartes bancaires sont proposées au client sur le Checkout FedaPay pour les paiements entrants. Elles ne sont pas utilisées comme destination de reversement : FedaPay indique actuellement que les retraits par carte bancaire ne sont pas disponibles.</p>
           </div>
 
           {/* Sécurité — changer le mot de passe */}

@@ -47,7 +47,9 @@ app.use((req, res, next) => {
     if (idx === -1) return;
     const key = part.slice(0, idx).trim();
     const value = part.slice(idx + 1).trim();
-    if (key) req.cookies[key] = decodeURIComponent(value);
+    if (!key) return;
+    // Un cookie mal encodé (%E0%A4%A) ne doit pas faire planter TOUTES les requêtes.
+    try { req.cookies[key] = decodeURIComponent(value); } catch { req.cookies[key] = value; }
   });
   next();
 });
@@ -147,6 +149,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/payouts', payoutRoutes);
+app.use('/api/internal', require('./routes/internalRoutes'));
 app.use('/api/affiliate', affiliateRoutes);
 
 app.use((req, res) => {
@@ -186,8 +189,8 @@ async function start() {
       console.error(`Secrets de production invalides ou absents : ${weak.join(', ')}. Chaque secret doit être indépendant et faire au moins 32 caractères.`);
       process.exit(1);
     }
-    if (!process.env.ADMIN_PASSWORD_HASH && !process.env.ADMIN_PASSWORD) {
-      console.error('Configurez ADMIN_PASSWORD_HASH (recommandé) ou ADMIN_PASSWORD pour activer la connexion admin.');
+    if (!process.env.ADMIN_PASSWORD_HASH) {
+      console.error('ADMIN_PASSWORD_HASH est obligatoire en production. Le mot de passe admin en clair est désactivé.');
       process.exit(1);
     }
     const { getConfiguredAdminEmail } = require('./utils/adminConfig');
@@ -220,6 +223,17 @@ async function start() {
       await migrateInvoiceIndexes();
     } catch (err) {
       console.error('Migration des index Invoice impossible :', err.message);
+      process.exit(1);
+    }
+
+    // Index financiers : unicité fiable des identifiants FedaPay et clé
+    // d'idempotence du ledger. Bloquant : sans eux, un webhook rejoué pourrait
+    // créditer deux fois.
+    try {
+      const { migrateFinancialIndexes } = require('./scripts/migrateFinancialIndexes');
+      await migrateFinancialIndexes();
+    } catch (err) {
+      console.error('Migration des index financiers impossible :', err.message);
       process.exit(1);
     }
   } catch (err) {

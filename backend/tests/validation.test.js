@@ -189,4 +189,34 @@ describe('Validation — profil', () => {
     expect(res.status).toBe(200);
     expect(res.body.telephone).toBe('+229 00000000');
   });
+
+  it('conserve les champs fiscaux e-MECeF des lignes de facture', async () => {
+    const { token } = await creerUtilisateurConnecte(app);
+    const client = await creerClient(app, token);
+    const res = await request(app)
+      .post('/api/invoices')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        client: client._id,
+        tva: 18,
+        items: [{
+          description: 'Produit avec taxe spécifique',
+          quantite: 1,
+          prixUnitaire: 1000,
+          taxGroup: 'B',
+          taxSpecific: 50,
+          originalPrice: 1200,
+          priceModification: 'Remise commerciale documentée',
+        }],
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.items[0]).toMatchObject({
+      taxGroup: 'B',
+      taxSpecific: 50,
+      originalPrice: 1200,
+      priceModification: 'Remise commerciale documentée',
+    });
+    expect(res.body.totalTTC).toBe(1230);
+  });
+
 });

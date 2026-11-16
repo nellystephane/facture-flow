@@ -38,7 +38,6 @@ export interface User {
   emailVerifie?: boolean;
   role?: 'proprietaire' | 'admin' | 'collaborateur';
   estCollaborateur?: boolean;
-  typeCompte?: 'classique' | 'affilie';
 }
 
 export interface Client {
@@ -68,6 +67,10 @@ export interface Item {
   description: string;
   quantite: number;
   prixUnitaire: number;
+  taxGroup?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | null;
+  taxSpecific?: number;
+  originalPrice?: number | null;
+  priceModification?: string;
 }
 
 export type InvoiceStatut =
@@ -94,6 +97,23 @@ export interface Invoice {
   dateVue?: string | null;
   totalHT?: number;
   totalTTC?: number;
+  fiscalisation?: {
+    status?: 'non_emise' | 'submitting' | 'pending_confirmation' | 'confirming' | 'cancelling' | 'confirmed' | 'cancelled' | 'error' | 'unknown';
+    environment?: 'test';
+    invoiceType?: 'FV' | 'FA' | 'EV' | 'EA';
+    aib?: '' | 'A' | 'B';
+    reference?: string | null;
+    expectedTotal?: number | null;
+    dgiTotal?: number | null;
+    uid?: string | null;
+    codeMECeFDGI?: string | null;
+    nim?: string | null;
+    dateTime?: string | null;
+    qrCode?: string | null;
+    counters?: string | null;
+    errorCode?: string | null;
+    errorDesc?: string | null;
+  };
   createdAt?: string;
 }
 

@@ -25,7 +25,9 @@ const paymentSchema = new mongoose.Schema({
   reference: { type: String, default: '' },
   note: { type: String, default: '' },
   // Traçabilité FedaPay (paiements en ligne uniquement)
-  fedapayTransactionId: { type: String, default: null, index: true, unique: true, sparse: true },
+  // Unicité garantie par l'index partiel déclaré plus bas : un `null` explicite
+  // (paiements manuels) ne doit pas compter comme une valeur dupliquée.
+  fedapayTransactionId: { type: String, default: undefined },
   fedapayMode: { type: String, default: '' }, // mtn, moov, carte bancaire, etc.
   receiptNumber: { type: String, default: '' }, // Numéro de reçu, ex: REC-2026-0001
   // Suivi litige/remboursement — géré depuis la page admin (voir
@@ -35,5 +37,11 @@ const paymentSchema = new mongoose.Schema({
   rembourse: { type: Boolean, default: false },
   rembourseLe: { type: Date, default: null },
 }, { timestamps: true });
+
+paymentSchema.index({ invoice: 1, statut: 1 });
+paymentSchema.index(
+  { fedapayTransactionId: 1 },
+  { name: 'uniq_fedapayTransactionId', unique: true, partialFilterExpression: { fedapayTransactionId: { $type: 'string' } } }
+);
 
 module.exports = mongoose.model('Payment', paymentSchema);

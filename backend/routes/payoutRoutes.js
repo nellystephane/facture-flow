@@ -1,5 +1,6 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const requireProprietaireOuAdmin = require('../middleware/requireProprietaireOuAdmin');
 const controller = require('../controllers/payoutController');
 const router = express.Router();
 
@@ -8,7 +9,9 @@ const router = express.Router();
 // transféré par cette route.
 router.post('/confirm/:token', controller.confirmDestination);
 
-router.use(auth);
+// L'argent et la destination des retraits relèvent du propriétaire / admin :
+// un collaborateur ne doit pas pouvoir modifier le numéro de retrait ni vider le solde.
+router.use(auth, requireProprietaireOuAdmin);
 router.get('/summary', controller.getSummary);
 router.get('/', controller.list);
 router.put('/settings', controller.updateSettings);

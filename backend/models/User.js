@@ -40,8 +40,16 @@ const userSchema = new mongoose.Schema({
     confirmationTokenExpire: { type: Date, default: null, select: false },
     confirmedAt: { type: Date, default: null },
   },
-  // Compte affilié seul jusqu'à activation volontaire de l'espace de gestion.
-  typeCompte: { type: String, enum: ['classique', 'affilie'], default: 'classique', index: true },
+  // Configuration e-MECeF par espace entreprise. Le jeton chiffré est toujours exclu des réponses API.
+  fiscalisation: {
+    environment: { type: String, enum: ['test'], default: 'test' },
+    ifu: { type: String, trim: true, default: '' },
+    operatorName: { type: String, trim: true, default: '' },
+    tokenEncrypted: { type: String, default: null, select: false },
+    tokenConfigured: { type: Boolean, default: false },
+    lastConnectionCheckAt: { type: Date, default: null },
+    lastConnectionStatus: { type: String, enum: ['unknown', 'ok', 'error'], default: 'unknown' },
+  },
   subscription: { type: String, enum: ['gratuit', 'pro', 'business'], default: 'gratuit' },
   // Vérification d'email à l'inscription : code à 6 chiffres, valable 15 minutes.
   emailVerifie: { type: Boolean, default: false },

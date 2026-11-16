@@ -4,6 +4,10 @@ const itemSchema = z.object({
   description: z.string().trim().min(1, 'La description est requise.').max(500),
   quantite: positiveNumber('La quantité'),
   prixUnitaire: nonNegativeNumber('Le prix unitaire'),
+  taxGroup: z.enum(['A', 'B', 'C', 'D', 'E', 'F']).nullable().optional(),
+  taxSpecific: nonNegativeNumber('La taxe spécifique').optional().default(0),
+  originalPrice: positiveNumber('Le prix d’origine').nullable().optional(),
+  priceModification: optionalText(100),
 }).strip();
 
 // Le statut d'une facture reflète des actions réelles (envoi effectif de
@@ -21,7 +25,7 @@ const invoiceBase = {
   tva: nonNegativeNumber('La TVA').max(100, 'La TVA ne peut pas dépasser 100%.').optional().default(0),
   notes: optionalText(2000),
   fraisSupportesPar: z.enum(['utilisateur', 'client']).optional(),
-  template: z.enum(['classique', 'moderne', 'minimal']).optional(),
+  template: z.enum(['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir']).optional(),
 };
 
 const createInvoiceSchema = z.object(invoiceBase).strip();

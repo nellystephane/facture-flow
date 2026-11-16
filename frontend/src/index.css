@@ -567,7 +567,7 @@ button { font-family: inherit; }
 }
 
 .fs-date-panel {
-  position: absolute; z-index: 99999; top: calc(100% + 6px); left: 0; width: min(320px, calc(100vw - 32px));
+  position: absolute; z-index: 100; top: calc(100% + 6px); left: 0; width: min(320px, calc(100vw - 32px));
   background: rgba(255,255,255,.96); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%);
   border: 1px solid rgba(255,255,255,.8); border-radius: 1rem; box-shadow: 0 20px 50px rgba(15,15,20,.16); overflow: hidden;
 }
@@ -786,9 +786,6 @@ button { font-family: inherit; }
 
 /* L'espace affilié utilise les mêmes primitives visuelles que le reste d'Oryxa. */
 .affiliate-page { min-height: 100dvh; padding: 20px 18px 48px; color:#17181d; }
-/* Les espaces affiliés authentifiés vivent dans le shell normal de l'application. */
-.affiliate-page.affiliate-authenticated { min-height: auto; padding: 8px 0 28px; }
-.affiliate-authenticated .affiliate-dashboard, .affiliate-authenticated .affiliate-activation-wrap { width: 100%; max-width: none; margin-left: auto; margin-right: auto; }
 .affiliate-topbar { width:min(1120px,100%); margin:0 auto 18px; display:flex; align-items:center; justify-content:space-between; }
 .affiliate-activation-wrap,.affiliate-dashboard { width:min(1120px,100%); margin:0 auto; }
 .affiliate-page-heading { display:flex; gap:16px; align-items:flex-start; padding:18px 0 22px; }

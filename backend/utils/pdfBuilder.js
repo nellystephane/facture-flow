@@ -2,6 +2,7 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 const { drawPaymentQr } = require('./qrcode/qrPdf');
+const { computeInvoiceTotals } = require('./invoiceTotals');
 
 const ORYXA_LOGO_PATH = path.join(__dirname, '..', 'assets', 'oryxa-logo.png');
 
@@ -51,11 +52,13 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
+// Totaux d'un document : source unique partagée avec l'API (utils/invoiceTotals).
+// Pour une facture confirmée par la DGI, `ttc` est le total fiscal et
+// `arrondiFiscal` l'écart d'arrondi par rapport au calcul HT global.
 function calcTotals(doc) {
-  const sousTotal = (doc.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);
-  const ht = sousTotal - (doc.remise || 0);
-  const montantTva = ht * (doc.tva || 0) / 100;
-  return { sousTotal, ht, montantTva, ttc: ht + montantTva };
+  const t = computeInvoiceTotals(doc);
+  const arrondiFiscal = t.fiscalTotal !== null ? Math.round(t.fiscalTotal - t.totalTTCCalcule) : 0;
+  return { sousTotal: t.sousTotal, ht: t.totalHT, montantTva: t.montantTva, taxeSpecifique: t.taxSpecific, arrondiFiscal, ttc: t.totalTTC };
 }
 
 /** Exécute un PDFDocument et retourne un Buffer (utile pour pièces jointes email). */
@@ -229,7 +232,7 @@ function drawItemsTable(pdf, items, devise, startY, style) {
 }
 
 function drawTotals(pdf, doc, devise, startY, style) {
-  const { sousTotal, montantTva, ttc } = calcTotals(doc);
+  const { sousTotal, montantTva, taxeSpecifique, arrondiFiscal, ttc } = calcTotals(doc);
   const v = style.variant;
   let y = startY;
   pdf.fillColor(GRIS).font('Helvetica').fontSize(10);
@@ -237,7 +240,16 @@ function drawTotals(pdf, doc, devise, startY, style) {
   pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(sousTotal, devise), 460, y, { width: 85, align: 'right' }); y += 18;
   if (doc.remise > 0) { pdf.fillColor(GRIS).font('Helvetica').text('Remise', 350, y, { width: 120, align: 'right' }); pdf.fillColor(style.accent).font('Helvetica-Bold').text('- ' + formatMontant(doc.remise, devise), 460, y, { width: 85, align: 'right' }); y += 18; }
   pdf.fillColor(GRIS).font('Helvetica').text('TVA (' + (doc.tva || 0) + '%)', 350, y, { width: 120, align: 'right' });
-  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(montantTva, devise), 460, y, { width: 85, align: 'right' }); y += 26;
+  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(montantTva, devise), 460, y, { width: 85, align: 'right' }); y += 18;
+  if (taxeSpecifique > 0) {
+    pdf.fillColor(GRIS).font('Helvetica').text('Taxes spécifiques', 350, y, { width: 120, align: 'right' });
+    pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(taxeSpecifique, devise), 460, y, { width: 85, align: 'right' }); y += 18;
+  }
+  if (arrondiFiscal !== 0) {
+    pdf.fillColor(GRIS).font('Helvetica').text('Arrondi fiscal (DGI)', 350, y, { width: 120, align: 'right' });
+    pdf.fillColor(NOIR).font('Helvetica-Bold').text((arrondiFiscal > 0 ? '+ ' : '- ') + formatMontant(Math.abs(arrondiFiscal), devise), 460, y, { width: 85, align: 'right' }); y += 18;
+  }
+  y += 8;
 
   if (v === 'minimal') {
     pdf.moveTo(350, y).lineTo(545, y).strokeColor(style.accent).stroke();
@@ -368,6 +380,70 @@ const STATUT_QUOTE_LABEL = {
   brouillon: 'Brouillon', envoye: 'Envoyé', accepte: 'Accepté', refuse: 'Refusé', expire: 'Expiré'
 };
 
+function drawFiscalSecuritySection(pdf, fiscalisation, y, style) {
+  if (!fiscalisation || fiscalisation.status !== 'confirmed' || !fiscalisation.codeMECeFDGI || !fiscalisation.qrCode) return y;
+  const pageWidth = 595;
+  const cardX = 50;
+  const cardW = pageWidth - 100;
+  const cardH = 132;
+  const bottomSafe = pdf.page.height - 58;
+  let cy = y + 16;
+  if (cy + cardH > bottomSafe) { pdf.addPage(); cy = 50; }
+  pdf.save();
+  pdf.roundedRect(cardX, cy, cardW, cardH, 10).fillAndStroke('#ffffff', LIGNE);
+  pdf.rect(cardX, cy, 5, cardH).fill('#16803c');
+  pdf.restore();
+  pdf.fillColor('#16803c').font('Helvetica-Bold').fontSize(9).text('FACTURE NORMALISÉE — DGI / e-MECeF', cardX + 16, cy + 12);
+  pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(10).text('Code MECeF/DGI : ' + fiscalisation.codeMECeFDGI, cardX + 16, cy + 31, { width: 330 });
+  pdf.fillColor(GRIS).font('Helvetica').fontSize(8.5).text('NIM : ' + (fiscalisation.nim || '—'), cardX + 16, cy + 48);
+  pdf.text('Date DGI : ' + (fiscalisation.dateTime || '—'), cardX + 16, cy + 62);
+  pdf.text('Compteur : ' + (fiscalisation.counters || '—'), cardX + 16, cy + 76);
+  pdf.fillColor(GRIS_CLAIR).font('Helvetica').fontSize(7).text('QR fiscal émis par la DGI — distinct du QR de paiement Oryxa.', cardX + 16, cy + 100, { width: 330 });
+  const { drawPaymentQr } = require('./qrcode/qrPdf');
+  drawPaymentQr(pdf, fiscalisation.qrCode, cardX + cardW - 102, cy + 18, 84);
+  return cy + cardH + 8;
+}
+
+
+function drawFiscalItemsTable(pdf, fiscalItems, startY, style) {
+  const pageWidth = 595;
+  let y = startY;
+  const rowH = 27;
+  const header = () => {
+    pdf.roundedRect(50, y, pageWidth - 100, 25, 3).fill(style.bandeArticles);
+    pdf.fillColor(['minimal', 'atelier', 'horizon', 'signature'].includes(style.variant) ? NOIR : '#ffffff').font('Helvetica-Bold').fontSize(8.2);
+    pdf.text('ARTICLE', 58, y + 8, { width: 166 });
+    pdf.text('QTÉ', 226, y + 8, { width: 42, align: 'right' });
+    pdf.text('PRIX TTC', 274, y + 8, { width: 80, align: 'right' });
+    pdf.text('GROUPE', 358, y + 8, { width: 52, align: 'center' });
+    pdf.text('TOTAL LIGNE', 414, y + 8, { width: 128, align: 'right' });
+    y += 25;
+  };
+  header();
+  (fiscalItems || []).forEach((item, idx) => {
+    if (y + rowH > 740) { pdf.addPage(); y = 50; header(); }
+    if (idx % 2 === 0) pdf.rect(50, y, pageWidth - 100, rowH).fill('#f8f8fa');
+    const line = Math.round(Number(item.price || 0) * Number(item.quantity || 0)) + Number(item.taxSpecific || 0);
+    pdf.fillColor(NOIR).font('Helvetica').fontSize(8.5);
+    pdf.text(String(item.name || ''), 58, y + 8, { width: 166 });
+    pdf.text(String(item.quantity || 0), 226, y + 8, { width: 42, align: 'right' });
+    pdf.text(formatMontant(item.price || 0), 274, y + 8, { width: 80, align: 'right' });
+    pdf.text(String(item.taxGroup || '—'), 358, y + 8, { width: 52, align: 'center' });
+    pdf.font('Helvetica-Bold').text(formatMontant(line), 414, y + 8, { width: 128, align: 'right' });
+    if (Number(item.taxSpecific || 0) > 0) {
+      pdf.font('Helvetica').fontSize(7).fillColor(GRIS).text('Taxe spécifique incluse : ' + formatMontant(item.taxSpecific), 58, y + 17, { width: 190 });
+    }
+    y += rowH;
+  });
+  pdf.moveTo(50, y).lineTo(pageWidth - 50, y).strokeColor(LIGNE).stroke();
+  y += 12;
+  if (y + 45 > pdf.page.height - 58) { pdf.addPage(); y = 50; }
+  pdf.roundedRect(335, y, 210, 43, 7).fill(style.totalBox);
+  pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9).text('TOTAL FISCAL DGI', 347, y + 8, { width: 95 });
+  pdf.fontSize(10.5).text(formatMontant(pdf._oryxaDgiTotal || 0), 347, y + 23, { width: 185, align: 'right' });
+  return y + 52;
+}
+
 function drawInvoiceOrQuote(pdf, { doc, user, isQuote, paymentUrl, logoBuffer }) {
   const devise = 'FCFA';
   const statutLabel = isQuote ? STATUT_QUOTE_LABEL[doc.statut] : STATUT_INVOICE_LABEL[doc.statut];
@@ -393,9 +469,17 @@ function drawInvoiceOrQuote(pdf, { doc, user, isQuote, paymentUrl, logoBuffer })
   }
 
   y = drawClientBlock(pdf, doc.client, y + 6, style);
-  y = drawItemsTable(pdf, doc.items, devise, y + 4, style);
-  const { y: afterTotals } = drawTotals(pdf, doc, devise, y + 6, style);
-  y = afterTotals;
+  const isFiscalConfirmed = !isQuote && doc.fiscalisation?.status === 'confirmed' && Array.isArray(doc.fiscalisation?.requestPayload?.items);
+  if (isFiscalConfirmed) {
+    pdf._oryxaDgiTotal = Number(doc.fiscalisation.dgiTotal || 0);
+    y = drawFiscalItemsTable(pdf, doc.fiscalisation.requestPayload.items, y + 4, style);
+  } else {
+    y = drawItemsTable(pdf, doc.items, devise, y + 4, style);
+    const { y: afterTotals } = drawTotals(pdf, doc, devise, y + 6, style);
+    y = afterTotals;
+  }
+
+  if (!isQuote) y = drawFiscalSecuritySection(pdf, doc.fiscalisation, y, style);
 
   if (!isQuote && doc.statut !== 'payee' && doc.statut !== 'annulee') {
     y = drawPaymentSection(pdf, { y, paymentUrl, banque: user.banque, devise, montant: calcTotals(doc).ttc, style });

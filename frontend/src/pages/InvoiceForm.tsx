@@ -48,7 +48,7 @@ export default function InvoiceForm() {
     objet: '',
     dateEmission: todayISO(),
     dateEcheance: addDays(15),
-    items: [{ description: '', quantite: 1, prixUnitaire: 0 }] as Item[],
+    items: [{ description: '', quantite: 1, prixUnitaire: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }] as Item[],
     remise: 0,
     tva: 0,
     notes: '',
@@ -77,7 +77,7 @@ export default function InvoiceForm() {
           objet: d.objet || '',
           dateEmission: d.dateEmission ? new Date(d.dateEmission).toISOString().split('T')[0] : todayISO(),
           dateEcheance: d.dateEcheance ? new Date(d.dateEcheance).toISOString().split('T')[0] : '',
-          items: d.items?.length ? d.items : [{ description: '', quantite: 1, prixUnitaire: 0 }],
+          items: d.items?.length ? d.items : [{ description: '', quantite: 1, prixUnitaire: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }],
           remise: d.remise || 0,
           tva: d.tva || 0,
           notes: d.notes || '',
@@ -91,9 +91,9 @@ export default function InvoiceForm() {
   }, [id, isEdit]);
 
   const update = (k: string, v: string | number) => setForm((f) => ({ ...f, [k]: v }));
-  const updateItem = (idx: number, k: keyof Item, v: string | number) =>
+  const updateItem = (idx: number, k: keyof Item, v: string | number | null) =>
     setForm((f) => ({ ...f, items: f.items.map((it, i) => i === idx ? { ...it, [k]: v } : it) }));
-  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { description: '', quantite: 1, prixUnitaire: 0 }] }));
+  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { description: '', quantite: 1, prixUnitaire: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }] }));
   const removeItem = (idx: number) => setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
 
   // Pré-remplir depuis un service existant
@@ -195,15 +195,15 @@ export default function InvoiceForm() {
           {/* Frais de paiement en ligne */}
           <div className="glass-card p-6">
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Frais de paiement en ligne</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Des frais peuvent s’appliquer lorsqu’un client paie en ligne. Choisissez si vous les prenez à votre charge ou s’ils sont ajoutés au paiement du client. Ces frais sont liés au traitement du paiement et ne sont pas prélevés par Oryxa.</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Choisissez qui supporte les frais techniques. Oryxa calculera automatiquement le montant affiché au client.</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <button type="button" onClick={() => update('fraisSupportesPar', 'utilisateur')} className={`text-left rounded-2xl p-4 border transition-soft ${form.fraisSupportesPar === 'utilisateur' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
-                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Je prends les frais à ma charge</p>
-                <p className="text-xs text-gray-500 mt-1">Votre client paie exactement le montant de la facture.</p>
+                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Je supporte les frais</p>
+                <p className="text-xs text-gray-500 mt-1">Le client paie uniquement le montant de la facture.</p>
               </button>
               <button type="button" onClick={() => update('fraisSupportesPar', 'client')} className={`text-left rounded-2xl p-4 border transition-soft ${form.fraisSupportesPar === 'client' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
-                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Les frais sont ajoutés au paiement</p>
-                <p className="text-xs text-gray-500 mt-1">Votre client voit le montant de la facture, les frais et le total à payer avant de régler.</p>
+                <p className="font-semibold text-sm text-[#0a0a0c] dark:text-white">Mon client supporte les frais</p>
+                <p className="text-xs text-gray-500 mt-1">Le total à payer inclut automatiquement les frais de transfert.</p>
               </button>
             </div>
           </div>
@@ -244,6 +244,13 @@ export default function InvoiceForm() {
                       {formatFCFA(item.quantite * item.prixUnitaire)}
                     </div>
                   </div>
+                  <div className="mt-2 max-w-xs"><label className="field-label">Taxe spécifique DGI (FCFA, total de la ligne)</label><input type="number" min={0} step={1} className="field" value={item.taxSpecific || 0} onChange={(e) => updateItem(idx, 'taxSpecific', Number(e.target.value))} /><p className="text-xs text-gray-500 mt-1">Champ fiscal transmis à la DGI ; distinct du calcul commercial standard d’Oryxa.</p></div>
+                  <div className="mt-2 max-w-xs"><label className="field-label">Groupe fiscal DGI de cette ligne</label><select className="field" value={item.taxGroup || ''} onChange={(e) => updateItem(idx, 'taxGroup', (e.target.value || null) as Item['taxGroup'])}><option value="">Utiliser le groupe choisi lors de la fiscalisation</option><option value="A">A — Groupe fiscal A</option><option value="B">B — Groupe fiscal B</option><option value="C">C — Groupe fiscal C</option><option value="D">D — Groupe fiscal D</option><option value="E">E — Groupe fiscal E</option><option value="F">F — Groupe fiscal F</option></select></div>
+                  <div className="grid sm:grid-cols-2 gap-2 mt-2">
+                    <div><label className="field-label">Prix d’origine (optionnel)</label><input type="number" min={0} step={1} className="field" value={item.originalPrice ?? ''} onChange={(e) => updateItem(idx, 'originalPrice', e.target.value === '' ? null : Number(e.target.value))} placeholder="Prix avant modification" /></div>
+                    <div><label className="field-label">Motif de modification</label><input className="field" maxLength={100} value={item.priceModification || ''} onChange={(e) => updateItem(idx, 'priceModification', e.target.value)} placeholder="Motif si prix modifié" /></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Si un prix d’origine est renseigné, le motif devient obligatoire lors de la fiscalisation.</p>
                   {services.length > 0 && (
                     <div className="mt-2">
                       {permissions?.peutUtiliserFacturationExpress ? (
@@ -321,6 +328,10 @@ export default function InvoiceForm() {
                 <span className="text-gray-500 dark:text-gray-400">TVA</span>
                 <span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span>
               </div>
+              {form.items.some((item) => Number(item.taxSpecific || 0) > 0) && <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Taxes spécifiques</span>
+                <span className="font-semibold">{formatFCFA(form.items.reduce((sum, item) => sum + Number(item.taxSpecific || 0), 0))}</span>
+              </div>}
               <div className="rounded-xl p-3 mt-3 text-white"
                 style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>

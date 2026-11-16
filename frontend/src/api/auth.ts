@@ -9,7 +9,6 @@ export interface RegisterData {
   telephone?: string;
   whatsapp?: string;
   referralCode?: string;
-  affiliateOnly?: boolean;
 }
 
 export const login = (email: string, password: string) =>
@@ -44,5 +43,3 @@ export const removeLogo = () =>
 
 export const changePassword = (motDePasseActuel: string, nouveauMotDePasse: string) =>
   api.put<{ message: string }>('/auth/profile/mot-de-passe', { motDePasseActuel, nouveauMotDePasse });
-
-export const activateUserWorkspace = () => api.post<User>('/auth/activer-espace-utilisateur');

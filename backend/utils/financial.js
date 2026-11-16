@@ -66,7 +66,12 @@ async function calculatePaymentQuote(invoiceAmount, fraisSupportesPar) {
 
 function baseRound(value) { return Math.round(Number(value || 0)); }
 
-async function getWalletBalance(ownerId) {
+const CREDIT_TYPES = ['credit_paiement', 'credit_ajustement', 'credit_affiliation', 'credit_annulation'];
+
+// Solde brut : peut être NÉGATIF (ex. remboursement après un reversement déjà
+// effectué). Il ne faut jamais le masquer : un solde négatif est une dette de
+// l'utilisateur envers la plateforme et doit être visible côté admin.
+async function getWalletBalanceRaw(ownerId) {
   const owner = ownerId instanceof mongoose.Types.ObjectId ? ownerId : new mongoose.Types.ObjectId(String(ownerId));
   const agg = await WalletEntry.aggregate([
     { $match: { owner } },
@@ -74,17 +79,41 @@ async function getWalletBalance(ownerId) {
   ]);
   let balance = 0;
   for (const row of agg) {
-    if (['credit_paiement', 'credit_ajustement', 'credit_affiliation', 'credit_annulation'].includes(row._id)) balance += row.total;
+    if (CREDIT_TYPES.includes(row._id)) balance += row.total;
     else balance -= row.total;
   }
-  return Math.max(0, roundXof(balance));
+  return Math.round(balance);
+}
+
+// Solde retirable : jamais négatif.
+async function getWalletBalance(ownerId) {
+  return Math.max(0, await getWalletBalanceRaw(ownerId));
+}
+
+// Écrit une ligne de ledger AU PLUS UNE FOIS pour une clé donnée. Deux webhooks
+// simultanés ne peuvent plus créditer deux fois : l'index unique sur dedupeKey
+// départage, et le perdant récupère la ligne existante.
+async function createLedgerEntryOnce(dedupeKey, fields) {
+  const existing = await WalletEntry.findOne({ dedupeKey });
+  if (existing) return { entry: existing, created: false };
+  try {
+    const entry = await WalletEntry.create({ ...fields, dedupeKey });
+    return { entry, created: true };
+  } catch (err) {
+    if (err && err.code === 11000) {
+      const entry = await WalletEntry.findOne({ dedupeKey });
+      if (entry) return { entry, created: false };
+    }
+    throw err;
+  }
 }
 
 async function createPaymentLedger({ payment, montantCredit, description }) {
   if (!montantCredit || montantCredit <= 0) return null;
-  const exists = await WalletEntry.findOne({ payment: payment._id, type: 'credit_paiement' });
-  if (exists) return exists;
-  return WalletEntry.create({
+  // Compatibilité : anciennes écritures créées avant l'introduction de dedupeKey.
+  const legacy = await WalletEntry.findOne({ payment: payment._id, type: 'credit_paiement' });
+  if (legacy) return legacy;
+  const { entry } = await createLedgerEntryOnce(`credit_paiement:${payment._id}`, {
     owner: payment.owner,
     type: 'credit_paiement',
     montant: roundXof(montantCredit),
@@ -93,6 +122,7 @@ async function createPaymentLedger({ payment, montantCredit, description }) {
     description: description || `Paiement de la facture ${payment.invoice}`,
     metadata: { origine: payment.origine, fraisSupportesPar: payment.fraisSupportesPar },
   });
+  return entry;
 }
 
 async function allocatePayoutFeeToPayment(payment, actualFee) {
@@ -110,6 +140,8 @@ module.exports = {
   calculateClientCharge,
   calculatePaymentQuote,
   getWalletBalance,
+  getWalletBalanceRaw,
+  createLedgerEntryOnce,
   createPaymentLedger,
   allocatePayoutFeeToPayment,
 };

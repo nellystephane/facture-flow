@@ -22,6 +22,15 @@ const nextInvoiceNumber = (owner) => nextNumber(owner, 'facture');
 // ne la supprime plus. On l'annule (statut "annulee") si besoin, on ne la
 // falsifie pas après coup.
 const MODIFIABLE_STATUTS = ['brouillon'];
+const EMECEF_LOCKED_STATUSES = ['submitting', 'pending_confirmation', 'confirming', 'cancelling', 'unknown', 'confirmed'];
+
+function fiscalisationLockResponse(res, fiscalStatus) {
+  return res.status(409).json({
+    message: 'Cette facture est liée à une demande e-MECeF en cours, confirmée ou incertaine. Sa modification ou sa suppression est bloquée pour éviter un écart avec la DGI.',
+    code: 'EMECEF_STATE_LOCKS_INVOICE',
+    fiscalisationStatus: fiscalStatus,
+  });
+}
 
 function paymentUrlFor(invoice) {
   const base = process.env.CLIENT_URL_PUBLIC || (process.env.CLIENT_URL || '').split(',')[0];
@@ -122,6 +131,8 @@ exports.updateInvoice = asyncHandler(async (req, res) => {
       code: 'INVOICE_NOT_EDITABLE',
     });
   }
+  const fiscalStatus = existing.fiscalisation?.status || 'non_emise';
+  if (EMECEF_LOCKED_STATUSES.includes(fiscalStatus)) return fiscalisationLockResponse(res, fiscalStatus);
   const updates = pickFields(req.body);
   if (updates.template) {
     const user = await User.findById(req.userId);
@@ -130,10 +141,16 @@ exports.updateInvoice = asyncHandler(async (req, res) => {
     }
   }
   const invoice = await Invoice.findOneAndUpdate(
-    { _id: req.params.id, owner: req.userId },
+    { _id: req.params.id, owner: req.userId, statut: { $in: MODIFIABLE_STATUTS }, 'fiscalisation.status': { $nin: EMECEF_LOCKED_STATUSES } },
     updates,
     { returnDocument: 'after' }
   ).populate('client');
+  if (!invoice) {
+    const latest = await Invoice.findOne({ _id: req.params.id, owner: req.userId });
+    const fiscalStatusNow = latest?.fiscalisation?.status || 'non_emise';
+    if (latest && EMECEF_LOCKED_STATUSES.includes(fiscalStatusNow)) return fiscalisationLockResponse(res, fiscalStatusNow);
+    return res.status(409).json({ message: 'La facture a changé pendant la modification. Actualisez-la avant de réessayer.', code: 'INVOICE_CONCURRENT_UPDATE' });
+  }
   res.json(invoice);
 });
 
@@ -149,11 +166,32 @@ exports.patchInvoiceStatus = asyncHandler(async (req, res) => {
   if (existing.statut === 'annulee') {
     return res.status(409).json({ message: 'Cette facture est déjà annulée.', code: 'INVOICE_NOT_CANCELLABLE' });
   }
-  existing.statut = 'annulee';
-  await existing.save();
-  await existing.populate('client');
-  enregistrerActivite(req, { action: 'facture.annulee', ressource: 'facture', ressourceId: existing._id, details: `Facture ${existing.numero} annulée` });
-  res.json(existing);
+  const fiscalStatus = existing.fiscalisation?.status || 'non_emise';
+  if (EMECEF_LOCKED_STATUSES.includes(fiscalStatus)) {
+    return res.status(409).json({
+      message: fiscalStatus === 'confirmed'
+        ? 'Cette facture a été fiscalisée par la DGI. Son annulation directe est bloquée ; la procédure d’avoir n’est pas encore prise en charge.'
+        : 'Une demande e-MECeF est en cours ou son résultat est incertain. Réglez ou vérifiez d’abord son état auprès de la DGI avant d’annuler la facture Oryxa.',
+      code: 'EMECEF_STATE_BLOCKS_CANCEL',
+      fiscalisationStatus: fiscalStatus,
+    });
+  }
+  const annulee = await Invoice.findOneAndUpdate(
+    { _id: req.params.id, owner: req.userId, statut: { $nin: ['payee', 'annulee'] }, 'fiscalisation.status': { $nin: EMECEF_LOCKED_STATUSES } },
+    { $set: { statut: 'annulee' } },
+    { new: true }
+  );
+  if (!annulee) {
+    const latest = await Invoice.findOne({ _id: req.params.id, owner: req.userId });
+    const latestFiscalStatus = latest?.fiscalisation?.status || 'non_emise';
+    if (latest && EMECEF_LOCKED_STATUSES.includes(latestFiscalStatus)) {
+      return res.status(409).json({ message: 'Une demande e-MECeF est en cours ou son résultat est incertain. Vérifiez d’abord son état auprès de la DGI.', code: 'EMECEF_STATE_BLOCKS_CANCEL', fiscalisationStatus: latestFiscalStatus });
+    }
+    return res.status(409).json({ message: 'La facture a changé pendant l’annulation. Actualisez-la avant de réessayer.', code: 'INVOICE_NOT_CANCELLABLE' });
+  }
+  await annulee.populate('client');
+  enregistrerActivite(req, { action: 'facture.annulee', ressource: 'facture', ressourceId: annulee._id, details: `Facture ${annulee.numero} annulée` });
+  res.json(annulee);
 });
 
 
@@ -184,8 +222,21 @@ exports.deleteInvoice = asyncHandler(async (req, res) => {
       code: 'INVOICE_NOT_DELETABLE',
     });
   }
-  await existing.deleteOne();
-  await Payment.deleteMany({ invoice: existing._id });
+  const fiscalStatus = existing.fiscalisation?.status || 'non_emise';
+  if (EMECEF_LOCKED_STATUSES.includes(fiscalStatus)) return fiscalisationLockResponse(res, fiscalStatus);
+  const deleted = await Invoice.findOneAndDelete({
+    _id: req.params.id,
+    owner: req.userId,
+    statut: { $in: MODIFIABLE_STATUTS },
+    'fiscalisation.status': { $nin: EMECEF_LOCKED_STATUSES },
+  });
+  if (!deleted) {
+    const latest = await Invoice.findOne({ _id: req.params.id, owner: req.userId });
+    const fiscalStatusNow = latest?.fiscalisation?.status || 'non_emise';
+    if (latest && EMECEF_LOCKED_STATUSES.includes(fiscalStatusNow)) return fiscalisationLockResponse(res, fiscalStatusNow);
+    return res.status(409).json({ message: 'La facture a changé pendant la suppression. Actualisez-la avant de réessayer.', code: 'INVOICE_NOT_DELETABLE' });
+  }
+  await Payment.deleteMany({ invoice: deleted._id });
   res.json({ message: 'Facture supprimée' });
 });
 

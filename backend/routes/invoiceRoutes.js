@@ -1,15 +1,22 @@
 const express = require('express');
 const auth = require('../middleware/auth');
-const requireBusinessAccount = require('../middleware/requireBusinessAccount');
+const requireProprietaireOuAdmin = require('../middleware/requireProprietaireOuAdmin');
 const requireFeature = require('../middleware/requireFeature');
 const validate = require('../middleware/validate');
 const { createInvoiceSchema, updateInvoiceSchema, patchInvoiceStatusSchema } = require('../validators/invoiceValidators');
 const controller = require('../controllers/invoiceController');
+const fiscalisationController = require('../controllers/fiscalisationController');
 const pdfController = require('../controllers/pdfController');
 const router = express.Router();
 
-router.use(auth, requireBusinessAccount);
+router.use(auth);
 
+router.get('/emecef/options', requireProprietaireOuAdmin, fiscalisationController.getOptions);
+router.post('/:id/emecef/prepare', requireProprietaireOuAdmin, fiscalisationController.prepareInvoice);
+router.post('/:id/emecef/confirm', requireProprietaireOuAdmin, fiscalisationController.confirmInvoice);
+router.post('/:id/emecef/cancel', requireProprietaireOuAdmin, fiscalisationController.cancelInvoice);
+router.post('/:id/emecef/refresh-status', requireProprietaireOuAdmin, fiscalisationController.refreshInvoiceStatus);
+router.post('/:id/emecef/reset', requireProprietaireOuAdmin, fiscalisationController.resetFiscalisation);
 router.get('/', controller.getInvoices);
 router.get('/export', requireFeature('exportComptable'), controller.exportComptable);
 router.post('/preview', validate(createInvoiceSchema), controller.previewInvoicePdf);

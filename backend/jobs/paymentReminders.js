@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const { withJobLock } = require('../utils/jobLock');
 const Invoice = require('../models/Invoice');
 const User = require('../models/User');
 const email = require('../utils/email');
@@ -60,7 +61,7 @@ async function executerRelances() {
 
 function demarrerRelancesAutomatiques() {
   cron.schedule('0 8 * * *', () => {
-    executerRelances().catch((err) => {
+    withJobLock('job:relances', 30 * 60 * 1000, executerRelances).catch((err) => {
       console.error('[cron] Échec des relances automatiques :', err.message);
     });
   });

@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const User = require('../models/User');
 const Payout = require('../models/Payout');
-const { getWalletBalance } = require('../utils/financial');
+const { getWalletBalance, getWalletBalanceRaw } = require('../utils/financial');
 const { createPayoutForOwner, reconcilePayout } = require('../utils/payout');
 const email = require('../utils/email');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -50,12 +50,19 @@ async function sendPayoutConfirmation(user, settings, token) {
 }
 
 exports.getSummary = asyncHandler(async (req, res) => {
-  const [user, soldeRetirable, derniers] = await Promise.all([
+  const [user, soldeBrut, derniers] = await Promise.all([
     User.findById(req.userId).select('payoutSettings'),
-    getWalletBalance(req.userId),
+    getWalletBalanceRaw(req.userId),
     Payout.find({ owner: req.userId }).sort({ createdAt: -1 }).limit(10),
   ]);
-  res.json({ soldeRetirable, payoutSettings: publicPayoutSettings(user?.payoutSettings) , payouts: derniers });
+  // Un solde négatif (remboursement après reversement) n'est pas masqué : il est
+  // exposé comme `dette` pour que l'utilisateur et l'admin le voient.
+  res.json({
+    soldeRetirable: Math.max(0, soldeBrut),
+    dette: soldeBrut < 0 ? Math.abs(soldeBrut) : 0,
+    payoutSettings: publicPayoutSettings(user?.payoutSettings),
+    payouts: derniers,
+  });
 });
 
 exports.updateSettings = asyncHandler(async (req, res) => {
@@ -71,10 +78,7 @@ exports.updateSettings = asyncHandler(async (req, res) => {
 
   const current = user.payoutSettings?.toObject?.() || user.payoutSettings || {};
   const nextMode = mode || current.mode || 'mobile_money';
-  const rawPhone = phone !== undefined ? String(phone).trim() : String(current.phone || '').trim();
-  const { normalizeBeninPhone } = require('../utils/beninPhone');
-  const nextPhone = nextMode === 'mobile_money' ? normalizeBeninPhone(rawPhone) : rawPhone;
-  if (nextMode === 'mobile_money' && rawPhone && nextPhone === null) return res.status(400).json({ message: 'Utilisez un numéro béninois au format +229 01 XX XX XX XX.' });
+  const nextPhone = phone !== undefined ? String(phone).trim() : String(current.phone || '').trim();
   const nextCountry = country ? String(country).toUpperCase() : (current.country || 'BJ');
 
   // Les cartes bancaires sont des moyens de paiement entrants FedaPay, pas une

@@ -4,14 +4,12 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const { permissionsDe } = require('../utils/permissions');
 const { getWalletBalance } = require('../utils/financial');
+const { computeInvoiceTotals, sumPaid } = require('../utils/invoiceTotals');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
-const calcTTC = (inv) => {
-  const ht = (inv.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0)
-    - (inv.remise || 0);
-  return ht * (1 + (inv.tva || 0) / 100);
-};
+// Même formule que partout ailleurs (taxe spécifique et total DGI inclus).
+const calcTTC = (inv) => computeInvoiceTotals(inv).totalTTC;
 
 exports.getDashboard = asyncHandler(async (req, res) => {
   const [user, invoices, clients, payments] = await Promise.all([
@@ -35,7 +33,7 @@ exports.getDashboard = asyncHandler(async (req, res) => {
       (i.dateEcheance && new Date(i.dateEcheance) < new Date() && i.statut !== 'payee' && i.statut !== 'annulee'))
     .reduce((s, i) => s + calcTTC(i), 0);
 
-  const totalPaye = payments.reduce((s, p) => s + (p.montantFacture ?? p.montant ?? 0), 0);
+  const totalPaye = sumPaid(payments);
   const soldeRetirable = await getWalletBalance(req.userId);
 
   const dashboard = {

@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const { withJobLock } = require('../utils/jobLock');
 const User = require('../models/User');
 
 // Le virtuel `estPremium` (voir models/User.js) tient déjà compte de la date
@@ -28,7 +29,7 @@ async function nettoyerAbonnementsExpires() {
 // jamais pendant les tests (voir server.js : `if (require.main === module)`).
 function demarrerNettoyageAbonnements() {
   cron.schedule('0 3 * * *', () => {
-    nettoyerAbonnementsExpires().catch((err) => {
+    withJobLock('job:abonnements', 30 * 60 * 1000, nettoyerAbonnementsExpires).catch((err) => {
       console.error('[cron] Échec du nettoyage des abonnements expirés :', err.message);
     });
   });

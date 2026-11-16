@@ -1,12 +1,21 @@
 const cron = require('node-cron');
 const User = require('../models/User');
 const Payout = require('../models/Payout');
-const { createPayoutForOwner, reconcilePayout } = require('../utils/payout');
+const { createPayoutForOwner, reconcilePayout, recoverStalePayouts } = require('../utils/payout');
+const { withJobLock } = require('../utils/jobLock');
 
 // Les reversements sont réels : aucun mode simulation n'est utilisé. Si FedaPay
 // n'est pas configuré/autorisé, le job laisse les fonds intacts et journalise
 // l'erreur au lieu de créer un faux transfert.
 async function executerReversements() {
+  // 1) Libère d'abord les reversements restés bloqués avant démarrage, puis
+  //    réconcilie ceux en cours, AVANT d'en créer de nouveaux.
+  try { await recoverStalePayouts(); } catch (err) { console.error('Nettoyage payouts bloqués:', err.message); }
+  const actifsAvant = await Payout.find({ statut: { $in: ['pending', 'started', 'processing'] }, fedapayPayoutId: { $ne: null } }).limit(100);
+  for (const payout of actifsAvant) {
+    try { await reconcilePayout(payout); } catch (err) { console.error('Réconciliation payout:', err.message); }
+  }
+
   const users = await User.find({
     compteProprietaire: null,
     'payoutSettings.enabled': true,
@@ -34,8 +43,7 @@ async function executerReversements() {
     }
   }
 
-  // Réconciliation légère des reversements en cours : FedaPay reste la source
-  // de vérité pour le statut distant et les frais réellement facturés.
+  // Réconciliation des reversements qui viennent d'être lancés.
   const actifs = await Payout.find({ statut: { $in: ['pending', 'started', 'processing'] }, fedapayPayoutId: { $ne: null } }).limit(100);
   for (const payout of actifs) {
     try { await reconcilePayout(payout); } catch (err) { console.error('Réconciliation payout:', err.message); }
@@ -43,7 +51,7 @@ async function executerReversements() {
 }
 
 function demarrerReversementsAutomatiques() {
-  cron.schedule('15 2 * * *', () => executerReversements().catch((e) => console.error('Job reversements:', e)));
+  cron.schedule('15 2 * * *', () => withJobLock('job:reversements', 30 * 60 * 1000, executerReversements).catch((e) => console.error('Job reversements:', e)));
 }
 
 module.exports = { demarrerReversementsAutomatiques, executerReversements };

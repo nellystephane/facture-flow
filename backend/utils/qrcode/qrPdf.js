@@ -36,8 +36,9 @@ function drawPaymentQr(pdf, text, x, y, size = 96) {
   }
   pdf.restore();
 
-  // Make the whole QR clickable in PDF viewers as a convenience.
-  pdf.link(x, y, actualSize, actualSize, text);
+  // Only payment URLs are clickable. The official DGI QR payload (F;...)
+  // is fiscal data, not a URL, and must never be treated as a hyperlink.
+  if (/^https?:\/\//i.test(String(text))) pdf.link(x, y, actualSize, actualSize, text);
   return actualSize;
 }
 

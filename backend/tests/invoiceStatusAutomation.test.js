@@ -50,6 +50,23 @@ describe('Statuts de facture automatiques', () => {
     expect(res.body.statut).toBe('annulee');
   });
 
+  it('bloque l’annulation commerciale si la facture e-MECeF est en attente ou confirmée', async () => {
+    const { token } = await creerUtilisateurConnecte(app);
+    const client = await creerClient(app, token);
+    const f = await request(app).post('/api/invoices').set('Authorization', `Bearer ${token}`).send(facturePayload(client._id));
+    const Invoice = require('../models/Invoice');
+
+    for (const fiscalStatus of ['pending_confirmation', 'confirmed', 'unknown']) {
+      await Invoice.findByIdAndUpdate(f.body._id, { 'fiscalisation.status': fiscalStatus, 'fiscalisation.uid': 'uid-test' });
+      const res = await request(app)
+        .patch(`/api/invoices/${f.body._id}/statut`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ statut: 'annulee' });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe('EMECEF_STATE_BLOCKS_CANCEL');
+    }
+  });
+
   it('refuse d’annuler une facture déjà payée', async () => {
     const { token } = await creerUtilisateurConnecte(app);
     const client = await creerClient(app, token);

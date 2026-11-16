@@ -9,16 +9,13 @@ const { buildReceiptPdf } = require('../utils/pdfBuilder');
 const { creerFactureDepuisDevis } = require('./invoiceController');
 const LegalContent = require('../models/LegalContent');
 const { calculatePaymentQuote } = require('../utils/financial');
+const { PAID_PAYMENT_FILTER } = require('../utils/invoiceTotals');
+const { getInvoiceBalance } = require('../utils/invoicePayments');
+const { publicInvoiceDto, publicPaymentDto, publicQuoteDto, pickEmetteur } = require('../utils/publicDto');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
 function tokenPublicValide(token) { return /^[a-f0-9]{40,64}$/i.test(String(token || '')); }
-
-function computeTTC(invoice) {
-  const sousTotal = (invoice.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);
-  const ht = sousTotal - (invoice.remise || 0);
-  return ht * (1 + (invoice.tva || 0) / 100);
-}
 
 // ---- Statistiques publiques (landing page) ------------------------------
 let cache = { data: null, expiresAt: 0 };
@@ -34,7 +31,7 @@ exports.getPublicStats = asyncHandler(async (req, res) => {
   const [totalUtilisateurs, totalFactures, encaisseAgg] = await Promise.all([
     User.countDocuments(),
     Invoice.countDocuments(),
-    Payment.aggregate([{ $match: { statut: 'complete' } }, { $group: { _id: null, total: { $sum: '$montant' } } }]),
+    Payment.aggregate([{ $match: PAID_PAYMENT_FILTER }, { $group: { _id: null, total: { $sum: '$montant' } } }]),
   ]);
 
   const data = {
@@ -56,15 +53,22 @@ exports.getPublicInvoice = asyncHandler(async (req, res) => {
   if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const user = await User.findById(invoice.owner).select('nom entreprise email telephone whatsapp adresse devise banque logoUrl');
   if (!invoice.dateVue && invoice.statut === 'envoyee') {
+    // Mise à jour ciblée : ne réécrit pas toute la facture.
+    await Invoice.updateOne({ _id: invoice._id, statut: 'envoyee', dateVue: null }, { $set: { dateVue: new Date(), statut: 'vue' } });
     invoice.dateVue = new Date();
     invoice.statut = 'vue';
-    await invoice.save();
   }
-  const payments = await Payment.find({ invoice: invoice._id, statut: 'complete' }).sort({ date: -1 });
-  const totalPaye = payments.reduce((s, p) => s + (p.montantFacture ?? p.montant ?? 0), 0);
-  const totalTTC = computeTTC(invoice);
-  const quote = await calculatePaymentQuote(Math.max(0, totalTTC - totalPaye), invoice.fraisSupportesPar || 'utilisateur');
-  res.json({ invoice, emetteur: user, totalTTC, totalPaye, payments, fraisPaiement: quote });
+  const payments = await Payment.find({ invoice: invoice._id, ...PAID_PAYMENT_FILTER }).sort({ date: -1 });
+  const balance = await getInvoiceBalance(invoice);
+  const quote = await calculatePaymentQuote(balance.reste, invoice.fraisSupportesPar || 'utilisateur');
+  res.json({
+    invoice: publicInvoiceDto(invoice),
+    emetteur: pickEmetteur(user, { withBanque: true }),
+    totalTTC: balance.totalTTC,
+    totalPaye: balance.totalPaye,
+    payments: payments.map(publicPaymentDto),
+    fraisPaiement: quote,
+  });
 });
 
 // POST /api/public/invoices/:token/pay  { firstname, lastname, email, phone }
@@ -80,10 +84,7 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
   const { firstname, lastname, email, phone } = req.body;
   if (!email) return res.status(400).json({ message: 'Email requis pour le paiement.' });
 
-  const reste = Math.max(0, computeTTC(invoice) - (await Payment.aggregate([
-    { $match: { invoice: invoice._id, statut: 'complete' } },
-    { $group: { _id: null, total: { $sum: { $ifNull: ['$montantFacture', '$montant'] } } } },
-  ]))[0]?.total || 0);
+  const { reste } = await getInvoiceBalance(invoice);
   if (reste <= 0.5) return res.status(400).json({ message: 'Cette facture est déjà réglée.' });
   const fraisSupportesPar = invoice.fraisSupportesPar || 'utilisateur';
 
@@ -138,7 +139,7 @@ exports.getPublicPaymentStatus = asyncHandler(async (req, res) => {
   const invoice = await Invoice.findOne({ publicToken: req.params.token });
   if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const dernierPaiement = await Payment.findOne({ invoice: invoice._id }).sort({ createdAt: -1 });
-  res.json({ statutFacture: invoice.statut, dernierPaiement });
+  res.json({ statutFacture: invoice.statut, dernierPaiement: dernierPaiement ? publicPaymentDto(dernierPaiement) : null });
 });
 
 // GET /api/public/invoices/:token/receipt/:paymentId — reçu téléchargeable par le client
@@ -164,17 +165,17 @@ exports.getPublicQuote = asyncHandler(async (req, res) => {
   if (!quote || quote.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   const user = await User.findById(quote.owner).select('nom entreprise email telephone whatsapp adresse devise logoUrl');
   if (!quote.dateVue && quote.statut === 'envoye') {
+    await Quote.updateOne({ _id: quote._id, dateVue: null }, { $set: { dateVue: new Date() } });
     quote.dateVue = new Date();
-    await quote.save();
   }
-  res.json({ quote, emetteur: user, totalTTC: quote.totalTTC });
+  res.json({ quote: publicQuoteDto(quote), emetteur: pickEmetteur(user), totalTTC: quote.totalTTC });
 });
 
 // POST /api/public/quotes/:token/repondre  { action: 'accepter' | 'demander_infos', message? }
 exports.respondPublicQuote = asyncHandler(async (req, res) => {
   if (!tokenPublicValide(req.params.token)) return res.status(404).json({ message: 'Lien public invalide.' });
   const { action, message } = req.body;
-  if (!['accepter', 'refuser', 'demander_infos'].includes(action)) {
+  if (!['accepter', 'demander_infos'].includes(action)) {
     return res.status(400).json({ message: 'Action invalide.' });
   }
 
@@ -182,16 +183,6 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
   if (!quote || quote.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   if (quote.statut === 'accepte') {
     return res.status(409).json({ message: 'Ce devis a déjà été accepté.' });
-  }
-
-  if (action === 'refuser') {
-    const refuse = await Quote.findOneAndUpdate(
-      { _id: quote._id, statut: { $nin: ['accepte', 'refuse', 'expire'] }, publicAccessRevoked: { $ne: true } },
-      { $set: { statut: 'refuse' } },
-      { returnDocument: 'after' }
-    );
-    if (!refuse) return res.status(409).json({ message: 'Ce devis ne peut plus recevoir de réponse.' });
-    return res.json({ message: 'Devis refusé.', quote: refuse });
   }
 
   const owner = await User.findById(quote.owner);
@@ -236,7 +227,7 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
       }
     }
 
-    return res.json({ message: 'Devis accepté. Le prestataire a été notifié et prépare votre facture.', quote });
+    return res.json({ message: 'Devis accepté. Le prestataire a été notifié et prépare votre facture.', quote: publicQuoteDto(verrou) });
   }
 
   // action === 'demander_infos'
@@ -254,7 +245,7 @@ exports.respondPublicQuote = asyncHandler(async (req, res) => {
     }
   }
 
-  res.json({ message: 'Votre demande a été transmise au prestataire.', quote });
+  res.json({ message: 'Votre demande a été transmise au prestataire.', quote: publicQuoteDto(quote) });
 });
 
 // Surcharge éventuelle d'une page légale, éditée depuis /admin — renvoie

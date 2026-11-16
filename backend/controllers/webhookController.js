@@ -5,7 +5,10 @@ const Subscription = require('../models/Subscription');
 const fedapay = require('../utils/fedapay');
 const { buildReceiptPdf } = require('../utils/pdfBuilder');
 const email = require('../utils/email');
-const { createPaymentLedger, roundXof } = require('../utils/financial');
+const WalletEntry = require('../models/WalletEntry');
+const { createPaymentLedger, createLedgerEntryOnce, roundXof } = require('../utils/financial');
+const { syncInvoiceStatus } = require('../utils/invoicePayments');
+const { applyRefund } = require('../utils/refunds');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -29,79 +32,90 @@ async function handleInvoicePaid(transaction) {
     console.warn('Webhook FedaPay: aucun paiement local pour la transaction', transaction.id);
     return;
   }
-  if (payment.statut === 'complete') return; // déjà traité (idempotence)
+  if (payment.statut === 'echoue') {
+    console.error('Webhook FedaPay: transaction approuvée pour un paiement local marqué échoué', transaction.id);
+    return;
+  }
 
-  payment.statut = 'complete';
-  payment.fedapayMode = transaction.mode || '';
-  payment.methode = mapFedaPayModeToPaymentMethod(transaction.mode, payment.methode);
+  // Sécurité : le montant réellement débité chez FedaPay doit correspondre à
+  // celui attendu. Sinon on ne crédite rien et on laisse une trace à examiner.
+  const paidRemote = Number(transaction.amount);
+  if (Number.isFinite(paidRemote) && Math.round(paidRemote) !== Math.round(payment.montant)) {
+    console.error(`Webhook FedaPay: montant inattendu pour ${transaction.id} (reçu ${paidRemote}, attendu ${payment.montant}). Aucun crédit effectué.`);
+    await Payment.updateOne({ _id: payment._id, statut: { $ne: 'complete' } }, { $set: { litige: true, litigeNote: `Montant FedaPay inattendu : ${paidRemote} au lieu de ${payment.montant}` } });
+    return;
+  }
+
   const actualPayinFee = roundXof(transaction.fees || transaction.fee || transaction.commission || 0);
-  payment.fraisPayin = actualPayinFee;
-  payment.montantClientPaye = payment.montant;
-  if (!payment.montantFacture) payment.montantFacture = payment.montant;
-  if (!payment.montantNetUtilisateur) {
-    payment.montantNetUtilisateur = payment.fraisSupportesPar === 'client'
-      ? payment.montantFacture
-      : Math.max(0, payment.montantFacture - actualPayinFee - (payment.fraisPayoutProvisionnes || 0));
+  const montantFacture = payment.montantFacture || payment.montant;
+  const netUtilisateur = payment.fraisSupportesPar === 'client'
+    ? montantFacture
+    : Math.max(0, montantFacture - actualPayinFee - (payment.fraisPayoutProvisionnes || 0));
+
+  // 1) Prise en charge ATOMIQUE : un seul des webhooks simultanés passe de
+  //    « non complété » à « complété ». Les autres ne refont pas l'encaissement.
+  const claimed = await Payment.findOneAndUpdate(
+    { _id: payment._id, statut: { $ne: 'complete' } },
+    {
+      $set: {
+        statut: 'complete',
+        fedapayMode: transaction.mode || '',
+        methode: mapFedaPayModeToPaymentMethod(transaction.mode, payment.methode),
+        fraisPayin: actualPayinFee,
+        montantClientPaye: payment.montant,
+        montantFacture,
+        montantNetUtilisateur: payment.montantNetUtilisateur || netUtilisateur,
+      },
+    },
+    { returnDocument: 'after' }
+  );
+  const firstDelivery = !!claimed;
+  let current = claimed || (await Payment.findById(payment._id));
+  if (!current) return;
+
+  // 2) Étapes REPRENABLES : si le serveur s'est arrêté après l'étape 1, le
+  //    retry de FedaPay passe ici et termine le travail (rien n'est dupliqué).
+  if (!current.receiptNumber) {
+    const number = await nextReceiptNumber(current.owner);
+    const withReceipt = await Payment.findOneAndUpdate(
+      { _id: current._id, $or: [{ receiptNumber: '' }, { receiptNumber: null }] },
+      { $set: { receiptNumber: number } },
+      { returnDocument: 'after' }
+    );
+    current = withReceipt || (await Payment.findById(current._id));
   }
-  payment.receiptNumber = await nextReceiptNumber(payment.owner);
-  await payment.save();
+
   // Le ledger conserve les fonds effectivement disponibles chez FedaPay.
-  // Lorsque l'Utilisateur supporte les frais, le crédit est après Pay-in.
-  // Lorsque le Client supporte les frais, le supplément destiné au futur
-  // payout reste également crédité : il servira à payer le coût réel du
-  // reversement sans diminuer le montant commercial dû à l'Utilisateur.
-  const creditBrut = payment.fraisSupportesPar === 'client'
-    ? payment.montantClientPaye - actualPayinFee
-    : Math.max(0, payment.montantFacture - actualPayinFee);
+  // Frais à la charge de l'utilisateur : crédit après Pay-in. Frais à la charge
+  // du client : le supplément destiné au futur reversement reste crédité.
+  const creditBrut = current.fraisSupportesPar === 'client'
+    ? current.montantClientPaye - current.fraisPayin
+    : Math.max(0, current.montantFacture - current.fraisPayin);
   await createPaymentLedger({
-    payment,
+    payment: current,
     montantCredit: creditBrut,
-    description: `Encaissement en ligne de la facture ${payment.invoice}`,
+    description: `Encaissement en ligne de la facture ${current.invoice}`,
   });
-  // Le payout prévisionnel est réservé une seule fois ici. Cette provision
-  // sert à ce que `solde retirable` soit déjà net du coût de reversement.
-  // Au moment du payout, on transfère exactement ce solde réservé et FedaPay
-  // débite en plus le coût réel ; si ce coût réel dépasse la provision, la
-  // cible de transfert est réduite avant /start. Il n'y a donc jamais deux
-  // débits du même frais.
-  const payoutReserve = roundXof(payment.fraisPayoutProvisionnes || 0);
-  if (payoutReserve > 0) {
-    const WalletEntry = require('../models/WalletEntry');
-    const existingReserve = await WalletEntry.findOne({
-      payment: payment._id,
-      type: 'debit_frais',
-      'metadata.kind': 'payout_reserve',
-    });
-    if (!existingReserve) {
-      await WalletEntry.create({
-        owner: payment.owner,
-        type: 'debit_frais',
-        montant: payoutReserve,
-        payment: payment._id,
-        reference: `payout-reserve-${payment._id}`,
-        description: 'Provision estimative des frais de reversement FedaPay',
-        metadata: { kind: 'payout_reserve', source: 'payment_quote', estimateOnlyUntilPayout: true },
-      });
-    }
-  }
 
+  // Les frais de reversement ne sont PAS provisionnés ici : ils sont prélevés
+  // au moment du reversement, sur le solde réellement disponible (voir
+  // utils/payout.js). Une provision estimative au crédit créait un écart entre
+  // le solde affiché et les fonds réels.
 
-  const invoice = await Invoice.findById(payment.invoice).populate('client');
+  // Statut de la facture : recalculé depuis les paiements réels et la source
+  // unique du total (taxe spécifique et total DGI inclus).
+  const synced = await syncInvoiceStatus(current.invoice);
+  if (!synced) return;
+
+  // Les emails ne partent qu'à la première livraison du webhook.
+  if (!firstDelivery) return;
+  const invoice = await Invoice.findById(current.invoice).populate('client');
   if (!invoice) return;
-
-  const payments = await Payment.find({ invoice: invoice._id, statut: 'complete' });
-  const totalPaye = payments.reduce((s, p) => s + (p.montantFacture ?? p.montant ?? 0), 0);
-  const sousTotal = (invoice.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);
-  const ttc = (sousTotal - (invoice.remise || 0)) * (1 + (invoice.tva || 0) / 100);
-
-  invoice.statut = totalPaye >= ttc - 0.01 ? 'payee' : 'envoyee';
-  await invoice.save();
-
   const user = await User.findById(invoice.owner);
   if (user && invoice.client?.email) {
     try {
-      const buffer = await buildReceiptPdf({ invoice, payment, user });
-      await email.sendReceiptEmail({ to: invoice.client.email, invoice, user, payment, pdfBuffer: buffer });
+      const buffer = await buildReceiptPdf({ invoice, payment: current, user });
+      await email.sendReceiptEmail({ to: invoice.client.email, invoice, user, payment: current, pdfBuffer: buffer });
     } catch (err) {
       console.error("Échec d'envoi du reçu par email:", err.message);
     }
@@ -109,7 +123,7 @@ async function handleInvoicePaid(transaction) {
   if (user?.email) {
     try {
       await email.sendOwnerPaymentNotification({
-        to: user.email, invoice, payment, clientNom: invoice.client?.nom || 'Client',
+        to: user.email, invoice, payment: current, clientNom: invoice.client?.nom || 'Client',
       });
     } catch (err) {
       console.error("Échec de notification propriétaire:", err.message);
@@ -124,42 +138,14 @@ async function handlePayoutEvent(entity) {
   if (!payoutId) return;
   const payout = await Payout.findOne({ fedapayPayoutId: String(payoutId) });
   if (!payout) return;
-  const remote = await fedapay.getPayout(payoutId);
-  payout.fedapayStatus = remote.status || entity.status || '';
-  const remoteStatus = String(remote.status || entity.status || payout.statut).toLowerCase();
-  payout.statut = remoteStatus === 'scheduled' ? 'processing' : (['pending', 'started', 'processing', 'sent', 'failed'].includes(remoteStatus) ? remoteStatus : 'processing');
-  payout.fraisFedaPay = roundXof(remote.fees || remote.fixed_commission || 0);
-  payout.commissionFedaPay = roundXof(remote.commission || 0);
-  payout.montantTransfere = roundXof(remote.amount_transferred || 0);
-  payout.montantDebite = roundXof(remote.amount_debited || 0);
-  if (remote.sent_at) payout.sentAt = new Date(remote.sent_at);
-  if (remote.failed_at) payout.failedAt = new Date(remote.failed_at);
-  if (remote.last_error_code) payout.erreur = String(remote.last_error_code);
-  await payout.save();
+  // Même logique que la réconciliation planifiée : statut distant + écritures
+  // de ledger idempotentes (libération en cas d'échec, restitution de l'écart).
+  const { reconcilePayout } = require('../utils/payout');
+  await reconcilePayout(payout);
 }
 
 async function handleInvoiceRefund(transaction) {
-  const Payment = require('../models/Payment');
-  const WalletEntry = require('../models/WalletEntry');
-  const payment = await Payment.findOne({ fedapayTransactionId: String(transaction.id), statut: 'complete' });
-  if (!payment || payment.rembourse) return;
-  payment.rembourse = true;
-  payment.rembourseLe = new Date();
-  await payment.save();
-  const montant = roundXof(payment.montantNetUtilisateur || payment.montantFacture || payment.montant);
-  if (montant > 0) {
-    const exists = await WalletEntry.findOne({ payment: payment._id, type: 'debit_remboursement' });
-    if (!exists) {
-      await WalletEntry.create({
-        owner: payment.owner,
-        type: 'debit_remboursement',
-        montant,
-        payment: payment._id,
-        reference: `refund-${payment._id}`,
-        description: 'Remboursement FedaPay confirmé',
-      });
-    }
-  }
+  await applyRefund({ fedapayTransactionId: String(transaction.id) });
 }
 
 async function handleSubscriptionPaid(transaction) {
@@ -170,9 +156,21 @@ async function handleSubscriptionPaid(transaction) {
   const sub = await Subscription.findById(subscriptionId);
   if (!sub) return;
 
+  // Le montant réellement débité doit correspondre à l'abonnement commandé.
+  const paidRemote = Number(transaction.amount);
+  if (Number.isFinite(paidRemote) && Math.round(paidRemote) !== Math.round(sub.montant)) {
+    console.error(`Webhook FedaPay (abonnement): montant inattendu pour ${transaction.id} (reçu ${paidRemote}, attendu ${sub.montant}). Aucune activation.`);
+    return;
+  }
+
   const DUREE_MS = { '1mois': 30 * 24 * 3600 * 1000, '6mois': 183 * 24 * 3600 * 1000, '1an': 365 * 24 * 3600 * 1000 };
   const now = new Date();
   const dureeMs = DUREE_MS[sub.duree] || DUREE_MS['1mois'];
+  // Renouvellement anticipé : la nouvelle période commence à la fin de la
+  // période encore active, pour ne pas faire perdre des jours déjà payés.
+  const currentUser = await User.findById(sub.owner).select('abonnement subscription');
+  const currentEnd = currentUser?.abonnement?.dateFin ? new Date(currentUser.abonnement.dateFin) : null;
+  const startsAt = currentEnd && currentEnd > now && currentUser.subscription !== 'gratuit' ? currentEnd : now;
 
   // Mise à jour atomique : deux retries FedaPay simultanés ne peuvent pas
   // transformer le même abonnement deux fois ni décaler sa date de début.
@@ -182,8 +180,8 @@ async function handleSubscriptionPaid(transaction) {
       $set: {
         statut: 'payee',
         fedapayTransactionId: String(transaction.id),
-        dateDebut: now,
-        dateFin: new Date(now.getTime() + dureeMs),
+        dateDebut: startsAt,
+        dateFin: new Date(startsAt.getTime() + dureeMs),
       },
     },
     { returnDocument: 'after' }

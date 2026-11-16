@@ -1,4 +1,5 @@
 const cron = require('node-cron');
+const { withJobLock } = require('../utils/jobLock');
 const User = require('../models/User');
 
 // Un compte non confirmé ne peut de toute façon pas se connecter (voir
@@ -23,7 +24,7 @@ function demarrerNettoyageComptesNonConfirmes() {
   // Une fois par jour à 4h du matin — en dehors de la fenêtre du nettoyage
   // des abonnements expirés (3h) pour ne pas cumuler la charge.
   cron.schedule('0 4 * * *', () => {
-    nettoyerComptesNonConfirmes().catch((err) => {
+    withJobLock('job:comptes', 30 * 60 * 1000, nettoyerComptesNonConfirmes).catch((err) => {
       console.error('[cron] Échec du nettoyage des comptes non confirmés :', err.message);
     });
   });

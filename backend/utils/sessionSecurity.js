@@ -15,25 +15,32 @@ function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-function cookieOptions(maxAge) {
+// Sur deux domaines différents (ex. xxx.github.io + xxx.onrender.com) le cookie
+// de session est « tiers » : Safari/iOS et de plus en plus de navigateurs le
+// bloquent, et la connexion échoue. La vraie solution est un domaine propre
+// partagé (app.oryxa.bj + api.oryxa.bj) : définir alors
+//   COOKIE_SAMESITE=lax  et  COOKIE_DOMAIN=.oryxa.bj
+// Sans ces variables, le comportement précédent est conservé.
+function baseCookieOptions() {
   const production = process.env.NODE_ENV === 'production';
-  return {
+  const configured = String(process.env.COOKIE_SAMESITE || '').toLowerCase();
+  const sameSite = ['lax', 'strict', 'none'].includes(configured) ? configured : (production ? 'none' : 'lax');
+  const options = {
     httpOnly: true,
-    secure: production,
-    sameSite: production ? 'none' : 'lax',
+    secure: production || sameSite === 'none',
+    sameSite,
     path: '/',
-    maxAge,
   };
+  if (process.env.COOKIE_DOMAIN) options.domain = process.env.COOKIE_DOMAIN;
+  return options;
+}
+
+function cookieOptions(maxAge) {
+  return { ...baseCookieOptions(), maxAge };
 }
 
 function clearCookieOptions() {
-  const production = process.env.NODE_ENV === 'production';
-  return {
-    httpOnly: true,
-    secure: production,
-    sameSite: production ? 'none' : 'lax',
-    path: '/',
-  };
+  return baseCookieOptions();
 }
 
 async function createSession({ type, userId = null, adminEmail = null, req }) {

@@ -1,5 +1,4 @@
 const bcrypt = require('bcryptjs');
-const { timingSafeEqual } = require('crypto');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const Invoice = require('../models/Invoice');
@@ -17,6 +16,7 @@ const AffiliateCommission = require('../models/AffiliateCommission');
 const Session = require('../models/Session');
 const AdminAuditLog = require('../models/AdminAuditLog');
 const SecurityEvent = require('../models/SecurityEvent');
+const { applyRefund } = require('../utils/refunds');
 const {
   createSession,
   signAccessToken,
@@ -30,24 +30,18 @@ const {
 const { getConfiguredAdminEmail } = require('../utils/adminConfig');
 
 // ===== Authentification admin =====
-// Les identifiants admin sont configurés dans les secrets Render, indépendamment
-// de MongoDB. Le hash bcrypt est préféré ; ADMIN_PASSWORD reste un repli possible.
+// Oryxa ne possède qu'un seul compte administrateur plateforme. Son email et
+// son hash de mot de passe restent hors de MongoDB, dans les secrets Render.
 async function motDePasseValide(motDePasseFourni) {
   if (process.env.ADMIN_PASSWORD_HASH) {
-    try {
-      return await bcrypt.compare(motDePasseFourni, process.env.ADMIN_PASSWORD_HASH);
-    } catch (_) {
-      return false;
-    }
+    return bcrypt.compare(motDePasseFourni, process.env.ADMIN_PASSWORD_HASH);
   }
-
-  // Repli pour faciliter la configuration initiale : mot de passe en variable
-  // d'environnement. Préférer ADMIN_PASSWORD_HASH en production.
-  const configuredPassword = process.env.ADMIN_PASSWORD;
-  if (!configuredPassword || typeof motDePasseFourni !== 'string') return false;
-  const supplied = Buffer.from(motDePasseFourni, 'utf8');
-  const expected = Buffer.from(configuredPassword, 'utf8');
-  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
+  // Le mot de passe en clair est toléré uniquement hors production pour le
+  // développement. Il est refusé par le démarrage production.
+  if (process.env.NODE_ENV !== 'production' && process.env.ADMIN_PASSWORD) {
+    return motDePasseFourni === process.env.ADMIN_PASSWORD;
+  }
+  return false;
 }
 
 exports.login = asyncHandler(async (req, res) => {
@@ -311,26 +305,8 @@ exports.listPayments = asyncHandler(async (req, res) => {
 
 exports.signalerLitige = asyncHandler(async (req, res) => {
   const { note = '' } = req.body;
-  const payment = await Payment.findByIdAndUpdate(req.params.id, { litige: true, litigeNote: note }, { returnDocument: 'after' });
+  const payment = await Payment.findByIdAndUpdate(req.params.id, { litige: true, litigeNote: String(note).slice(0, 1000) }, { returnDocument: 'after' });
   if (!payment) return res.status(404).json({ message: 'Paiement introuvable' });
-  if (payment.rembourse) return res.status(409).json({ message: 'Ce paiement est déjà marqué comme remboursé.' });
-  if (payment.origine !== 'en_ligne' || payment.statut !== 'complete') return res.status(409).json({ message: 'Seul un paiement en ligne confirmé peut être marqué comme remboursé.' });
-  if (payment.origine === 'en_ligne' && payment.statut === 'complete') {
-    const WalletEntry = require('../models/WalletEntry');
-const Subscription = require('../models/Subscription');
-const { ABONNEMENT_REDUCTION_PERCENT } = require('../config/plans');
-    const exists = await WalletEntry.findOne({ payment: payment._id, type: 'debit_remboursement' });
-    if (!exists && Number(payment.montantNetUtilisateur || 0) > 0) {
-      await WalletEntry.create({
-        owner: payment.owner,
-        type: 'debit_remboursement',
-        montant: Math.round(payment.montantNetUtilisateur),
-        payment: payment._id,
-        reference: `refund-${payment._id}`,
-        description: 'Remboursement d’un paiement en ligne',
-      });
-    }
-  }
   res.json(payment);
 });
 
@@ -341,15 +317,18 @@ exports.resoudreLitige = asyncHandler(async (req, res) => {
 });
 
 exports.marquerRembourse = asyncHandler(async (req, res) => {
-  // Ceci enregistre le remboursement côté Oryxa pour le suivi admin — le
-  // remboursement réel côté FedaPay se fait sur leur tableau de bord
-  // marchand ; ce bouton ne déclenche aucun virement.
-  const payment = await Payment.findByIdAndUpdate(
-    req.params.id,
-    { rembourse: true, rembourseLe: new Date() },
-    { returnDocument: 'after' }
-  );
-  if (!payment) return res.status(404).json({ message: 'Paiement introuvable' });
+  // Enregistre le remboursement côté Oryxa — le remboursement réel côté FedaPay
+  // se fait sur leur tableau de bord marchand ; ce bouton ne déclenche aucun
+  // virement. Il débite en revanche le solde de l'utilisateur et recalcule le
+  // statut de la facture (même effet que le webhook de remboursement).
+  const existant = await Payment.findById(req.params.id);
+  if (!existant) return res.status(404).json({ message: 'Paiement introuvable' });
+  if (existant.rembourse) return res.status(409).json({ message: 'Ce paiement est déjà marqué comme remboursé.' });
+  if (existant.origine !== 'en_ligne' || existant.statut !== 'complete') {
+    return res.status(409).json({ message: 'Seul un paiement en ligne confirmé peut être marqué comme remboursé.' });
+  }
+  const payment = await applyRefund({ _id: existant._id });
+  if (!payment) return res.status(409).json({ message: 'Ce paiement est déjà marqué comme remboursé.' });
   res.json(payment);
 });
 

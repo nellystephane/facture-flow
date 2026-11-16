@@ -114,6 +114,25 @@ describe('Immutabilité des factures envoyées', () => {
     expect(suppr.status).toBe(200);
   });
 
+  it('bloque la modification et la suppression quand une demande e-MECeF est en cours ou confirmée', async () => {
+    const { token } = await creerUtilisateurConnecte(app);
+    const client = await creerClient(app, token);
+    const f = await request(app).post('/api/invoices').set('Authorization', `Bearer ${token}`).send(facturePayload(client._id));
+    const Invoice = require('../models/Invoice');
+    await Invoice.findByIdAndUpdate(f.body._id, { 'fiscalisation.status': 'pending_confirmation', 'fiscalisation.uid': 'uid-test' });
+
+    const maj = await request(app)
+      .put(`/api/invoices/${f.body._id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ objet: 'Modification interdite' });
+    expect(maj.status).toBe(409);
+    expect(maj.body.code).toBe('EMECEF_STATE_LOCKS_INVOICE');
+
+    const suppr = await request(app).delete(`/api/invoices/${f.body._id}`).set('Authorization', `Bearer ${token}`);
+    expect(suppr.status).toBe(409);
+    expect(suppr.body.code).toBe('EMECEF_STATE_LOCKS_INVOICE');
+  });
+
   it("bloque la modification et la suppression dès que la facture n'est plus un brouillon", async () => {
     const { token } = await creerUtilisateurConnecte(app);
     const client = await creerClient(app, token);

@@ -1,10 +1,15 @@
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const { computeInvoiceTotals } = require('../utils/invoiceTotals');
 
 const itemSchema = new mongoose.Schema({
   description: { type: String, required: true },
   quantite: { type: Number, required: true, default: 1 },
   prixUnitaire: { type: Number, required: true, default: 0 },
+  taxGroup: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F'], default: null },
+  taxSpecific: { type: Number, min: 0, default: 0 },
+  originalPrice: { type: Number, min: 0, default: null },
+  priceModification: { type: String, default: '' },
 }, { _id: false });
 
 itemSchema.virtual('total').get(function () {
@@ -35,6 +40,32 @@ const invoiceSchema = new mongoose.Schema({
   // Jeton public : permet au client d'accéder à la page de paiement sans compte.
   publicToken: { type: String, default: null },
   publicAccessRevoked: { type: Boolean, default: false },
+  // État e-MECeF distinct du statut commercial Oryxa. Ne jamais confondre les deux.
+  fiscalisation: {
+    status: { type: String, enum: ['non_emise', 'submitting', 'pending_confirmation', 'confirming', 'cancelling', 'confirmed', 'cancelled', 'error', 'unknown'], default: 'non_emise' },
+    environment: { type: String, enum: ['test'], default: 'test' },
+    invoiceType: { type: String, enum: ['FV', 'FA', 'EV', 'EA'], default: 'FV' },
+    aib: { type: String, enum: ['', 'A', 'B'], default: '' },
+    reference: { type: String, default: null },
+    requestPayload: { type: mongoose.Schema.Types.Mixed, default: null },
+    creationResponse: { type: mongoose.Schema.Types.Mixed, default: null },
+    uid: { type: String, default: null },
+    requestFingerprint: { type: String, default: null },
+    requestAt: { type: Date, default: null },
+    expectedTotal: { type: Number, default: null },
+    dgiTotal: { type: Number, default: null },
+    confirmedAt: { type: Date, default: null },
+    codeMECeFDGI: { type: String, default: null },
+    nim: { type: String, default: null },
+    dateTime: { type: String, default: null },
+    qrCode: { type: String, default: null },
+    counters: { type: String, default: null },
+    response: { type: mongoose.Schema.Types.Mixed, default: null },
+    errorCode: { type: String, default: null },
+    errorDesc: { type: String, default: null },
+    // Trace des réinitialisations manuelles (après vérification auprès de la DGI).
+    resetHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  },
   derniereRelance: { type: Date, default: null },
   dateEnvoi: { type: Date, default: null },
   dateVue: { type: Date, default: null },
@@ -55,13 +86,15 @@ invoiceSchema.index(
   { unique: true, partialFilterExpression: { publicToken: { $type: 'string' } } }
 );
 
+// Les montants viennent d'un module unique (utils/invoiceTotals) pour que la
+// page publique, le paiement, le webhook, les stats et le PDF ne divergent
+// jamais. `totalTTC` fait foi du total fiscal DGI une fois la facture confirmée.
 invoiceSchema.virtual('totalHT').get(function () {
-  const sousTotal = (this.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);
-  return sousTotal - (this.remise || 0);
+  return computeInvoiceTotals(this).totalHT;
 });
 
 invoiceSchema.virtual('totalTTC').get(function () {
-  return this.totalHT * (1 + (this.tva || 0) / 100);
+  return computeInvoiceTotals(this).totalTTC;
 });
 
 invoiceSchema.pre('save', function () {

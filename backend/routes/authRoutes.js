@@ -1,9 +1,11 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const requireProprietaireOuAdmin = require('../middleware/requireProprietaireOuAdmin');
 const validate = require('../middleware/validate');
 const requireFeature = require('../middleware/requireFeature');
 const { updateProfileSchema } = require('../validators/authValidators');
 const controller = require('../controllers/authController');
+const fiscalisationController = require('../controllers/fiscalisationController');
 const router = express.Router();
 
 router.post('/register', controller.register);
@@ -14,8 +16,10 @@ router.post('/refresh', controller.refresh);
 router.post('/logout', controller.logout);
 router.post('/mot-de-passe-oublie', controller.forgotPassword);
 router.post('/reinitialiser-mot-de-passe', controller.resetPassword);
-router.post('/activer-espace-utilisateur', auth, controller.activateUserWorkspace);
 router.get('/profile', auth, controller.getProfile);
+router.get('/profile/emecef', auth, requireProprietaireOuAdmin, fiscalisationController.getConfig);
+router.put('/profile/emecef', auth, requireProprietaireOuAdmin, fiscalisationController.saveConfig);
+router.post('/profile/emecef/test-connection', auth, requireProprietaireOuAdmin, fiscalisationController.testConnection);
 router.put('/profile', auth, validate(updateProfileSchema), controller.updateProfile);
 router.post('/profile/logo', auth, requireFeature('logoPersonnalise'), controller.uploadLogo);
 router.delete('/profile/logo', auth, controller.removeLogo);

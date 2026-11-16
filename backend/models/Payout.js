@@ -27,6 +27,10 @@ const payoutSchema = new mongoose.Schema({
   scheduledAt: { type: Date, default: null },
   sentAt: { type: Date, default: null },
   failedAt: { type: Date, default: null },
+  // Posé juste AVANT l'appel /start de FedaPay. Tant qu'il est vide, aucun
+  // argent n'a pu quitter le compte : le reversement peut être abandonné et
+  // la réservation libérée sans risque.
+  startRequestedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 payoutSchema.index({ owner: 1, createdAt: -1 });

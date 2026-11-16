@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Download, Pencil, Wallet, Trash2,
-  XCircle, Mail, Link2, Receipt, Loader2, Lock, MessageCircle
+  XCircle, Mail, Link2, Receipt, Loader2, Lock, MessageCircle, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 import { authenticatedFetch } from '../api/authenticatedFetch';
+import { getEmecefOptions, type EmecefOptions, type EmecefOption } from '../api/emecef';
 import { getInvoice, patchInvoiceStatus, deleteInvoice, invoicePdfUrl, sendInvoiceEmail } from '../api/invoices';
 import { createPayment, getPayments, deletePayment, paymentReceiptUrl } from '../api/payments';
 import type { Invoice, Payment, MethodePaiement } from '../types';
@@ -16,8 +17,17 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoHint from '../components/ui/InfoHint';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { formatFCFA, formatDate, badgeClass, INVOICE_STATUT_LABEL, METHODE_LABEL, apiError, totalTTC, todayISO, publicAppUrl } from '../utils/format';
+import { formatFCFA, formatDate, badgeClass, INVOICE_STATUT_LABEL, METHODE_LABEL, apiError, totalHT, totalTTC, todayISO, publicAppUrl } from '../utils/format';
 import { ouvrirPartageWhatsApp } from '../utils/whatsapp';
+import { prepareEmecefInvoice, confirmEmecefInvoice, cancelEmecefInvoice, refreshEmecefInvoiceStatus, resetEmecefInvoice } from '../api/emecef';
+
+function dgiOptionCode(option: EmecefOption): string {
+  if (typeof option === 'string') return option.trim().toUpperCase();
+  return String(option.type || option.code || option.name || option.value || '').trim().toUpperCase();
+}
+function dgiOptionDescription(option: EmecefOption): string {
+  return typeof option === 'string' ? '' : String(option.description || '');
+}
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -50,6 +60,35 @@ export default function InvoiceDetail() {
 
   useEffect(load, [id]);
 
+  useEffect(() => {
+    let active = true;
+    setEmecefOptionsLoading(true);
+    setEmecefOptionsError('');
+    getEmecefOptions()
+      .then((res) => {
+        if (!active) return;
+        setEmecefOptions(res.data);
+        const availableTypes = (res.data.invoiceTypes || []).map(dgiOptionCode).filter((value) => ['FV', 'FA', 'EV', 'EA'].includes(value));
+        const availablePayments = (res.data.paymentTypes || []).map(dgiOptionCode).filter((value) => ['ESPECES', 'CHEQUES', 'MOBILEMONEY', 'CARTEBANCAIRE', 'VIREMENT', 'CREDIT', 'AUTRE'].includes(value));
+        setEmecefForm((current) => ({
+          ...current,
+          invoiceType: availableTypes.includes(current.invoiceType) ? current.invoiceType : ((availableTypes[0] || 'FV') as 'FV' | 'FA' | 'EV' | 'EA'),
+          paymentType: availablePayments.includes(current.paymentType) ? current.paymentType : (availablePayments[0] || 'ESPECES'),
+          taxGroup: ['a','b','c','d','e','f'].some((key) => key.toUpperCase() === current.taxGroup && res.data.taxGroups?.[key] !== undefined)
+            ? current.taxGroup
+            : (['a','b','c','d','e','f'].find((key) => res.data.taxGroups?.[key] !== undefined)?.toUpperCase() || 'B'),
+        }));
+      })
+      .catch((err) => {
+        if (active) {
+          setEmecefOptions(null);
+          setEmecefOptionsError(apiError(err));
+        }
+      })
+      .finally(() => { if (active) setEmecefOptionsLoading(false); });
+    return () => { active = false; };
+  }, [id]);
+
   const previewPdf = () => { if (id) setPreview({ url: invoicePdfUrl(id), title: `Aperçu de ${invoice?.numero || 'la facture'}`, filename: `Facture-${invoice?.numero || id}.pdf` }); };
 
   const openPdf = () => {
@@ -60,6 +99,12 @@ export default function InvoiceDetail() {
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [emecefForm, setEmecefForm] = useState({ taxGroup: 'B', paymentType: 'ESPECES', priceBasis: 'HT' as const, invoiceType: 'FV' as 'FV' | 'FA' | 'EV' | 'EA', aib: '' as '' | 'A' | 'B', reference: '' });
+  const [emecefBusy, setEmecefBusy] = useState(false);
+  const [emecefOptions, setEmecefOptions] = useState<EmecefOptions | null>(null);
+  const [emecefOptionsLoading, setEmecefOptionsLoading] = useState(false);
+  const [emecefOptionsError, setEmecefOptionsError] = useState('');
+
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -70,6 +115,62 @@ export default function InvoiceDetail() {
       toast('Facture annulée');
     } catch (err) { toast(apiError(err), 'error'); }
     finally { setCancelling(false); }
+  };
+
+  const handlePrepareEmecef = async () => {
+    if (!id) return;
+    setEmecefBusy(true);
+    try {
+      const res = await prepareEmecefInvoice(id, emecefForm);
+      toast(res.data.message || 'Demande envoyée à la DGI.');
+      load();
+    } catch (err) { toast(apiError(err), 'error'); load(); }
+    finally { setEmecefBusy(false); }
+  };
+
+  const handleConfirmEmecef = async () => {
+    if (!id) return;
+    setEmecefBusy(true);
+    try {
+      await confirmEmecefInvoice(id);
+      toast('Facture confirmée par la DGI de test.');
+      load();
+    } catch (err) { toast(apiError(err), 'error'); load(); }
+    finally { setEmecefBusy(false); }
+  };
+
+  const handleRefreshEmecefStatus = async () => {
+    if (!id) return;
+    setEmecefBusy(true);
+    try {
+      const res = await refreshEmecefInvoiceStatus(id);
+      toast(res.data.message || 'État DGI actualisé.');
+      load();
+    } catch (err) { toast(apiError(err), 'error'); load(); }
+    finally { setEmecefBusy(false); }
+  };
+
+  const handleResetEmecef = async () => {
+    if (!id) return;
+    if (!window.confirm('Avez-vous vérifié auprès de la DGI que cette demande n’a pas été finalisée ? La réinitialiser permet de refaire une demande, au risque d’un doublon si elle existe déjà.')) return;
+    setEmecefBusy(true);
+    try {
+      await resetEmecefInvoice(id);
+      toast('Fiscalisation réinitialisée. Vous pouvez refaire une demande.');
+      load();
+    } catch (err) { toast(apiError(err), 'error'); load(); }
+    finally { setEmecefBusy(false); }
+  };
+
+  const handleCancelEmecef = async () => {
+    if (!id) return;
+    setEmecefBusy(true);
+    try {
+      await cancelEmecefInvoice(id);
+      toast('Demande e-MECeF annulée dans l’environnement de test.');
+      load();
+    } catch (err) { toast(apiError(err), 'error'); load(); }
+    finally { setEmecefBusy(false); }
   };
 
   const handlePay = async (e: React.FormEvent) => {
@@ -148,6 +249,7 @@ export default function InvoiceDetail() {
   if (loading) return <div className="h-96 skeleton" />;
   if (!invoice) return <div className="text-center text-gray-500 dark:text-gray-400 py-20">Facture introuvable.</div>;
 
+  const fiscalisationLocksInvoice = ['submitting', 'pending_confirmation', 'confirming', 'cancelling', 'unknown', 'confirmed'].includes(invoice.fiscalisation?.status || '');
   const client = typeof invoice.client === 'object' ? invoice.client : null;
   const ttc = invoice.totalTTC || totalTTC(invoice.items, invoice.remise, invoice.tva);
   const paiementsCompletes = payments.filter((p) => (p.statut || 'complete') === 'complete');
@@ -177,13 +279,13 @@ export default function InvoiceDetail() {
           </button>
           <button onClick={previewPdf} className="btn-ghost text-sm"><span className="text-base leading-none">◫</span> Prévisualiser</button>
           <button onClick={openPdf} className="btn-ghost text-sm"><Download size={16} /> PDF</button>
-          {invoice.statut === 'brouillon' ? (
+          {invoice.statut === 'brouillon' && !fiscalisationLocksInvoice ? (
             <>
               <Link to={`/app/invoices/${id}/edit`} className="btn-dark text-sm"><Pencil size={16} /> Modifier</Link>
               <button onClick={() => setDeleteOpen(true)} className="btn-icon" title="Supprimer"><Trash2 size={16} /></button>
             </>
           ) : (
-            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1" title="Une facture envoyée ne peut plus être modifiée ni supprimée, pour garantir une numérotation fiable. Utilisez le statut « Annulée » si besoin.">
+            <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1" title={fiscalisationLocksInvoice ? 'Une demande e-MECeF est en cours, confirmée ou incertaine : modification et suppression bloquées.' : 'Une facture envoyée ne peut plus être modifiée ni supprimée, pour garantir une numérotation fiable.'}>
               <Lock size={13} /> Verrouillée
             </span>
           )}
@@ -308,7 +410,8 @@ export default function InvoiceDetail() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Sous-total</span><span className="font-medium">{formatFCFA(invoice.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
               {invoice.remise ? <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Remise</span><span className="font-medium text-[#d9524d]">- {formatFCFA(invoice.remise)}</span></div> : null}
-              <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">TVA ({invoice.tva}%)</span><span className="font-medium">{formatFCFA(ttc / (1 + invoice.tva / 100) * invoice.tva / 100)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">TVA ({invoice.tva}%)</span><span className="font-medium">{formatFCFA(totalHT(invoice.items, invoice.remise) * invoice.tva / 100)}</span></div>
+              {invoice.items.some((item) => Number(item.taxSpecific || 0) > 0) && <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Taxes spécifiques</span><span className="font-medium">{formatFCFA(invoice.items.reduce((sum, item) => sum + Number(item.taxSpecific || 0), 0))}</span></div>}
               <div className="rounded-xl p-3 mt-3 text-white" style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>
                 <p className="text-xl font-extrabold">{formatFCFA(ttc)}</p>
@@ -317,11 +420,43 @@ export default function InvoiceDetail() {
               {reste > 0 && <div className="flex justify-between"><span className="text-[#d9524d] font-medium">Reste à payer</span><span className="font-bold text-[#d9524d]">{formatFCFA(reste)}</span></div>}
             </div>
 
+            {/* Fiscalisation e-MECeF séparée du PDF commercial Oryxa */}
+            <div className="mt-5 pt-5 border-t border-gray-100 dark:border-white/10">
+              <h3 className="font-bold text-[#0a0a0c] dark:text-white flex items-center gap-2 mb-2"><ShieldCheck size={17} className="text-[#d9524d]" /> e-MECeF (test DGI)</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Cette action envoie les données à la plateforme de test de la DGI. Le PDF commercial actuel n’est pas un PDF fiscal certifié.</p>
+              <div className="rounded-xl bg-gray-50 dark:bg-white/5 p-3 mb-3 text-sm">
+                <div className="flex justify-between gap-2"><span className="text-gray-500">État</span><strong>{invoice.fiscalisation?.status || 'non_emise'}</strong></div>
+                {invoice.fiscalisation?.uid && <div className="mt-1 break-all"><span className="text-gray-500">UID :</span> {invoice.fiscalisation.uid}</div>}
+                {invoice.fiscalisation?.expectedTotal != null && <div className="mt-1"><span className="text-gray-500">Total attendu :</span> {formatFCFA(invoice.fiscalisation.expectedTotal)}</div>}
+                {invoice.fiscalisation?.dgiTotal != null && <div className="mt-1"><span className="text-gray-500">Total calculé DGI :</span> {formatFCFA(invoice.fiscalisation.dgiTotal)}</div>}
+                {invoice.fiscalisation?.errorDesc && <p className="text-red-600 mt-2">{invoice.fiscalisation.errorCode ? `Erreur ${invoice.fiscalisation.errorCode} : ` : ''}{invoice.fiscalisation.errorDesc}</p>}
+                {invoice.fiscalisation?.status === 'confirmed' && <div className="mt-2 space-y-1"><p className="text-green-700 dark:text-green-400 flex items-center gap-1"><CheckCircle2 size={14} /> Confirmation DGI réussie</p><p><span className="text-gray-500">Code MECeF/DGI :</span> <strong>{invoice.fiscalisation.codeMECeFDGI || '—'}</strong></p><p><span className="text-gray-500">NIM :</span> {invoice.fiscalisation.nim || '—'}</p><p><span className="text-gray-500">Date DGI :</span> {invoice.fiscalisation.dateTime || '—'}</p><p><span className="text-gray-500">Compteur :</span> {invoice.fiscalisation.counters || '—'}</p><p className="break-all"><span className="text-gray-500">Contenu QR fiscal DGI :</span> {invoice.fiscalisation.qrCode || '—'}</p><p className="text-xs text-green-700 dark:text-green-400">Le PDF téléchargé inclut le QR fiscal DGI distinct du QR de paiement, après confirmation.</p></div>}
+                {invoice.fiscalisation?.status === 'confirmed' && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Cette facture est fiscalisée : son annulation directe est bloquée. Pour la corriger, émettez un avoir FA/EA distinct avec le code MECeF/DGI de l’original, puis vérifiez ce scénario sur la plateforme DGI.</p>}
+              </div>
+              {(!invoice.fiscalisation?.status || invoice.fiscalisation.status === 'non_emise' || invoice.fiscalisation.status === 'error') && (
+                <div className="space-y-3">
+                  {emecefOptionsLoading && <p className="text-xs text-gray-500">Chargement des paramètres fiscaux depuis la DGI…</p>}
+                  {emecefOptionsError && <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-xs text-red-700 dark:text-red-300">Impossible de charger les options DGI : {emecefOptionsError}<button type="button" className="underline ml-1" onClick={() => { setEmecefOptionsError(''); setEmecefOptionsLoading(true); getEmecefOptions().then((r) => setEmecefOptions(r.data)).catch((e) => setEmecefOptionsError(apiError(e))).finally(() => setEmecefOptionsLoading(false)); }}>Réessayer</button></div>}
+                  {emecefOptions && <p className="text-xs text-green-700 dark:text-green-400">Options DGI chargées. NIM : {emecefOptions.status?.nim || 'non communiqué'}.</p>}
+                  <div><label className="field-label">Type de facture DGI (options chargées depuis la DGI)</label><select className="field" value={emecefForm.invoiceType} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, invoiceType: e.target.value as 'FV' | 'FA' | 'EV' | 'EA' })}>{(emecefOptions?.invoiceTypes || []).filter((type) => ['FV', 'FA', 'EV', 'EA'].includes(dgiOptionCode(type))).map((type) => { const value = dgiOptionCode(type); const labels: Record<string, string> = { FV: 'Facture de vente', FA: 'Facture d’avoir', EV: 'Vente à l’exportation', EA: 'Avoir à l’exportation' }; return <option key={value} value={value}>{value} — {dgiOptionDescription(type) || labels[value] || value}</option>; })}</select></div>
+                  {['FA', 'EA'].includes(emecefForm.invoiceType) && <div><label className="field-label">Code MECeF/DGI de la facture originale (référence)</label><input className="field" value={emecefForm.reference} maxLength={29} placeholder="Code MECeF/DGI original" onChange={(e) => setEmecefForm({ ...emecefForm, reference: e.target.value.trim() })} /><p className="text-xs text-gray-500 mt-1">Obligatoire pour les avoirs ; utilisez le code de la facture originale déjà confirmée par la DGI.</p></div>}
+                  <div><label className="field-label">AIB (taux retournés par la DGI)</label><select className="field" value={emecefForm.aib} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, aib: e.target.value as '' | 'A' | 'B' })}><option value="">Aucun AIB</option>{Number(emecefOptions?.taxGroups?.aibA) > 0 && <option value="A">AIB A — {Number(emecefOptions!.taxGroups.aibA)} %</option>}{Number(emecefOptions?.taxGroups?.aibB) > 0 && <option value="B">AIB B — {Number(emecefOptions!.taxGroups.aibB)} %</option>}</select></div>
+                  <div><label className="field-label">Groupe fiscal (taux DGI)</label><select className="field" value={emecefForm.taxGroup} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, taxGroup: e.target.value })}>{['a','b','c','d','e','f'].filter((key) => emecefOptions?.taxGroups?.[key] !== undefined).map((key) => <option key={key} value={key.toUpperCase()}>{key.toUpperCase()} — {Number(emecefOptions!.taxGroups[key])}%</option>)}</select></div>
+                  <p className="text-xs text-gray-500">Base de prix : HT (comme dans le calcul des factures Oryxa). La TVA est ajoutée avant l’envoi à la DGI.</p>
+                  <div><label className="field-label">Mode de paiement déclaré (options DGI)</label><select className="field" value={emecefForm.paymentType} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, paymentType: e.target.value })}>{(emecefOptions?.paymentTypes || []).filter((type) => ['ESPECES', 'CHEQUES', 'MOBILEMONEY', 'CARTEBANCAIRE', 'VIREMENT', 'CREDIT', 'AUTRE'].includes(dgiOptionCode(type))).map((type) => { const value = dgiOptionCode(type); const labels: Record<string, string> = { ESPECES: 'Espèces', CHEQUES: 'Chèques', MOBILEMONEY: 'Mobile Money', CARTEBANCAIRE: 'Carte bancaire', VIREMENT: 'Virement', CREDIT: 'Crédit', AUTRE: 'Autre' }; return <option key={value} value={value}>{dgiOptionDescription(type) || labels[value] || value}</option>; })}</select></div>
+                  <p className="text-xs text-amber-700 dark:text-amber-400">La DGI reste l’autorité de calcul fiscal. Les remises globales sont bloquées tant que leur représentation exacte n’est pas prise en charge. Pour un avoir, vérifiez la référence originale avant l’envoi.</p>
+                  <button onClick={handlePrepareEmecef} disabled={emecefBusy || invoice.statut === 'annulee' || !emecefOptions || emecefOptionsLoading || !emecefOptions.invoiceTypes.some((type) => ['FV', 'FA', 'EV', 'EA'].includes(dgiOptionCode(type))) || !emecefOptions.paymentTypes.some((type) => ['ESPECES', 'CHEQUES', 'MOBILEMONEY', 'CARTEBANCAIRE', 'VIREMENT', 'CREDIT', 'AUTRE'].includes(dgiOptionCode(type)))} className="btn-primary w-full justify-center">{emecefBusy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Envoyer à la DGI (test)</button>
+                </div>
+              )}
+              {invoice.fiscalisation?.status === 'pending_confirmation' && <div className="space-y-2"><p className="text-xs text-amber-700 dark:text-amber-400">La demande existe chez la DGI. Confirmez rapidement ; ne créez pas une deuxième demande si la réponse est incertaine.</p><button onClick={handleConfirmEmecef} disabled={emecefBusy} className="btn-primary w-full justify-center">{emecefBusy ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />} Confirmer auprès de la DGI</button><button onClick={handleCancelEmecef} disabled={emecefBusy} className="btn-ghost w-full justify-center">Annuler la demande de test</button></div>}
+              {['unknown', 'pending_confirmation', 'confirming', 'cancelling'].includes(invoice.fiscalisation?.status || '') && <div className="space-y-2"><p className="text-sm text-amber-700 dark:text-amber-400">{invoice.fiscalisation?.status === 'pending_confirmation' ? 'Vérifiez que la demande est toujours en attente avant de confirmer.' : 'Résultat incertain ou opération en cours. Ne renvoyez pas cette facture ; vérifiez son état auprès de la DGI.'}</p>{invoice.fiscalisation?.uid ? <button onClick={handleRefreshEmecefStatus} disabled={emecefBusy} className="btn-ghost w-full justify-center">{emecefBusy ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />} Vérifier l’état auprès de la DGI</button> : <p className="text-xs text-red-600">Aucun UID DGI n’a été enregistré. Vérifiez les demandes récentes dans Swagger ou auprès de la DGI avant toute nouvelle tentative.</p>}{['unknown', 'confirming', 'cancelling'].includes(invoice.fiscalisation?.status || '') && <button onClick={handleResetEmecef} disabled={emecefBusy} className="btn-ghost w-full justify-center">Réinitialiser après vérification auprès de la DGI</button>}</div>}
+            </div>
+
             {/* Annulation — seule transition de statut manuelle : tout le
                 reste (envoyée, vue, payée, en retard) découle d'une action
                 réelle (envoi effectif, ouverture du lien client, paiement,
                 détection automatique de retard). */}
-            {invoice.statut !== 'payee' && invoice.statut !== 'annulee' && (
+            {invoice.statut !== 'payee' && invoice.statut !== 'annulee' && !['submitting', 'pending_confirmation', 'confirming', 'cancelling', 'unknown', 'confirmed'].includes(invoice.fiscalisation?.status || '') && (
               <div className="mt-5 pt-5 border-t border-gray-100 dark:border-white/10">
                 <button onClick={() => setCancelOpen(true)} className="btn-ghost text-xs py-2 justify-center w-full text-[#b23c37]">
                   <XCircle size={13} /> Annuler la facture

@@ -8,9 +8,14 @@ const subscriptionSchema = new mongoose.Schema({
   montantNormal: { type: Number, default: null },
   remiseAffiliation: { type: Number, default: 0 },
   statut: { type: String, enum: ['en_attente', 'payee', 'echouee'], default: 'en_attente' },
-  fedapayTransactionId: { type: String, default: null, index: true, unique: true, sparse: true },
+  fedapayTransactionId: { type: String, default: undefined },
   dateDebut: { type: Date, default: null },
   dateFin: { type: Date, default: null },
 }, { timestamps: true });
+
+subscriptionSchema.index(
+  { fedapayTransactionId: 1 },
+  { name: 'uniq_fedapayTransactionId', unique: true, partialFilterExpression: { fedapayTransactionId: { $type: 'string' } } }
+);
 
 module.exports = mongoose.model('Subscription', subscriptionSchema);

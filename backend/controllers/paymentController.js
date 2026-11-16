@@ -7,6 +7,8 @@ const email = require('../utils/email');
 const { paginationParams, paginatedResponse } = require('../utils/pagination');
 const { enregistrerActivite } = require('../utils/activityLog');
 const WalletEntry = require('../models/WalletEntry');
+const { getInvoiceBalance, syncInvoiceStatus } = require('../utils/invoicePayments');
+const { PAID_PAYMENT_FILTER } = require('../utils/invoiceTotals');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
@@ -19,11 +21,11 @@ exports.getPaymentsStats = asyncHandler(async (req, res) => {
   const owner = new mongoose.Types.ObjectId(req.userId);
   const [totalAgg, parMethode] = await Promise.all([
     Payment.aggregate([
-      { $match: { owner } },
-      { $group: { _id: null, total: { $sum: '$montant' }, count: { $sum: 1 } } },
+      { $match: { owner, ...PAID_PAYMENT_FILTER } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$montantFacture', '$montant'] } }, count: { $sum: 1 } } },
     ]),
     Payment.aggregate([
-      { $match: { owner } },
+      { $match: { owner, ...PAID_PAYMENT_FILTER } },
       { $group: { _id: '$methode', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 1 },
@@ -74,11 +76,24 @@ exports.createPayment = asyncHandler(async (req, res) => {
   }
   const invoice = await Invoice.findOne({ _id: invoiceId, owner: req.userId }).populate('client');
   if (!invoice) return res.status(404).json({ message: 'Facture introuvable' });
+  if (invoice.statut === 'annulee') return res.status(400).json({ message: 'Cette facture est annulée : aucun paiement ne peut y être enregistré.' });
+
+  const montantNum = Number(montant);
+  if (!Number.isFinite(montantNum) || montantNum <= 0) {
+    return res.status(400).json({ message: 'Le montant du paiement doit être supérieur à 0.' });
+  }
+  // Un paiement ne peut pas dépasser ce qu'il reste à payer (total DGI inclus).
+  const avant = await getInvoiceBalance(invoice);
+  if (montantNum > avant.reste + 0.5) {
+    return res.status(400).json({ message: `Le montant dépasse le solde restant de cette facture (${Math.round(avant.reste)} FCFA).` });
+  }
 
   const payment = await Payment.create({
     owner: req.userId,
     invoice: invoiceId,
-    montant,
+    montant: montantNum,
+    montantFacture: montantNum,
+    montantClientPaye: montantNum,
     methode: methode || 'especes',
     origine: 'manuel',
     statut: 'complete',
@@ -88,20 +103,8 @@ exports.createPayment = asyncHandler(async (req, res) => {
     receiptNumber: await nextReceiptNumber(req.userId),
   });
 
-  // Si le total des paiements couvre la facture -> payée
-  const all = await Payment.find({ invoice: invoiceId, statut: 'complete' });
-  const totalPaye = all.reduce((s, p) => s + (p.montant || 0), 0);
-  const ttc = (invoice.items || []).reduce((s, i) => s + (i.quantite || 0) * (i.prixUnitaire || 0), 0);
-  const remise = invoice.remise || 0;
-  const tva = invoice.tva || 0;
-  const totalTTC = (ttc - remise) * (1 + tva / 100);
-  if (totalPaye >= totalTTC - 0.01) {
-    invoice.statut = 'payee';
-    await invoice.save();
-  } else if (totalPaye > 0 && invoice.statut === 'brouillon') {
-    invoice.statut = 'envoyee';
-    await invoice.save();
-  }
+  // Statut de la facture déduit des paiements réels (source unique).
+  await syncInvoiceStatus(invoice);
   await payment.populate({ path: 'invoice', populate: { path: 'client', select: 'nom entreprise' } });
 
   // Envoi du reçu par email — best effort : un échec d'email ne doit jamais
@@ -131,20 +134,14 @@ exports.deletePayment = asyncHandler(async (req, res) => {
   if (payment.origine === 'en_ligne' && payment.statut === 'complete') {
     return res.status(409).json({ message: 'Un paiement en ligne confirmé ne peut pas être supprimé : il participe à votre historique financier et à votre solde retirable.', code: 'PAYMENT_FINANCIAL_LOCK' });
   }
-  const invoice = await Invoice.findById(payment.invoice);
-  await WalletEntry.deleteMany({ payment: payment._id });
-  await payment.deleteOne();
-  if (invoice && invoice.statut === 'payee') {
-    const restant = await Payment.aggregate([
-      { $match: { invoice: invoice._id, statut: 'complete' } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ['$montantFacture', '$montant'] } } } },
-    ]);
-    const totalPaye = Number(restant[0]?.total || 0);
-    const totalTTC = ((invoice.items || []).reduce((sum, item) => sum + (item.quantite || 0) * (item.prixUnitaire || 0), 0) - (invoice.remise || 0)) * (1 + (invoice.tva || 0) / 100);
-    if (totalPaye < totalTTC - 0.01) {
-      invoice.statut = 'envoyee';
-      await invoice.save();
-    }
+  // Le ledger est immuable : on ne supprime jamais ses écritures. Un paiement
+  // qui en a déjà produit (crédit, remboursement) ne peut donc pas être effacé.
+  const ecritures = await WalletEntry.countDocuments({ payment: payment._id });
+  if (ecritures > 0) {
+    return res.status(409).json({ message: 'Ce paiement a déjà généré des écritures financières et ne peut pas être supprimé.', code: 'PAYMENT_FINANCIAL_LOCK' });
   }
+  const invoiceId = payment.invoice;
+  await payment.deleteOne();
+  await syncInvoiceStatus(invoiceId);
   res.json({ message: 'Paiement supprimé' });
 });

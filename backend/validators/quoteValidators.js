@@ -17,10 +17,14 @@ const quoteBase = {
   remise: nonNegativeNumber('La remise').optional().default(0),
   tva: nonNegativeNumber('La TVA').max(100, 'La TVA ne peut pas dépasser 100%.').optional().default(0),
   notes: optionalText(2000),
+  statut: z.enum(STATUTS).optional(),
+  template: z.enum(['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir']).optional(),
 };
 
 const createQuoteSchema = z.object(quoteBase).strip();
 const updateQuoteSchema = z.object(quoteBase).partial().strip();
-const patchQuoteStatusSchema = z.object({}).strip();
+const patchQuoteStatusSchema = z.object({
+  statut: z.enum(STATUTS, { errorMap: () => ({ message: 'Statut invalide.' }) }),
+}).strip();
 
 module.exports = { createQuoteSchema, updateQuoteSchema, patchQuoteStatusSchema };
