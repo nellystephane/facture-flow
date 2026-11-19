@@ -1,4 +1,5 @@
 const Quote = require('../models/Quote');
+const { resolveDocumentCurrency } = require('../utils/currency');
 const Client = require('../models/Client');
 const User = require('../models/User');
 const { nextNumber } = require('../models/Counter');
@@ -19,7 +20,7 @@ const nextQuoteNumber = (owner) => nextNumber(owner, 'devis');
 // coup rendrait la facture générée incohérente avec le devis d'origine.
 const LOCKED_STATUTS = ['accepte'];
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut', 'template'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateExpiration', 'items', 'remise', 'tva', 'notes', 'statut', 'template', 'devise', 'tauxChange'];
 
 function pickFields(body) {
   const o = {};
@@ -81,6 +82,9 @@ exports.createQuote = asyncHandler(async (req, res) => {
   const data = pickFields(req.body);
   if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) data.template = 'classique';
   if (!data.client) return res.status(400).json({ message: 'Le client est requis' });
+  const dev = resolveDocumentCurrency(data, user.devise);
+  if (dev.error) return res.status(400).json({ message: dev.error });
+  Object.assign(data, dev.fields);
   data.owner = req.userId;
   data.numero = await nextQuoteNumber(req.userId);
   const quote = await Quote.create(data);
@@ -99,6 +103,10 @@ exports.updateQuote = asyncHandler(async (req, res) => {
     });
   }
   const updates = pickFields(req.body);
+  const dev = resolveDocumentCurrency(updates, null, existing);
+  if (dev.error) return res.status(400).json({ message: dev.error });
+  delete updates.devise; delete updates.tauxChange;
+  Object.assign(updates, dev.fields);
   const user = await User.findById(req.userId);
   if (updates.template && !permissionsDe(user).peutUtiliserModele(updates.template)) updates.template = 'classique';
   const quote = await Quote.findOneAndUpdate(

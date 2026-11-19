@@ -22,7 +22,16 @@ router.get('/security', admin.getSecurityOverview);
 router.post('/email-test', admin.testEmail);
 router.get('/finance', admin.getFinancials);
 
+const tools = require('../controllers/adminToolsController');
+router.get('/analytics/catalog', tools.getAdminCatalog);
+router.get('/analytics', tools.getAdminAnalytics);
+router.get('/audit', tools.getAuditJournal);
+router.get('/system', tools.getSystemStatus);
+router.get('/export/users.csv', tools.exportUsersCsv);
+router.get('/export/abonnements.csv', tools.exportSubscriptionsCsv);
+
 router.get('/users', admin.listUsers);
+router.get('/users/:id', tools.getUserDetail);
 router.patch('/users/:id/suspendre', admin.suspendreUtilisateur);
 router.patch('/users/:id/reactiver', admin.reactiverUtilisateur);
 router.patch('/users/:id/plan', admin.changerPlanUtilisateur);
@@ -31,6 +40,7 @@ router.get('/payments', admin.listPayments);
 router.patch('/payments/:id/litige', admin.signalerLitige);
 router.patch('/payments/:id/litige/resoudre', admin.resoudreLitige);
 router.patch('/payments/:id/rembourse', admin.marquerRembourse);
+router.post('/payouts/:id/resolve', admin.resolvePayout);
 
 router.get('/pricing', admin.getPricing);
 router.put('/pricing', admin.updatePricing);

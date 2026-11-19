@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(auth);
 
 router.get('/', controller.getClients);
+router.get('/:id/historique', controller.getClientHistorique);
 router.get('/:id', controller.getClientById);
 router.post('/', validate(createClientSchema), controller.createClient);
 router.put('/:id', validate(updateClientSchema), controller.updateClient);

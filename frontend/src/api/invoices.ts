@@ -33,3 +33,11 @@ export const sendInvoiceEmail = (id: string) =>
 // sont pas sur le même domaine (ex: GitHub Pages + Render).
 export const invoicePdfUrl = (id: string) => `${API_BASE_URL}/invoices/${id}/pdf`;
 export const invoicesExportUrl = () => `${API_BASE_URL}/invoices/export`;
+
+export const createVenteRapide = (data: {
+  items: { description: string; quantite: number; prixUnitaire: number; service?: string | null }[];
+  methode?: 'especes' | 'mtn_money' | 'moov_money' | 'carte' | 'virement' | 'autre';
+  client?: string;
+  remise?: number;
+  tva?: number;
+}) => api.post<{ invoice: Invoice }>('/invoices/vente-rapide', data);

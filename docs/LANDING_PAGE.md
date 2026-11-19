@@ -1,44 +1,26 @@
-# Oryxa — Landing page & onboarding
+# Oryxa — Landing page
 
-## Objectif
+## Parti pris
 
-La page publique présente Oryxa comme un outil de gestion commerciale simple pour les indépendants, artisans, prestataires, commerçants et petites entreprises.
+Oryxa est présentée comme l'outil évident des freelances, commerçants et PME : on vend le temps gagné, pas la technique. Aucun détail d'implémentation (chiffrement, jetons, secrets) n'apparaît.
 
-La communication part des problèmes du quotidien avant de présenter les fonctionnalités : informations dispersées, ressaisie, manque de visibilité sur les paiements et parcours client peu clair.
+Titre : « Gagnez du temps avec Oryxa. »
 
-## Landing page
+## Structure (`frontend/src/pages/Landing.tsx`)
 
-La page contient maintenant :
+1. Accroche et un seul appel à l'action.
+2. Six gains : facture rapide, paiement à la réception (bouton Payer), clients centralisés, tableau de bord, relances à 3/7/15 jours, solde retirable.
+3. Profils visés.
+4. Confiance en langage simple (données protégées, FedaPay, mobile).
+5. FAQ (paiement, prix, DGI, usage seul, comptable).
+6. Appel à l'action final.
 
-- un en-tête mobile-first avec le logo Oryxa et **Se connecter** ;
-- un seul appel à l'action principal dans le header mobile, afin d'éviter le doublon « Commencer » ;
-- un hero orienté bénéfice ;
-- un aperçu visuel du parcours Oryxa ;
-- une section sur les problèmes concrets ;
-- un parcours en 4 étapes : client → document → paiement → suivi ;
-- une section de bénéfices ;
-- une section dédiée aux profils visés ;
-- une FAQ interactive répondant aux objections réelles ;
-- un appel à l'action final ;
-- les liens légaux en pied de page.
+## Règles de rédaction
 
-La communication reste volontairement cohérente avec le fonctionnement actuel : FCFA uniquement, pas de promesse d'intégration WhatsApp automatique, et distinction entre paiement via le parcours Oryxa et paiement manuel enregistré par l'utilisateur.
+- Phrases courtes, concrètes, une idée par phrase.
+- Aucune promesse que le produit ne tient pas : e-MECeF est en test (dit dans la FAQ), pas d'automatisation WhatsApp, FCFA uniquement.
+- Pas de chiffres inventés.
 
-## Onboarding
+## Mouvement
 
-L'écran d'étapes a été repensé pour téléphone :
-
-- progression visuelle ;
-- navigation Retour/Suivant ;
-- geste de balayage horizontal ;
-- messages courts orientés problème/bénéfice ;
-- logo Oryxa sur l'écran d'accueil ;
-- étapes clients, documents, paiement, suivi et tableau de bord ;
-- accès direct à la connexion pour les utilisateurs existants ;
-- CTA final vers l'inscription.
-
-## Choix UX mobile
-
-Le bouton « Commencer » n'est plus dupliqué dans le header mobile. Le CTA principal reste visible dans le hero, avec « Se connecter » conservé en accès rapide.
-
-L'objectif est de réduire les choix concurrents au premier écran et de garder une hiérarchie claire : comprendre → voir le parcours → commencer.
+Le hero entre en cascade (`fx-stagger`), le soulignement de « vrai » se dessine, les autres sections apparaissent au défilement via `<Reveal>`. Styles préfixés `lp-` dans `index.css`.

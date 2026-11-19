@@ -1,38 +1,44 @@
 import type { ReactNode } from 'react';
+import CountUp from './CountUp';
 
 interface StatCardProps {
   label: string;
   value: string | number;
   icon: ReactNode;
   trend?: string;
+  /** Conservé pour compatibilité : la couleur d'accent ne colore plus que la pastille. */
   accent?: 'rouge' | 'noir' | 'vert' | 'bleu' | 'orange';
+  /** « mint » = carte mise en avant (chiffre clé), « dark » = carte sombre, « plain » = neutre. */
+  tone?: 'plain' | 'mint' | 'dark';
   delay?: number;
 }
 
-const ACCENTS: Record<string, string> = {
-  rouge: 'linear-gradient(135deg, #d9524d, #b23c37)',
-  noir: 'linear-gradient(135deg, #1a1a1f, #0a0a0c)',
-  vert: 'linear-gradient(135deg, #10b981, #047857)',
-  bleu: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-  orange: 'linear-gradient(135deg, #f59e0b, #d97706)',
+const DOT: Record<string, string> = {
+  rouge: '#d9524d',
+  noir: '#0a0a0c',
+  vert: '#10b981',
+  bleu: '#3b82f6',
+  orange: '#f59e0b',
 };
 
-export default function StatCard({ label, value, icon, trend, accent = 'rouge', delay = 0 }: StatCardProps) {
+export default function StatCard({ label, value, icon, trend, accent = 'rouge', tone = 'plain', delay = 0 }: StatCardProps) {
+  const dark = tone === 'dark';
+  const toneClass = tone === 'mint' ? 'stat-tone-mint' : dark ? 'stat-tone-dark' : '';
   return (
-    <div className="glass-card p-5 animate-fade-up" style={{ animationDelay: `${delay}s` }}>
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</p>
-          <p className="text-2xl font-extrabold text-[#0a0a0c] dark:text-white mt-1 truncate">{value}</p>
-          {trend && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{trend}</p>}
-        </div>
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0"
-          style={{ background: ACCENTS[accent] }}
+    <div className={`glass-card p-5 animate-fade-up ${toneClass}`} style={{ animationDelay: `${delay}s` }}>
+      <div className="flex items-center justify-between gap-3">
+        <p className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${dark ? 'text-white/60' : 'text-gray-500 dark:text-gray-400'}`}>{label}</p>
+        <span
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 [&_svg]:w-4 [&_svg]:h-4"
+          style={{ background: dark ? 'rgba(255,255,255,0.12)' : `${DOT[accent]}1a`, color: dark ? '#fff' : DOT[accent] }}
         >
           {icon}
-        </div>
+        </span>
       </div>
+      <p className={`text-[1.75rem] leading-none font-extrabold mt-4 truncate tabular-nums ${dark ? 'text-white' : 'text-[#0a0a0c] dark:text-white'}`}>
+        <CountUp value={value} />
+      </p>
+      {trend && <p className={`text-xs mt-2 ${dark ? 'text-white/50' : 'text-gray-400 dark:text-gray-500'}`}>{trend}</p>}
     </div>
   );
 }

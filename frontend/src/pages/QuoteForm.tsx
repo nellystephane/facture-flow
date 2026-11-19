@@ -10,7 +10,8 @@ import Select from '../components/ui/Select';
 import DatePicker from '../components/ui/DatePicker';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
-import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
+import DeviseField from '../components/DeviseField';
+import { formatFCFA as formatBase, deviseInfo, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
 import { usePermissions } from '../contexts/PermissionsContext';
 
 const TEMPLATES = [
@@ -49,6 +50,8 @@ export default function QuoteForm() {
     tva: 0,
     notes: '',
     template: 'classique',
+    devise: 'XOF',
+    tauxChange: 1,
   });
 
   useEffect(() => {
@@ -74,6 +77,8 @@ export default function QuoteForm() {
           tva: d.tva || 0,
           notes: d.notes || '',
           template: d.template || 'classique',
+          devise: d.devise || 'XOF',
+          tauxChange: d.tauxChange || 1,
         });
       })
       .catch((err) => toast(apiError(err), 'error'))
@@ -120,6 +125,8 @@ export default function QuoteForm() {
 
   if (loading) return <div className="h-96 skeleton" />;
 
+  const formatFCFA = (n: number | null | undefined) => formatBase(n, form.devise);
+
   const ht = totalHT(form.items, form.remise);
   const ttc = totalTTC(form.items, form.remise, form.tva);
 
@@ -154,6 +161,9 @@ export default function QuoteForm() {
                 <DatePicker value={form.dateExpiration} onChange={(v) => update('dateExpiration', v)} />
               </div>
             </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
+              <DeviseField devise={form.devise} tauxChange={form.tauxChange} onChange={(d) => setForm((f) => ({ ...f, ...d }))} />
+            </div>
           </div>
 
           <div className="glass-card p-6">
@@ -185,7 +195,7 @@ export default function QuoteForm() {
                   </div>
                   {services.length > 0 && (
                     <div className="mt-2">
-                      <Select value="" onChange={(v) => pickService(idx, v)} options={[{value:'',label:'Pré-remplir depuis un service...'}, ...services.map(s => ({value:s._id,label:`${s.nom} — ${formatFCFA(s.prix)}`}))]} className="text-xs py-1" />
+                      <Select value="" onChange={(v) => pickService(idx, v)} options={[{value:'',label:'Pré-remplir depuis un service...'}, ...services.map(s => ({value:s._id,label:`${s.nom} — ${formatBase(s.prix, 'XOF')}`}))]} className="text-xs py-1" />
                     </div>
                   )}
                 </div>
@@ -224,7 +234,7 @@ export default function QuoteForm() {
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-4">Totaux</h3>
             <div className="space-y-3">
               <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Sous-total</span><span className="font-semibold">{formatFCFA(form.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
-              <div className="flex justify-between items-center text-sm"><span className="text-gray-500 dark:text-gray-400">Remise (FCFA)</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.remise} onChange={(e) => update('remise', Number(e.target.value))} /></div>
+              <div className="flex justify-between items-center text-sm"><span className="text-gray-500 dark:text-gray-400">Remise ({deviseInfo(form.devise).label})</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.remise} onChange={(e) => update('remise', Number(e.target.value))} /></div>
               <div className="flex justify-between items-center text-sm"><span className="text-gray-500 dark:text-gray-400">TVA (%)</span><input type="number" min={0} className="field w-28 text-right py-1" value={form.tva} onChange={(e) => update('tva', Number(e.target.value))} /></div>
               <div className="flex justify-between text-sm pt-2 border-t border-gray-100 dark:border-white/10"><span className="text-gray-500 dark:text-gray-400">Total HT</span><span className="font-semibold">{formatFCFA(ht)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">TVA</span><span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span></div>

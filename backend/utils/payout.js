@@ -270,6 +270,15 @@ async function handleRunFailure(payout, err) {
     const remote = await fedapay.getPayout(payout.fedapayPayoutId);
     applyRemote(payout, remote);
     payout.statut = normalizePayoutStatus(remote.status || 'processing');
+    // Refus définitif (HTTP 4xx hors délai/limite) et FedaPay indique toujours
+    // « pending » : l'ordre n'a pas été accepté, aucun argent n'est parti.
+    // On abandonne et on rend le solde au lieu de le bloquer indéfiniment.
+    const definitiveRejection = Number(err.status) >= 400 && Number(err.status) < 500 && ![408, 425, 429].includes(Number(err.status));
+    if (definitiveRejection && payout.statut === 'pending') {
+      payout.statut = 'failed';
+      payout.failedAt = new Date();
+      payout.erreur = `Démarrage refusé par FedaPay : ${err.message}`;
+    }
   } catch {
     payout.statut = 'processing';
   }
@@ -295,6 +304,9 @@ async function recoverStalePayouts(ownerId) {
 }
 
 async function reconcilePayout(payout) {
+  // Un reversement terminé (envoyé ou échoué) ne se réconcilie plus : relire
+  // FedaPay pourrait le faire revenir à un état actif et rouvrir le ledger.
+  if (!ACTIVE.includes(payout.statut)) return payout;
   if (!payout.fedapayPayoutId) {
     // Jamais créé côté FedaPay : seul le nettoyage « avant démarrage » s'applique.
     await recoverStalePayouts(payout.owner);
@@ -336,4 +348,30 @@ async function reconcilePayout(payout) {
   return payout;
 }
 
-module.exports = { createPayoutForOwner, reconcilePayout, recoverStalePayouts, settleLedger, applyRemote, normalizePayoutStatus };
+// Résolution manuelle par un admin d'un reversement resté incertain.
+//  - recheck : relit FedaPay et applique l'issue.
+//  - release : abandonne et rend le solde, UNIQUEMENT si FedaPay confirme que
+//    l'ordre n'a pas été exécuté (statut distant « pending » ou « failed »).
+async function resolvePayoutManually(payout, action) {
+  if (!['recheck', 'release'].includes(action)) throw new Error('Action invalide.');
+  if (!ACTIVE.includes(payout.statut)) throw new Error('Ce reversement est déjà finalisé.');
+  if (action === 'recheck') return reconcilePayout(payout);
+  if (!payout.fedapayPayoutId) {
+    payout.statut = 'failed';
+  } else {
+    const remote = await fedapay.getPayout(payout.fedapayPayoutId);
+    const status = normalizePayoutStatus(remote.status);
+    if (!['pending', 'failed'].includes(status)) {
+      throw new Error(`FedaPay indique « ${remote.status} » : le solde ne peut pas être libéré tant que le reversement n'est pas échoué.`);
+    }
+    applyRemote(payout, remote);
+    payout.statut = 'failed';
+  }
+  payout.failedAt = new Date();
+  payout.erreur = `Libéré manuellement par un administrateur. ${payout.erreur || ''}`.trim();
+  await payout.save();
+  await settleLedger(payout);
+  return payout;
+}
+
+module.exports = { resolvePayoutManually, createPayoutForOwner, reconcilePayout, recoverStalePayouts, settleLedger, applyRemote, normalizePayoutStatus };

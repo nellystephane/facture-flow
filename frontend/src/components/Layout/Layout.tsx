@@ -1,10 +1,11 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { useState } from 'react';
 import OryxaLogo from '../OryxaLogo';
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="app-bg">
@@ -32,7 +33,9 @@ export default function Layout() {
           </div>
 
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-            <Outlet />
+            <div key={location.pathname} className="fx-page">
+              <Outlet />
+            </div>
           </main>
 
           <footer className="text-center text-xs text-gray-400 dark:text-gray-500 py-6">

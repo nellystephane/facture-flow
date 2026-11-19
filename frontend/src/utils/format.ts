@@ -1,18 +1,49 @@
 import type { InvoiceStatut, QuoteStatut, MethodePaiement } from '../types';
 
-export const DEVISE_DEFAUT = 'FCFA';
+export const DEVISE_DEFAUT = 'XOF';
+
+export interface DeviseInfo { code: string; label: string; nom: string; decimales: number }
+
+/** Miroir de backend/utils/currency.js. */
+export const DEVISES: DeviseInfo[] = [
+  { code: 'XOF', label: 'FCFA', nom: 'Franc CFA (XOF)', decimales: 0 },
+  { code: 'EUR', label: '€', nom: 'Euro', decimales: 2 },
+  { code: 'USD', label: '$', nom: 'Dollar américain', decimales: 2 },
+  { code: 'GBP', label: '£', nom: 'Livre sterling', decimales: 2 },
+  { code: 'CAD', label: 'CA$', nom: 'Dollar canadien', decimales: 2 },
+  { code: 'CHF', label: 'CHF', nom: 'Franc suisse', decimales: 2 },
+  { code: 'MAD', label: 'MAD', nom: 'Dirham marocain', decimales: 2 },
+  { code: 'NGN', label: '₦', nom: 'Naira nigérian', decimales: 2 },
+  { code: 'GHS', label: 'GH₵', nom: 'Cedi ghanéen', decimales: 2 },
+  { code: 'GNF', label: 'GNF', nom: 'Franc guinéen', decimales: 0 },
+];
+
+/** « FCFA », vide ou inconnu → XOF. */
+export function normalizeDevise(d?: string | null): string {
+  const v = String(d || '').toUpperCase().replace(/[\s.]/g, '');
+  if (!v || v === 'FCFA' || v === 'CFA' || v === 'FRANCCFA') return 'XOF';
+  return DEVISES.some((x) => x.code === v) ? v : 'XOF';
+}
+
+export function deviseInfo(d?: string | null): DeviseInfo {
+  const code = normalizeDevise(d);
+  return DEVISES.find((x) => x.code === code) || DEVISES[0];
+}
 
 export function deviseCourante(): string { return DEVISE_DEFAUT; }
 
-/** Affichage monétaire unique d'Oryxa : FCFA (XOF). */
-export function formatMoney(n: number | undefined | null, _devise = DEVISE_DEFAUT): string {
+/** Affichage monétaire : décimales et symbole selon la devise du document (XOF par défaut). */
+export function formatMoney(n: number | undefined | null, devise?: string | null): string {
+  const info = deviseInfo(devise);
   const value = Number(n || 0);
-  return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(value))} FCFA`;
+  const nombre = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: info.decimales, maximumFractionDigits: info.decimales }).format(info.decimales ? value : Math.round(value));
+  return `${nombre} ${info.label}`;
 }
 
-export function formatFCFA(n: number | undefined | null, devise?: string): string { return formatMoney(n, devise || deviseCourante()); }
+export function formatFCFA(n: number | undefined | null, devise?: string | null): string { return formatMoney(n, devise); }
 
-export function formatCompact(n: number | undefined | null, _devise = DEVISE_DEFAUT): string {
+/** Montants agrégés (tableaux de bord) : toujours en équivalent FCFA. */
+export function formatCompact(n: number | undefined | null, _devise?: string | null): string {
   const value = Number(n || 0);
   if (value >= 1_000_000) return (value / 1_000_000).toFixed(1).replace('.0', '') + ' M FCFA';
   if (value >= 1_000) return (value / 1_000).toFixed(0) + ' k FCFA';

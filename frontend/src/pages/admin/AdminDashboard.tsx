@@ -1,13 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, CreditCard, Tag, FileText, LogOut, ArrowDownUp, Headphones, Menu, X, WalletCards, ReceiptText, Settings2, CircleDollarSign, ShieldCheck, ChevronRight, Gift, MousePointerClick, Check,
+  LayoutDashboard, Users, CreditCard, Tag, FileText, LogOut, ArrowDownUp, Headphones, Menu, X, WalletCards, ReceiptText, Settings2, CircleDollarSign, ShieldCheck, ChevronRight, Gift, MousePointerClick, Check, ScrollText, ServerCog,
 } from 'lucide-react';
 import adminApi from '../../api/adminAxios';
 import { useAdminAuth } from '../../contexts/AdminAuthContext';
 import OryxaLogo from '../../components/OryxaLogo';
 import Select from '../../components/ui/Select';
 import ThemeToggle from '../../components/ThemeToggle';
+import { AdminChartButton, BoutonsExport, JournalAudit, SystemeAdmin, UserDetailModal } from './AdminOutils';
 
 const fmt = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
 
@@ -32,6 +33,10 @@ function AdminShell({ children }: { children: ReactNode }) {
       { to: '/admin/support', label: 'Support client', icon: Headphones },
       { to: '/admin/affiliation', label: 'Affiliation', icon: Gift },
       { to: '/admin/legal', label: 'Contenu légal', icon: FileText },
+    ] },
+    { titre: 'Exploitation', liens: [
+      { to: '/admin/journal', label: 'Journal & sécurité', icon: ScrollText },
+      { to: '/admin/systeme', label: 'État du système', icon: ServerCog },
     ] },
   ];
 
@@ -147,6 +152,10 @@ function VueEnsemble() {
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-500">Vue d’ensemble de la plateforme</p>
+        <AdminChartButton metrics={['nouveaux_comptes', 'revenu_abonnements', 'comptes_par_plan']} title="Analyser la plateforme" label="Analyser" />
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="glass-card p-5">
           <p className="text-xs text-gray-400 mb-1.5">Comptes totaux</p>
@@ -243,6 +252,7 @@ interface AdminUser {
 
 function Utilisateurs() {
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
   const [chargement, setChargement] = useState(true);
 
@@ -281,7 +291,9 @@ function Utilisateurs() {
           onKeyDown={(e) => e.key === 'Enter' && charger()}
         />
         <button onClick={charger} className="btn-ghost">Rechercher</button>
+        <AdminChartButton metrics={['nouveaux_comptes', 'comptes_par_plan']} title="Analyser les utilisateurs" />
       </div>
+      <div className="mb-4"><BoutonsExport /></div>
 
       {chargement ? (
         <div className="flex justify-center py-16"><div className="spinner" /></div>
@@ -301,7 +313,7 @@ function Utilisateurs() {
               {users.map((u) => (
                 <tr key={u._id} className="border-b border-white/5">
                   <td className="px-5 py-3">
-                    <p className="font-medium text-white">{u.nom}</p>
+                    <button type="button" onClick={() => setDetailId(u._id)} className="font-medium text-white hover:text-[#d9524d] text-left" title="Voir la fiche complète">{u.nom}</button>
                     <p className="text-xs text-gray-500">{u.email}</p>
                   </td>
                   <td className="px-5 py-3">
@@ -333,6 +345,7 @@ function Utilisateurs() {
           </table>
         </div>
       )}
+      {detailId && <UserDetailModal id={detailId} onClose={() => setDetailId(null)} />}
     </div>
   );
 }
@@ -842,6 +855,8 @@ export default function AdminDashboard() {
         <Route path="legal" element={<ContenuLegal />} />
         <Route path="support" element={<SupportAdmin />} />
         <Route path="affiliation" element={<AffiliationAdmin />} />
+        <Route path="journal" element={<JournalAudit />} />
+        <Route path="systeme" element={<SystemeAdmin />} />
       </Routes>
     </AdminShell>
   );

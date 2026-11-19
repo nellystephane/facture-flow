@@ -5,6 +5,10 @@ const serviceBase = {
   description: optionalText(1000),
   prix: nonNegativeNumber('Le prix').optional().default(0),
   unite: optionalText(30).optional().default('unité'),
+  suiviStock: z.coerce.boolean().optional(),
+  stock: z.coerce.number().optional(),
+  seuilAlerte: nonNegativeNumber('Le seuil d’alerte').optional(),
+  prixAchat: nonNegativeNumber('Le prix d’achat').optional(),
 };
 
 const createServiceSchema = z.object(serviceBase).strip();

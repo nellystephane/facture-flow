@@ -5,6 +5,7 @@
 // tels quels (identifiants FedaPay, notes internes, coordonnées complètes...).
 
 const { computeInvoiceTotals, paidAmountOf } = require('./invoiceTotals');
+const { normalizeDevise } = require('./currency');
 
 function pickClient(client) {
   if (!client || typeof client !== 'object' || client.nom === undefined) return null;
@@ -34,7 +35,7 @@ function pickEmetteur(user, { withBanque = false } = {}) {
     telephone: user.telephone || '',
     whatsapp: user.whatsapp || '',
     adresse: user.adresse || '',
-    devise: user.devise || 'FCFA',
+    devise: normalizeDevise(user.devise),
     logoUrl: user.logoUrl || '',
   };
   if (withBanque) out.banque = user.banque || undefined;
@@ -52,6 +53,7 @@ function publicInvoiceDto(invoice) {
     dateEmission: invoice.dateEmission,
     dateEcheance: invoice.dateEcheance,
     items: pickItems(invoice.items),
+    devise: normalizeDevise(invoice.devise),
     remise: t.remise,
     tva: invoice.tva || 0,
     notes: invoice.notes || '',
@@ -66,6 +68,7 @@ function publicInvoiceDto(invoice) {
 function publicPaymentDto(payment) {
   return {
     _id: String(payment._id),
+    devise: normalizeDevise(payment.devise),
     montant: payment.montant,
     montantFacture: paidAmountOf(payment),
     statut: payment.statut,
@@ -85,6 +88,7 @@ function publicQuoteDto(quote) {
     dateEmission: quote.dateEmission,
     dateExpiration: quote.dateExpiration,
     items: pickItems(quote.items),
+    devise: normalizeDevise(quote.devise),
     remise: quote.remise || 0,
     tva: quote.tva || 0,
     notes: quote.notes || '',

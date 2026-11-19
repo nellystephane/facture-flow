@@ -17,23 +17,26 @@ Créez devis et factures en quelques secondes, suivez les paiements Mobile Money
 - 💳 **Paiements** — espèces, MTN Money, Moov Money, carte, virement ; passage auto au statut "payée"
 - 🖥️ **PDF** — génération d'un PDF professionnel pour factures et devis
 - 🔍 **Historique & recherche** — par client, date, statut
+- 👤 **Fiche client** — total facturé, payé, reste à payer, délai moyen de paiement, fiabilité, factures et paiements
+- 🧮 **Dépenses** — saisie par catégorie, résumé du mois, bénéfice (encaissé − dépenses)
+- 📊 **Analyser** — bouton graphique sur chaque outil : l'utilisateur choisit les éléments, la période et le type de graphique (courbes, barres, anneau), export CSV
 
 ### Évolutions prévues (v2 / v3)
 - ✍️ Signature électronique des devis
 - 🔔 Relances automatiques (J+7, J+15, J+30)
-- 📱 Envoi WhatsApp avec PDF
+- 📱 Envoi WhatsApp automatisé (aujourd’hui : partage du lien via WhatsApp, sans API)
 - 🤖 Génération de factures par IA
 - 💰 Gestion des dépenses & bénéfices
-- 👥 Gestion d'équipe multi-rôles
+- 🧾 Facture normalisée DGI (e-MECeF) : en phase de test, ni homologuée ni en production
 
 ---
 
 ## 🎨 Design
 
-- **Thème** : blanc dégradé + effet **liquid glass**
-- **Couleurs** : rouge (`#e11d2a`) & noir (`#0a0a0c`)
+- **Thème** : cartes blanches à bordure fine sur fond gris clair, mode sombre disponible
+- **Couleurs** : rouge Oryxa (`#d9524d`) & noir (`#0a0a0c`) ; vert menthe pour la carte du chiffre clé
 - **Icônes** : [Lucide React](https://lucide.dev)
-- **Animations** : fondu, glissement, orbes flottants, transitions fluides
+- **Animations** : entrée en fondu net depuis un léger flou, en cascade ; chiffres qui montent (`CountUp`), barres qui poussent, lignes de tableau en cascade, apparition au défilement (`Reveal`). Tout est désactivé avec `prefers-reduced-motion`. Voir `frontend/src/index.css` (section « Mouvement »).
 
 ---
 
@@ -41,13 +44,13 @@ Créez devis et factures en quelques secondes, suivez les paiements Mobile Money
 
 | Couche        | Technologie                          |
 |---------------|--------------------------------------|
-| Frontend      | React 19 + TypeScript + Vite         |
+| Frontend      | React 18 + TypeScript (strict) + Vite 5         |
 | Styles        | Tailwind CSS v4                      |
 | Icônes        | Lucide React                         |
 | Routing       | React Router v7                      |
 | Backend       | Node.js + Express 5                  |
 | Base de données | MongoDB Atlas (Mongoose)           |
-| Authentification | JWT (7 jours) + bcrypt           |
+| Authentification | JWT d’accès courts (15 min) + refresh tokens en cookie httpOnly + bcrypt           |
 | PDF           | PDFKit                               |
 | HTTP          | Axios (avec intercepteur JWT)        |
 
@@ -169,8 +172,8 @@ Authorization: Bearer <token>
 | Plan       | Prix            | Inclus                                                   |
 |------------|-----------------|----------------------------------------------------------|
 | Gratuit    | 0 FCFA          | 5 factures/mois, 5 devis/mois, jusqu’à 20 clients, PDF |
-| Pro        | 3 000 FCFA/mois | Factures illimitées, logo, relances auto, stats avancées |
-| Business   | 8 000 FCFA/mois | Tout Pro + équipe, WhatsApp, Mobile Money, export comptable |
+| Pro        | 3 500 FCFA/mois | Factures illimitées, logo, relances auto, stats avancées |
+| Business   | 6 000 FCFA/mois | Tout Pro + équipe, WhatsApp, Mobile Money, export comptable |
 
 ---
 

@@ -4,6 +4,7 @@ import { FileSpreadsheet, Plus, Search, Eye, Download, Filter } from 'lucide-rea
 import { getQuotes, quotePdfUrl } from '../api/quotes';
 import type { Quote } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import ChartButton from '../components/charts/ChartButton';
 import EmptyState from '../components/ui/EmptyState';
 import Pagination from '../components/ui/Pagination';
 import Select from '../components/ui/Select';
@@ -58,7 +59,7 @@ export default function Quotes() {
         title="Devis"
         subtitle={`${total} devis au total`}
         icon={<FileSpreadsheet size={20} />}
-        actions={<Link to="/app/quotes/new" className="btn-primary text-sm"><Plus size={18} /> Nouveau devis</Link>}
+        actions={<><ChartButton metrics={['nb_devis', 'statuts_devis']} title="Analyser mes devis" /><Link to="/app/quotes/new" className="btn-primary text-sm"><Plus size={18} /> Nouveau devis</Link></>}
       />
 
       <div className="glass-card p-4 mb-6 animate-fade-up">
@@ -109,7 +110,7 @@ export default function Quotes() {
                       <td className="px-5 py-4 text-gray-700 dark:text-gray-300">{client?.nom || '—'}</td>
                       <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(q.dateEmission)}</td>
                       <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(q.dateExpiration)}</td>
-                      <td className="px-5 py-4 font-semibold">{formatFCFA(q.totalTTC)}</td>
+                      <td className="px-5 py-4 font-semibold">{formatFCFA(q.totalTTC, q.devise)}</td>
                       <td className="px-5 py-4"><span className={badgeClass(q.statut)}>{QUOTE_STATUT_LABEL[q.statut]}</span></td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1.5">

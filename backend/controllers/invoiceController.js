@@ -1,4 +1,5 @@
 const Invoice = require('../models/Invoice');
+const { resolveDocumentCurrency } = require('../utils/currency');
 const Payment = require('../models/Payment');
 const Client = require('../models/Client');
 const Service = require('../models/Service');
@@ -47,7 +48,7 @@ async function verifierLimiteGratuite(userId) {
   return verifierLimiteFactures(Invoice, user);
 }
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateEcheance', 'items', 'remise', 'tva', 'notes', 'template', 'fraisSupportesPar'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateEcheance', 'items', 'remise', 'tva', 'notes', 'template', 'fraisSupportesPar', 'devise', 'tauxChange'];
 
 function pickFields(body) {
   const o = {};
@@ -111,6 +112,9 @@ exports.createInvoice = asyncHandler(async (req, res) => {
 
   const data = pickFields(req.body);
   if (!data.client) return res.status(400).json({ message: 'Le client est requis' });
+  const dev = resolveDocumentCurrency(data, user.devise);
+  if (dev.error) return res.status(400).json({ message: dev.error });
+  Object.assign(data, dev.fields);
   data.owner = req.userId;
   data.numero = await nextInvoiceNumber(req.userId);
   if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) {
@@ -120,6 +124,66 @@ exports.createInvoice = asyncHandler(async (req, res) => {
   await invoice.populate('client');
   enregistrerActivite(req, { action: 'facture.creee', ressource: 'facture', ressourceId: invoice._id, details: `Facture ${invoice.numero} créée` });
   res.status(201).json(invoice);
+});
+
+// -----------------------------------------------------------------------
+// Vente au comptoir : une vente encaissée sur-le-champ (espèces, Mobile Money
+// reçu en main propre...) sans client enregistré. Crée la facture, enregistre
+// le paiement et la marque payée en une seule action.
+// POST /api/invoices/vente-rapide { items, methode?, client?, remise?, tva? }
+// -----------------------------------------------------------------------
+exports.venteRapide = asyncHandler(async (req, res) => {
+  const { computeInvoiceTotals } = require('../utils/invoiceTotals');
+  const { syncInvoiceStatus } = require('../utils/invoicePayments');
+  const user = await User.findById(req.userId);
+  const limite = await verifierLimiteFactures(Invoice, user);
+  if (limite) return res.status(403).json(limite);
+
+  const items = (req.body.items || []).map((i) => ({ description: i.description, quantite: i.quantite, prixUnitaire: i.prixUnitaire, service: i.service || null }));
+  if (!items.length) return res.status(400).json({ message: 'Ajoutez au moins un article.' });
+
+  let clientId = req.body.client;
+  if (clientId) {
+    const c = await Client.findOne({ _id: clientId, owner: req.userId }).select('_id');
+    if (!c) return res.status(404).json({ message: 'Client introuvable' });
+  } else {
+    // Un seul « Client de passage » par compte, réutilisé pour toutes les ventes comptoir.
+    const passage = await Client.findOneAndUpdate(
+      { owner: req.userId, nom: 'Client de passage', notes: 'Client créé automatiquement pour les ventes au comptoir.' },
+      { $setOnInsert: { owner: req.userId, nom: 'Client de passage', notes: 'Client créé automatiquement pour les ventes au comptoir.' } },
+      { upsert: true, returnDocument: 'after' }
+    );
+    clientId = passage._id;
+  }
+
+  const invoice = await Invoice.create({
+    owner: req.userId,
+    client: clientId,
+    numero: await nextInvoiceNumber(req.userId),
+    objet: 'Vente au comptoir',
+    dateEmission: Date.now(),
+    items,
+    remise: req.body.remise || 0,
+    tva: req.body.tva || 0,
+    statut: 'envoyee',
+  });
+  const { totalDu } = computeInvoiceTotals(invoice);
+  const payment = await Payment.create({
+    owner: req.userId,
+    invoice: invoice._id,
+    montant: totalDu,
+    montantFacture: totalDu,
+    montantClientPaye: totalDu,
+    methode: req.body.methode || 'especes',
+    origine: 'manuel',
+    statut: 'complete',
+    note: 'Vente au comptoir',
+    receiptNumber: await nextNumber(req.userId, 'recu'),
+  });
+  await syncInvoiceStatus(invoice);
+  await invoice.populate('client');
+  enregistrerActivite(req, { action: 'facture.vente_rapide', ressource: 'facture', ressourceId: invoice._id, details: `Vente au comptoir ${invoice.numero} (${totalDu} FCFA)` });
+  res.status(201).json({ invoice, payment });
 });
 
 exports.updateInvoice = asyncHandler(async (req, res) => {
@@ -134,6 +198,10 @@ exports.updateInvoice = asyncHandler(async (req, res) => {
   const fiscalStatus = existing.fiscalisation?.status || 'non_emise';
   if (EMECEF_LOCKED_STATUSES.includes(fiscalStatus)) return fiscalisationLockResponse(res, fiscalStatus);
   const updates = pickFields(req.body);
+  const dev = resolveDocumentCurrency(updates, null, existing);
+  if (dev.error) return res.status(400).json({ message: dev.error });
+  delete updates.devise; delete updates.tauxChange;
+  Object.assign(updates, dev.fields);
   if (updates.template) {
     const user = await User.findById(req.userId);
     if (!permissionsDe(user).peutUtiliserModele(updates.template)) {
@@ -189,6 +257,7 @@ exports.patchInvoiceStatus = asyncHandler(async (req, res) => {
     }
     return res.status(409).json({ message: 'La facture a changé pendant l’annulation. Actualisez-la avant de réessayer.', code: 'INVOICE_NOT_CANCELLABLE' });
   }
+  require('../utils/stock').restituerStockFacture(annulee._id).catch(() => {});
   await annulee.populate('client');
   enregistrerActivite(req, { action: 'facture.annulee', ressource: 'facture', ressourceId: annulee._id, details: `Facture ${annulee.numero} annulée` });
   res.json(annulee);
@@ -256,6 +325,8 @@ async function creerFactureDepuisDevis(quote, ownerId) {
     objet: quote.objet,
     dateEmission: Date.now(),
     items: quote.items.map(i => ({ description: i.description, quantite: i.quantite, prixUnitaire: i.prixUnitaire })),
+    devise: quote.devise || 'XOF',
+    tauxChange: quote.tauxChange || 1,
     remise: quote.remise,
     tva: quote.tva,
     notes: quote.notes,
@@ -346,6 +417,7 @@ exports.sendInvoiceEmail = asyncHandler(async (req, res) => {
   if (invoice.statut === 'brouillon') invoice.statut = 'envoyee';
   invoice.dateEnvoi = new Date();
   await invoice.save();
+  require('../utils/stock').appliquerStockFacture(invoice._id).catch(() => {});
 
   res.json({ message: 'Facture envoyée par email.', invoice, paymentUrl });
 });

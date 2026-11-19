@@ -7,6 +7,8 @@ const VERIFICATEURS = {
   logoPersonnalise: (p) => p.peutUtiliserLogoPersonnalise(),
   relancesAutomatiques: (p) => p.peutUtiliserRelancesAutomatiques(),
   statistiquesAvancees: (p) => p.peutVoirStatistiquesAvancees(),
+  gestionStock: (p) => p.peutGererStock(),
+  facturesRecurrentes: (p) => p.peutUtiliserFacturesRecurrentes(),
   exportComptable: (p) => p.peutExporterComptabilite(),
 };
 

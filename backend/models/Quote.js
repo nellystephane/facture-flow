@@ -15,6 +15,8 @@ const quoteSchema = new mongoose.Schema({
   dateEmission: { type: Date, default: Date.now },
   dateExpiration: { type: Date },
   items: [itemSchema],
+  devise: { type: String, default: 'XOF' },
+  tauxChange: { type: Number, default: 1, min: 0 },
   remise: { type: Number, default: 0 },
   tva: { type: Number, default: 0 },
   notes: { type: String, default: '' },

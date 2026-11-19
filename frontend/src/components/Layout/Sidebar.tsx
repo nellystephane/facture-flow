@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Users, Package, FileSpreadsheet,
-  Wallet, User, LogOut, X, Crown, UsersRound, Headphones, Zap, Gift
+  Wallet, Receipt, ShoppingCart, Repeat, User, LogOut, X, Crown, UsersRound, Headphones, Zap, Gift
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../contexts/PermissionsContext';
@@ -16,10 +16,13 @@ interface SidebarProps {
 const NAV = [
   { to: '/app', end: true, label: 'Tableau de bord', icon: LayoutDashboard },
   { to: '/app/invoices', label: 'Factures', icon: FileText },
+  { to: '/app/vente-rapide', label: 'Vente comptoir', icon: ShoppingCart },
+  { to: '/app/recurrentes', label: 'Récurrentes', icon: Repeat },
   { to: '/app/quotes', label: 'Devis', icon: FileSpreadsheet },
   { to: '/app/clients', label: 'Clients', icon: Users },
   { to: '/app/services', label: 'Produits & Services', icon: Package },
   { to: '/app/payments', label: 'Paiements', icon: Wallet },
+  { to: '/app/depenses', label: 'Dépenses', icon: Receipt },
   { to: '/app/abonnement', label: 'Abonnement', icon: Crown },
   { to: '/app/profile', label: 'Mon profil', icon: User },
   { to: '/app/support', label: 'Support', icon: Headphones },
@@ -41,7 +44,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   // à voir un lien vers une page qui lui répondrait "verrouillé" ou "accès
   // refusé" à chaque clic.
   const nav = permissions?.peutGererEquipe
-    ? [...NAV.slice(0, 6), { to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...NAV.slice(6)]
+    ? [...NAV.slice(0, 9), { to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...NAV.slice(9)]
     : NAV;
 
   return (

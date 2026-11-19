@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { formatMoney, normalizeDevise } = require('../utils/currency');
 const Payment = require('../models/Payment');
 const Invoice = require('../models/Invoice');
 const User = require('../models/User');
@@ -85,13 +86,15 @@ exports.createPayment = asyncHandler(async (req, res) => {
   // Un paiement ne peut pas dépasser ce qu'il reste à payer (total DGI inclus).
   const avant = await getInvoiceBalance(invoice);
   if (montantNum > avant.reste + 0.5) {
-    return res.status(400).json({ message: `Le montant dépasse le solde restant de cette facture (${Math.round(avant.reste)} FCFA).` });
+    return res.status(400).json({ message: `Le montant dépasse le solde restant de cette facture (${formatMoney(avant.reste, invoice.devise)}).` });
   }
 
   const payment = await Payment.create({
     owner: req.userId,
     invoice: invoiceId,
     montant: montantNum,
+    devise: normalizeDevise(invoice.devise),
+    tauxChange: normalizeDevise(invoice.devise) === 'XOF' ? 1 : (invoice.tauxChange || 1),
     montantFacture: montantNum,
     montantClientPaye: montantNum,
     methode: methode || 'especes',

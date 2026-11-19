@@ -11,7 +11,8 @@ import DatePicker from '../components/ui/DatePicker';
 import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { formatFCFA, todayISO, addDays, totalHT, totalTTC, apiError } from '../utils/format';
+import DeviseField from '../components/DeviseField';
+import { formatFCFA as formatBase, todayISO, addDays, deviseInfo, totalHT, totalTTC, apiError } from '../utils/format';
 
 const TEMPLATES = [
   { id: 'classique', label: 'Classique', desc: 'Référence Oryxa, sobre et universelle' },
@@ -42,7 +43,7 @@ export default function InvoiceForm() {
 
   const [form, setForm] = useState<{
     client: string; objet: string; dateEmission: string; dateEcheance: string;
-    items: Item[]; remise: number; tva: number; notes: string; fraisSupportesPar: 'utilisateur' | 'client'; statut: InvoiceStatut; template: string;
+    items: Item[]; remise: number; tva: number; notes: string; fraisSupportesPar: 'utilisateur' | 'client'; statut: InvoiceStatut; template: string; devise: string; tauxChange: number;
   }>({
     client: '',
     objet: '',
@@ -55,6 +56,8 @@ export default function InvoiceForm() {
     fraisSupportesPar: 'utilisateur',
     statut: 'brouillon',
     template: 'classique',
+    devise: 'XOF',
+    tauxChange: 1,
   });
 
   useEffect(() => {
@@ -84,6 +87,8 @@ export default function InvoiceForm() {
           fraisSupportesPar: d.fraisSupportesPar || 'utilisateur',
           statut: (d.statut as 'brouillon') || 'brouillon',
           template: d.template || 'classique',
+          devise: d.devise || 'XOF',
+          tauxChange: d.tauxChange || 1,
         });
       })
       .catch((err) => toast(apiError(err), 'error'))
@@ -102,6 +107,7 @@ export default function InvoiceForm() {
     if (!s) return;
     updateItem(idx, 'description', s.nom);
     updateItem(idx, 'prixUnitaire', s.prix);
+    updateItem(idx, 'service', s.suiviStock ? s._id : null);
   };
 
   const handlePreview = async () => {
@@ -155,6 +161,8 @@ export default function InvoiceForm() {
 
   if (loading) return <div className="h-96 skeleton" />;
 
+  // Tous les montants du document s'affichent dans sa devise ; le catalogue reste en FCFA.
+  const formatFCFA = (n: number | null | undefined) => formatBase(n, form.devise);
   const ht = totalHT(form.items, form.remise);
   const ttc = totalTTC(form.items, form.remise, form.tva);
 
@@ -189,6 +197,9 @@ export default function InvoiceForm() {
                 <label className="field-label">Date d'échéance</label>
                 <DatePicker value={form.dateEcheance} onChange={(v) => update('dateEcheance', v)} />
               </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
+              <DeviseField devise={form.devise} tauxChange={form.tauxChange} onChange={(d) => setForm((f) => ({ ...f, ...d }))} />
             </div>
           </div>
 
@@ -244,7 +255,7 @@ export default function InvoiceForm() {
                       {formatFCFA(item.quantite * item.prixUnitaire)}
                     </div>
                   </div>
-                  <div className="mt-2 max-w-xs"><label className="field-label">Taxe spécifique DGI (FCFA, total de la ligne)</label><input type="number" min={0} step={1} className="field" value={item.taxSpecific || 0} onChange={(e) => updateItem(idx, 'taxSpecific', Number(e.target.value))} /><p className="text-xs text-gray-500 mt-1">Champ fiscal transmis à la DGI ; distinct du calcul commercial standard d’Oryxa.</p></div>
+                  <div className="mt-2 max-w-xs"><label className="field-label">Taxe spécifique DGI (FCFA, total de la ligne, factures en FCFA uniquement)</label><input type="number" min={0} step={1} className="field" value={item.taxSpecific || 0} onChange={(e) => updateItem(idx, 'taxSpecific', Number(e.target.value))} /><p className="text-xs text-gray-500 mt-1">Champ fiscal transmis à la DGI ; distinct du calcul commercial standard d’Oryxa.</p></div>
                   <div className="mt-2 max-w-xs"><label className="field-label">Groupe fiscal DGI de cette ligne</label><select className="field" value={item.taxGroup || ''} onChange={(e) => updateItem(idx, 'taxGroup', (e.target.value || null) as Item['taxGroup'])}><option value="">Utiliser le groupe choisi lors de la fiscalisation</option><option value="A">A — Groupe fiscal A</option><option value="B">B — Groupe fiscal B</option><option value="C">C — Groupe fiscal C</option><option value="D">D — Groupe fiscal D</option><option value="E">E — Groupe fiscal E</option><option value="F">F — Groupe fiscal F</option></select></div>
                   <div className="grid sm:grid-cols-2 gap-2 mt-2">
                     <div><label className="field-label">Prix d’origine (optionnel)</label><input type="number" min={0} step={1} className="field" value={item.originalPrice ?? ''} onChange={(e) => updateItem(idx, 'originalPrice', e.target.value === '' ? null : Number(e.target.value))} placeholder="Prix avant modification" /></div>
@@ -254,7 +265,7 @@ export default function InvoiceForm() {
                   {services.length > 0 && (
                     <div className="mt-2">
                       {permissions?.peutUtiliserFacturationExpress ? (
-                        <Select value="" onChange={(v) => pickService(idx, v)} options={[{value:'',label:'Pré-remplir depuis un service...'}, ...services.map(s => ({value:s._id,label:`${s.nom} — ${formatFCFA(s.prix)}`}))]} className="text-xs py-1" />
+                        <Select value="" onChange={(v) => pickService(idx, v)} options={[{value:'',label:'Pré-remplir depuis un service...'}, ...services.map(s => ({value:s._id,label:`${s.nom} — ${formatBase(s.prix, 'XOF')}`}))]} className="text-xs py-1" />
                       ) : (
                         <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1.5">
                           <Lock size={11} /> Pré-remplissage depuis vos tarifs — plan Pro
@@ -311,7 +322,7 @@ export default function InvoiceForm() {
                 <span className="font-semibold">{formatFCFA(form.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Remise (FCFA)</span>
+                <span className="text-gray-500 dark:text-gray-400">Remise ({deviseInfo(form.devise).label})</span>
                 <input type="number" min={0} className="field w-28 text-right py-1" value={form.remise}
                   onChange={(e) => update('remise', Number(e.target.value))} />
               </div>

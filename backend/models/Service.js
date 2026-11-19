@@ -6,6 +6,11 @@ const serviceSchema = new mongoose.Schema({
   description: { type: String, default: '' },
   prix: { type: Number, required: true, default: 0 },
   unite: { type: String, default: 'unité' },
+  // Suivi de stock (optionnel, réservé aux plans qui l'incluent).
+  suiviStock: { type: Boolean, default: false },
+  stock: { type: Number, default: 0 },
+  seuilAlerte: { type: Number, min: 0, default: 0 },
+  prixAchat: { type: Number, min: 0, default: 0 },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Service', serviceSchema);

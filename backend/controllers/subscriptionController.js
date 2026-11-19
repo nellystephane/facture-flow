@@ -136,6 +136,8 @@ exports.getPermissions = asyncHandler(async (req, res) => {
     peutUtiliserLogoPersonnalise: perms.peutUtiliserLogoPersonnalise(),
     peutUtiliserRelancesAutomatiques: perms.peutUtiliserRelancesAutomatiques(),
     peutVoirStatistiquesAvancees: perms.peutVoirStatistiquesAvancees(),
+    peutGererStock: perms.peutGererStock(),
+    peutUtiliserFacturesRecurrentes: perms.peutUtiliserFacturesRecurrentes(),
     peutExporterComptabilite: perms.peutExporterComptabilite(),
     peutGererEquipe: perms.plan === 'business' && (req.userRole === 'proprietaire' || req.userRole === 'admin'),
     modelesFactureDisponibles: perms.modelesFactureDisponibles(),

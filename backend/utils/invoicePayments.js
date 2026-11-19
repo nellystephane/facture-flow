@@ -59,6 +59,9 @@ async function syncInvoiceStatus(invoiceOrId) {
     await Invoice.updateOne({ _id: invoice._id, statut: { $ne: 'annulee' } }, { $set: { statut: next } });
     invoice.statut = next;
   }
+  if (invoice.statut !== 'brouillon' && invoice.statut !== 'annulee' && !invoice.stockApplique) {
+    require('./stock').appliquerStockFacture(invoice._id).catch(() => {});
+  }
   return { invoice, balance, statut: next };
 }
 

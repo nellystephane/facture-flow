@@ -17,6 +17,8 @@ const quoteBase = {
   remise: nonNegativeNumber('La remise').optional().default(0),
   tva: nonNegativeNumber('La TVA').max(100, 'La TVA ne peut pas dépasser 100%.').optional().default(0),
   notes: optionalText(2000),
+  devise: z.string().trim().max(10).optional(),
+  tauxChange: z.coerce.number().positive('Le taux de change doit être positif.').optional(),
   statut: z.enum(STATUTS).optional(),
   template: z.enum(['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir']).optional(),
 };

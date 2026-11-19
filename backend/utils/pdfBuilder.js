@@ -1,3 +1,4 @@
+const { formatMoney: formatMoneyText } = require('./currency');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -36,15 +37,10 @@ function styleDe(templateId) {
   return TEMPLATE_STYLES[templateId] || TEMPLATE_STYLES.classique;
 }
 
-function formatMontant(n, _devise = 'FCFA') {
-  const rounded = Math.round(n || 0);
-  // On construit le séparateur de milliers nous-mêmes avec une espace
-  // normale plutôt que Intl.NumberFormat('fr-FR'), qui insère une espace
-  // insécable fine (U+202F) — invisible à l'écran mais absente de
-  // l'encodage de base de la police PDF (Helvetica/WinAnsi), ce qui la
-  // faisait s'afficher comme "/" dans les PDF générés.
-  const str = Math.abs(rounded).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return (rounded < 0 ? '-' : '') + str + ' FCFA';
+// Séparateur de milliers = espace normale (l'espace fine insécable d'Intl
+// s'affiche « / » avec la police PDF de base) : voir utils/currency.formatMoney.
+function formatMontant(n, devise) {
+  return formatMoneyText(n, devise);
 }
 
 function formatDate(d) {
@@ -445,7 +441,7 @@ function drawFiscalItemsTable(pdf, fiscalItems, startY, style) {
 }
 
 function drawInvoiceOrQuote(pdf, { doc, user, isQuote, paymentUrl, logoBuffer }) {
-  const devise = 'FCFA';
+  const devise = doc.devise || 'XOF';
   const statutLabel = isQuote ? STATUT_QUOTE_LABEL[doc.statut] : STATUT_INVOICE_LABEL[doc.statut];
   const statutColor = isQuote ? '#1d4ed8' : STATUT_INVOICE_COLOR[doc.statut];
   const style = styleDe(doc.template);
@@ -505,7 +501,7 @@ async function buildQuotePdf({ quote, user }) {
 
 /** Reçu de paiement — document distinct, remis après règlement. */
 async function buildReceiptPdf({ invoice, payment, user }) {
-  const devise = 'FCFA';
+  const devise = (payment && payment.devise) || (invoice && invoice.devise) || 'XOF';
   const METHODE_LABEL = {
     especes: 'Espèces', mtn_money: 'MTN Mobile Money', moov_money: 'Moov Money',
     carte: 'Carte bancaire', virement: 'Virement bancaire', autre: 'Autre'

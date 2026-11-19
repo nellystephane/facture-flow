@@ -3,7 +3,7 @@ import OryxaLogo from '../components/OryxaLogo';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Building2, CheckCircle2, Loader2, ShieldCheck, Smartphone, CreditCard, Landmark, Receipt, AlertTriangle } from 'lucide-react';
 import { getPublicInvoice, initiateOnlinePayment, getPublicPaymentStatus, publicReceiptUrl, type PublicInvoiceResponse } from '../api/public';
-import { formatFCFA, formatDate, apiError } from '../utils/format';
+import { formatFCFA as formatBase, deviseInfo, normalizeDevise, formatDate, apiError } from '../utils/format';
 import InfoHint from '../components/ui/InfoHint';
 
 export default function PaymentPublic() {
@@ -102,9 +102,11 @@ export default function PaymentPublic() {
 
   if (!data) return null;
   const { invoice, emetteur, totalTTC, totalPaye, payments, fraisPaiement } = data;
+  const formatFCFA = (n: number | null | undefined) => formatBase(n, invoice.devise);
   const reste = Math.max(0, totalTTC - totalPaye);
   const dejaPayee = invoice.statut === 'payee' || reste <= 0.5;
-  const paiementEnLigneDisponible = true;
+  // Le paiement en ligne (FedaPay) ne traite que le FCFA.
+  const paiementEnLigneDisponible = normalizeDevise(invoice.devise) === 'XOF';
 
   return (
     <div className="app-bg min-h-screen py-10 px-4">
@@ -158,7 +160,7 @@ export default function PaymentPublic() {
             <div className="text-center py-6">
               <AlertTriangle className="mx-auto text-amber-500 mb-3" size={32} />
               <p className="font-bold text-[#0a0a0c] dark:text-white mb-1">Paiement en ligne indisponible</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Les paiements en ligne Oryxa sont actuellement traités en FCFA (XOF).</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Cette facture est en {deviseInfo(invoice.devise).nom}. Réglez-la directement auprès de {emetteur.entreprise || emetteur.nom}{emetteur.email ? ` (${emetteur.email}` : ''}{emetteur.email && emetteur.telephone ? ` · ${emetteur.telephone})` : emetteur.email ? ')' : ''}, qui enregistrera votre paiement.</p>
             </div>
           ) : checkingReturn ? (
             <div className="text-center py-8">

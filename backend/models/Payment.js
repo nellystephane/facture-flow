@@ -4,6 +4,9 @@ const paymentSchema = new mongoose.Schema({
   owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   invoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice', required: true },
   montant: { type: Number, required: true },
+  // Devise du paiement = devise de la facture (jamais de conversion à l'encaissement).
+  devise: { type: String, default: 'XOF' },
+  tauxChange: { type: Number, default: 1, min: 0 },
   // Montant commercial réellement imputé à la facture. Pour un paiement en ligne
   // avec frais client, `montant` peut être supérieur à ce montant.
   montantFacture: { type: Number, default: null },

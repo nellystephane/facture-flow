@@ -27,6 +27,8 @@ function permissionsDe(user) {
     peutUtiliserLogoPersonnalise: () => plan.logoPersonnalise,
     peutUtiliserRelancesAutomatiques: () => plan.relancesAutomatiques,
     peutVoirStatistiquesAvancees: () => plan.statistiquesAvancees,
+    peutGererStock: () => plan.gestionStock,
+    peutUtiliserFacturesRecurrentes: () => plan.facturesRecurrentes,
     peutExporterComptabilite: () => plan.exportComptable,
     peutAjouterUtilisateur: (nbMembresActuel = 1) => plan.multiUtilisateurs && nbMembresActuel < plan.maxMembres,
     modelesFactureDisponibles: () => plan.modelesFacture,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Plus, Pencil, Trash2, Search, Tag, Zap, Lock } from 'lucide-react';
-import { getServices, getUnites, createService, updateService, deleteService } from '../api/services';
+import { Package, Plus, Pencil, Trash2, Search, Tag, Zap, Lock, Boxes, AlertTriangle, ArrowDownUp } from 'lucide-react';
+import { getServices, getUnites, createService, updateService, deleteService, mouvementStock, getStockResume, type StockResume, type MouvementType } from '../api/services';
 import { getAllClients } from '../api/clients';
 import { createInvoiceFromService } from '../api/invoices';
 import type { Service, Client } from '../types';
@@ -17,7 +17,7 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../contexts/ToastContext';
 import { formatFCFA, apiError, todayISO } from '../utils/format';
 
-const EMPTY = { nom: '', description: '', prix: 0, unite: 'unité' };
+const EMPTY = { nom: '', description: '', prix: 0, unite: 'unité', suiviStock: false, stock: 0, seuilAlerte: 0, prixAchat: 0 };
 
 export default function Services() {
   const [services, setServices] = useState<Service[]>([]);
@@ -54,6 +54,27 @@ export default function Services() {
   };
 
   useEffect(load, []);
+  const peutStock = !!permissions?.peutGererStock;
+  const [resume, setResume] = useState<StockResume | null>(null);
+  const [mouvement, setMouvement] = useState<Service | null>(null);
+  const [mvt, setMvt] = useState<{ type: MouvementType; quantite: number; note: string }>({ type: 'entree', quantite: 1, note: '' });
+  const [mvtSaving, setMvtSaving] = useState(false);
+  const loadResume = () => { if (peutStock) getStockResume().then((r) => setResume(r.data)).catch(() => {}); };
+  useEffect(loadResume, [peutStock]);
+
+  const ouvrirMouvement = (s: Service) => { setMvt({ type: 'entree', quantite: 1, note: '' }); setMouvement(s); };
+  const validerMouvement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mouvement) return;
+    setMvtSaving(true);
+    try {
+      await mouvementStock(mouvement._id, mvt);
+      toast('Stock mis à jour');
+      setMouvement(null);
+      load();
+      loadResume();
+    } catch (err) { toast(apiError(err), 'error'); } finally { setMvtSaving(false); }
+  };
   useEffect(() => { getUnites().then((res) => setUnites(res.data.unites)).catch(() => {}); }, []);
 
   const openCreate = () => {
@@ -64,7 +85,7 @@ export default function Services() {
 
   const openEdit = (s: Service) => {
     setEditing(s);
-    setForm({ nom: s.nom, description: s.description || '', prix: s.prix, unite: s.unite || 'unité' });
+    setForm({ nom: s.nom, description: s.description || '', prix: s.prix, unite: s.unite || 'unité', suiviStock: !!s.suiviStock, stock: s.stock ?? 0, seuilAlerte: s.seuilAlerte ?? 0, prixAchat: s.prixAchat ?? 0 });
     setModalOpen(true);
   };
 
@@ -73,7 +94,9 @@ export default function Services() {
     setSaving(true);
     try {
       if (editing) {
-        await updateService(editing._id, form);
+        const { stock: _stock, ...sansStock } = form;
+        void _stock;
+        await updateService(editing._id, sansStock);
         toast('Service mis à jour');
       } else {
         await createService(form);
@@ -153,6 +176,26 @@ export default function Services() {
         actions={<button onClick={openCreate} className="btn-primary text-sm"><Plus size={18} /> Nouveau</button>}
       />
 
+      {peutStock && resume && resume.nombreProduits > 0 && (
+        <div className="grid sm:grid-cols-3 gap-4 mb-6 fx-stagger">
+          <div className="glass-card p-5 stat-tone-mint">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500">Valeur du stock (achat)</p>
+            <p className="text-2xl font-extrabold mt-3 tabular-nums">{formatFCFA(resume.valeurAchat)}</p>
+            <p className="text-xs text-gray-500 mt-1">À la vente : {formatFCFA(resume.valeurVente)}</p>
+          </div>
+          <div className="glass-card p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500">Stock bas</p>
+            <p className="text-2xl font-extrabold mt-3 text-[#f59e0b]">{resume.enAlerte.length}</p>
+            <p className="text-xs text-gray-500 mt-1 truncate">{resume.enAlerte.map((p) => p.nom).join(', ') || 'Aucun produit en alerte'}</p>
+          </div>
+          <div className="glass-card p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500">Épuisés</p>
+            <p className="text-2xl font-extrabold mt-3 text-[#d9524d]">{resume.epuises.length}</p>
+            <p className="text-xs text-gray-500 mt-1 truncate">{resume.epuises.map((p) => p.nom).join(', ') || 'Rien d’épuisé'}</p>
+          </div>
+        </div>
+      )}
+
       <div className="glass-card p-4 mb-6 animate-fade-up">
         <div className="relative">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
@@ -195,6 +238,15 @@ export default function Services() {
                   <button className="btn-icon" onClick={() => setToDelete(s)}><Trash2 size={15} /></button>
                 </div>
               </div>
+              {s.suiviStock && (
+                <div className="flex items-center justify-between mt-3 text-xs">
+                  <span className={`inline-flex items-center gap-1.5 font-semibold ${(s.stock ?? 0) <= 0 ? 'text-[#d9524d]' : (s.stock ?? 0) <= (s.seuilAlerte ?? 0) ? 'text-[#f59e0b]' : 'text-[#10b981]'}`}>
+                    {(s.stock ?? 0) <= (s.seuilAlerte ?? 0) ? <AlertTriangle size={13} /> : <Boxes size={13} />}
+                    {s.stock ?? 0} {s.unite} en stock
+                  </span>
+                  <button type="button" className="btn-ghost text-xs px-2 py-1" onClick={() => ouvrirMouvement(s)}><ArrowDownUp size={12} /> Mouvement</button>
+                </div>
+              )}
               <button
                 onClick={() => openInvoiceModal(s)}
                 className="btn-dark text-xs w-full justify-center mt-3 py-2"
@@ -234,12 +286,63 @@ export default function Services() {
               />
             </div>
           </div>
+          <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3 space-y-3">
+            <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+              <input type="checkbox" checked={form.suiviStock} disabled={!peutStock && !form.suiviStock}
+                onChange={(e) => setForm({ ...form, suiviStock: e.target.checked })} />
+              Suivre le stock de ce produit
+              {!peutStock && <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500">Pro</span>}
+            </label>
+            {form.suiviStock && (
+              <div className="grid grid-cols-3 gap-3">
+                {!editing && (
+                  <div>
+                    <label className="field-label">Stock initial</label>
+                    <input type="number" className="field" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
+                  </div>
+                )}
+                <div>
+                  <label className="field-label">Alerte à</label>
+                  <input type="number" min={0} className="field" value={form.seuilAlerte} onChange={(e) => setForm({ ...form, seuilAlerte: Number(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="field-label">Prix d’achat</label>
+                  <input type="number" min={0} className="field" value={form.prixAchat} onChange={(e) => setForm({ ...form, prixAchat: Number(e.target.value) })} />
+                </div>
+              </div>
+            )}
+            {form.suiviStock && <p className="text-xs text-gray-500">Le stock baisse tout seul à chaque facture envoyée ou payée, et remonte si elle est annulée.</p>}
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn-ghost" onClick={() => setModalOpen(false)}>Annuler</button>
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving && <span className="spinner" style={{ width: 16, height: 16 }} />}
               {editing ? 'Mettre à jour' : 'Créer'}
             </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!mouvement} onClose={() => setMouvement(null)} title={`Stock : ${mouvement?.nom ?? ''}`}>
+        <form onSubmit={validerMouvement} className="space-y-4">
+          <p className="text-sm text-gray-500">En stock actuellement : <b>{mouvement?.stock ?? 0} {mouvement?.unite}</b></p>
+          <div className="grid grid-cols-3 gap-2">
+            {([['entree', 'Entrée'], ['sortie', 'Sortie'], ['ajustement', 'Inventaire']] as [MouvementType, string][]).map(([t, l]) => (
+              <button key={t} type="button" onClick={() => setMvt({ ...mvt, type: t })}
+                className={`px-3 py-2 rounded-lg text-sm font-semibold border transition-soft ${mvt.type === t ? 'bg-[#14151a] text-white border-[#14151a]' : 'border-gray-200 dark:border-white/15'}`}>{l}</button>
+            ))}
+          </div>
+          <div>
+            <label className="field-label">{mvt.type === 'ajustement' ? 'Quantité réellement comptée' : 'Quantité'}</label>
+            <input type="number" min={mvt.type === 'ajustement' ? 0 : 1} className="field" value={mvt.quantite} onChange={(e) => setMvt({ ...mvt, quantite: Number(e.target.value) })} />
+          </div>
+          <div>
+            <label className="field-label">Note</label>
+            <input className="field" value={mvt.note} onChange={(e) => setMvt({ ...mvt, note: e.target.value })} placeholder="Ex. livraison fournisseur, casse..." />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-ghost" onClick={() => setMouvement(null)}>Annuler</button>
+            <button type="submit" className="btn-primary" disabled={mvtSaving}>{mvtSaving ? 'Enregistrement…' : 'Enregistrer'}</button>
           </div>
         </form>
       </Modal>

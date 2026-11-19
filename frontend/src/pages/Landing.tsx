@@ -1,272 +1,197 @@
 import { Link } from 'react-router-dom';
-import OryxaLogo from '../components/OryxaLogo';
-import {
-  ArrowRight,
-  BellRing,
-  CheckCircle2,
-  ChevronDown,
-  CreditCard,
-  FileText,
-  HelpCircle,
-  LayoutDashboard,
-  UsersRound,
-  X,
-} from 'lucide-react';
 import { useState } from 'react';
+import { ArrowRight, Check, Plus, X } from 'lucide-react';
+import OryxaLogo from '../components/OryxaLogo';
+import Reveal from '../components/ui/Reveal';
 
-const ETAPES = [
+const GAINS = [
   {
-    icon: UsersRound,
-    numero: '01',
-    titre: 'Retrouvez votre client',
-    texte: 'Gardez vos clients et leurs informations au même endroit. Plus besoin de réécrire les mêmes coordonnées à chaque vente.',
+    titre: 'Une facture en quelques clics',
+    texte: 'Choisissez le client, ajoutez vos prestations, c’est parti. Les numéros, les totaux et le PDF se font tout seuls.',
   },
   {
-    icon: FileText,
-    numero: '02',
-    titre: 'Préparez votre devis ou facture',
-    texte: 'Créez un document professionnel avec vos prestations, vos montants et votre identité.',
+    titre: 'Un client qui paie en la recevant',
+    texte: 'La facture arrive avec un bouton Payer. Votre client règle en Mobile Money ou par carte, depuis son téléphone, sans créer de compte.',
   },
   {
-    icon: CreditCard,
-    numero: '03',
-    titre: 'Envoyez et faites payer',
-    texte: 'Votre client reçoit un lien clair vers son document et son parcours de paiement, sans devoir créer un compte Oryxa.',
+    titre: 'Tous vos clients au même endroit',
+    texte: 'Coordonnées, devis, factures, paiements : tout l’historique d’un client en une page, plus besoin de fouiller vos conversations.',
   },
   {
-    icon: BellRing,
-    numero: '04',
-    titre: 'Suivez sans courir après',
-    texte: 'Retrouvez les factures, les paiements et les échéances dans votre espace pour savoir ce qui est réglé et ce qui reste à recevoir.',
+    titre: 'Votre activité d’un coup d’œil',
+    texte: 'Chiffre d’affaires, factures en attente, impayés, meilleurs clients. Vous savez où vous en êtes sans sortir la calculatrice.',
   },
+  {
+    titre: 'Les relances, c’est Oryxa',
+    texte: 'Une facture en retard ? Votre client reçoit un rappel à 3, 7 et 15 jours. Vous n’avez plus à vous justifier de relancer.',
+  },
+  {
+    titre: 'Votre argent, quand vous voulez',
+    texte: 'Les paiements s’ajoutent à votre solde. Vous voyez ce qui est disponible et vous demandez votre retrait.',
+  },
+];
+
+const METIERS = [
+  'Freelances et consultants',
+  'Artisans et prestataires de services',
+  'Commerçants et grossistes',
+  'Petites entreprises et agences',
+];
+
+const CONFIANCE = [
+  ['Vos données restent les vôtres', 'Vos clients et vos factures sont protégés et ne sont visibles que par vous et votre équipe.'],
+  ['Des paiements qui passent par FedaPay', 'Mobile Money et cartes, via un service de paiement reconnu dans la région.'],
+  ['Sur téléphone comme sur ordinateur', 'Créez, envoyez et suivez depuis votre poche. Installez-le comme une application.'],
 ];
 
 const FAQ = [
   {
-    q: 'Est-ce que je dois changer complètement ma façon de travailler ?',
-    a: 'Non. Oryxa est justement pensé pour partir de votre quotidien : vos clients, vos ventes et vos échanges existent déjà. L’objectif est de supprimer la ressaisie et les recherches inutiles, pas de vous imposer une méthode compliquée.',
+    q: 'Mon client doit-il créer un compte pour payer ?',
+    a: 'Non. Il ouvre le lien reçu avec la facture, choisit son moyen de paiement et règle. C’est tout.',
   },
   {
-    q: 'Mon client doit-il créer un compte Oryxa pour payer ?',
-    a: 'Non pour le parcours de paiement public. Le client peut accéder au lien qui lui est transmis et effectuer l’opération depuis cette page, sans ouvrir un espace professionnel Oryxa.',
+    q: 'Quels moyens de paiement mes clients peuvent-ils utiliser ?',
+    a: 'MTN Money, Moov Money et carte bancaire. Si un client vous paie en espèces ou par virement, vous l’enregistrez vous-même en une ligne.',
   },
   {
-    q: 'Est-ce uniquement pour les grandes entreprises ?',
-    a: 'Non. Oryxa vise notamment les indépendants, artisans, freelances, commerçants, prestataires et petites entreprises qui veulent professionnaliser leur gestion sans adopter un outil disproportionné.',
+    q: 'Combien ça coûte ?',
+    a: 'Le plan gratuit permet de commencer : 5 factures, 5 devis et 20 clients par mois. Les plans Pro et Business enlèvent ces limites et ajoutent les relances automatiques, les statistiques avancées et le travail en équipe.',
   },
   {
-    q: 'Est-ce que je peux continuer à travailler avec mes clients comme avant ?',
-    a: 'Oui. Oryxa ne vous demande pas de remplacer toutes vos habitudes. Vous pouvez continuer à échanger avec vos clients par vos canaux habituels tout en utilisant Oryxa pour structurer vos clients, devis, factures et paiements.',
+    q: 'Et pour la facture normalisée de la DGI ?',
+    a: 'Elle est en cours de test chez nous. Nous l’annoncerons le jour où elle sera ouverte à tous, pas avant.',
   },
   {
-    q: 'Que se passe-t-il si mon client paie autrement ?',
-    a: 'Un paiement effectué en dehors du parcours de paiement Oryxa peut être enregistré comme paiement manuel dans votre suivi. Oryxa ne déclenche pas artificiellement un paiement : il distingue ce qui est réellement encaissé de ce qui est simplement déclaré dans votre gestion.',
+    q: 'Est-ce que je peux l’utiliser seul ?',
+    a: 'Oui, c’est même fait pour ça. L’équipe (plusieurs utilisateurs) arrive avec le plan Business.',
   },
   {
-    q: 'Est-ce qu’Oryxa remplace un comptable ?',
-    a: 'Non. Oryxa est un outil de gestion commerciale et de suivi des ventes et paiements. Il aide à mieux organiser votre activité, mais ne prétend pas remplacer les conseils ou obligations relevant d’un professionnel de la comptabilité.',
-  },
-  {
-    q: 'Dans quelle devise travaille Oryxa ?',
-    a: 'Oryxa est actuellement centré sur le FCFA. Les montants affichés dans les documents et le suivi restent cohérents dans cette devise au lieu de proposer un changement de devise incomplet.',
-  },
-  {
-    q: 'Puis-je utiliser Oryxa depuis mon téléphone ?',
-    a: 'Oui. L’interface est conçue pour être utilisée sur téléphone comme sur ordinateur, avec des parcours adaptés aux petits écrans.',
+    q: 'Ça remplace mon comptable ?',
+    a: 'Non, mais ça lui évite de vous demander où est passée la facture du 14.',
   },
 ];
 
-function FaqItem({ item, open, onToggle }: { item: typeof FAQ[number]; open: boolean; onToggle: () => void }) {
+function FaqItem({ item, open, onToggle }: { item: (typeof FAQ)[number]; open: boolean; onToggle: () => void }) {
   return (
-    <div className="landing-faq-item">
-      <button type="button" onClick={onToggle} className="landing-faq-question" aria-expanded={open}>
+    <div className="lp-faq-item">
+      <button type="button" onClick={onToggle} className="lp-faq-q" aria-expanded={open}>
         <span>{item.q}</span>
-        {open ? <X size={19} /> : <ChevronDown size={19} />}
+        {open ? <X size={18} /> : <Plus size={18} />}
       </button>
-      {open && <div className="landing-faq-answer">{item.a}</div>}
+      {open && <div className="lp-faq-a">{item.a}</div>}
     </div>
   );
 }
 
 export default function Landing() {
-  const [faqOpen, setFaqOpen] = useState<number | null>(0);
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   return (
-    <div className="landing-page app-bg min-h-screen">
-      <div className="orb orb-1" />
-      <div className="orb orb-2" />
-      <div className="orb orb-3" />
-
-      <header className="landing-header relative z-20">
-        <div className="landing-header-inner">
-          <Link to="/" aria-label="Oryxa — accueil" className="shrink-0">
-            <OryxaLogo size={42} nameClassName="font-extrabold text-xl text-[#0a0a0c] dark:text-white" />
-          </Link>
-          <Link to="/login" className="landing-login-btn">
-            Se connecter <ArrowRight size={16} />
-          </Link>
-        </div>
+    <div className="lp-page">
+      <header className="lp-header">
+        <Link to="/" aria-label="Oryxa, accueil" className="shrink-0">
+          <OryxaLogo size={38} nameClassName="font-extrabold text-xl text-[#0a0a0c]" />
+        </Link>
+        <nav className="lp-nav">
+          <Link to="/login" className="lp-link">Se connecter</Link>
+          <Link to="/register" className="btn-primary lp-btn-sm">Créer mon compte</Link>
+        </nav>
       </header>
 
-      <main className="relative z-10">
-        <section className="landing-hero">
-          <div className="landing-eyebrow"><span className="landing-eyebrow-dot" /> Facturation • Paiement • Suivi</div>
+      <main>
+        <section className="lp-hero fx-stagger">
+          <p className="lp-kicker">Facturation et gestion pour freelances, commerçants et PME</p>
           <h1>
-            Vous faites le travail.<br />
-            <span>Oryxa vous aide à être payé.</span>
+            Gagnez du temps
+            <br />
+            avec <span className="lp-underline">Oryxa</span>.
           </h1>
-          <p className="landing-hero-lead">
-            Devis, factures, clients et paiements réunis dans un seul espace pensé pour les indépendants et petites entreprises.
-            Moins de recherche. Moins de ressaisie. Plus de visibilité sur votre activité.
+          <p className="lp-lead">
+            Vos devis, vos factures, vos clients et vos paiements au même endroit. Vous créez, vous envoyez, votre client paie en ligne, et vous suivez tout depuis un seul tableau de bord.
           </p>
-          <div className="landing-hero-actions">
-            <Link to="/register" className="btn-primary landing-main-cta">
-              Commencer gratuitement <ArrowRight size={19} />
+          <div className="lp-actions">
+            <Link to="/register" className="btn-primary lp-btn">
+              Créer mon compte gratuit <ArrowRight size={18} />
             </Link>
-            <a href="#comment-ca-marche" className="landing-secondary-cta">
-              Voir comment ça marche
-            </a>
-          </div>
-          <p className="landing-trust-line">Pas besoin d’être expert en comptabilité pour commencer.</p>
-
-          <div className="landing-hero-preview" aria-label="Aperçu du parcours Oryxa">
-            <div className="landing-preview-topbar">
-              <div className="flex items-center gap-2"><span className="landing-preview-dot" /><span>Votre activité</span></div>
-              <span className="landing-preview-pill">FCFA</span>
-            </div>
-            <div className="landing-preview-grid">
-              <div className="landing-preview-card landing-preview-main">
-                <div className="landing-preview-icon"><LayoutDashboard size={18} /></div>
-                <div><p className="landing-preview-label">Aujourd’hui</p><p className="landing-preview-title">Une vue claire de votre activité</p></div>
-                <div className="landing-preview-lines"><span /><span /><span /></div>
-              </div>
-              <div className="landing-preview-card">
-                <p className="landing-preview-label">Documents</p>
-                <p className="landing-preview-number">Devis & factures</p>
-                <p className="landing-preview-small">Créés et suivis au même endroit</p>
-              </div>
-              <div className="landing-preview-card">
-                <p className="landing-preview-label">Paiements</p>
-                <p className="landing-preview-number">Encaissé / à recevoir</p>
-                <p className="landing-preview-small">Un suivi plus lisible</p>
-              </div>
-            </div>
+            <a href="#gains" className="lp-link-quiet">Voir ce que vous gagnez</a>
           </div>
         </section>
 
-        <section className="landing-problem-section section-shell">
-          <div className="landing-section-heading">
-            <span className="landing-section-kicker">Le problème n’est pas votre métier.</span>
-            <h2>C’est tout ce qu’il faut faire <span>autour</span> du métier.</h2>
-            <p>Un client dans le téléphone. Un devis dans une conversation. Une facture dans un fichier. Une preuve de paiement dans la galerie. Puis on recommence.</p>
-          </div>
-          <div className="landing-problem-grid">
-            {[
-              ['Vous perdez du temps', 'à refaire les mêmes documents et rechercher les mêmes informations.'],
-              ['Vous perdez de la visibilité', 'quand ventes, paiements et échanges restent dispersés.'],
-              ['Vous donnez moins de clarté', 'à votre client quand le devis, la facture et le paiement sont séparés.'],
-            ].map(([title, text]) => (
-              <div key={title} className="landing-problem-card">
-                <span className="landing-problem-mark">×</span>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </div>
+        <section id="gains" className="lp-section lp-section-tint">
+          <Reveal>
+            <h2 className="lp-h2">Tout ce qu’il faut pour gérer votre activité, sans jongler entre dix outils.</h2>
+          </Reveal>
+          <div className="lp-gains">
+            {GAINS.map((g, i) => (
+              <Reveal key={g.titre} delay={(i % 3) * 100} className="lp-gain">
+                <Check size={18} className="lp-gain-check" />
+                <h3>{g.titre}</h3>
+                <p>{g.texte}</p>
+              </Reveal>
             ))}
           </div>
         </section>
 
-        <section id="comment-ca-marche" className="section-shell landing-steps-section">
-          <div className="landing-section-heading centered">
-            <span className="landing-section-kicker">Simple à comprendre. Utile au quotidien.</span>
-            <h2>Votre vente, du premier clic au paiement.</h2>
-            <p>Oryxa structure les étapes qui se répètent dans votre activité sans vous obliger à devenir gestionnaire de logiciel.</p>
-          </div>
-          <div className="landing-steps-grid">
-            {ETAPES.map(({ icon: Icon, numero, titre, texte }) => (
-              <article key={numero} className="landing-step-card">
-                <div className="landing-step-number">{numero}</div>
-                <div className="landing-step-icon"><Icon size={21} /></div>
+        <section className="lp-section">
+          <Reveal>
+            <h2 className="lp-h2">Pensé pour ceux qui vendent leur travail.</h2>
+          </Reveal>
+          <ul className="lp-metiers">
+            {METIERS.map((m, i) => (
+              <Reveal as="li" key={m} delay={i * 80}>{m}</Reveal>
+            ))}
+          </ul>
+        </section>
+
+        <section className="lp-section lp-section-tint">
+          <Reveal>
+            <h2 className="lp-h2">Vous pouvez compter dessus.</h2>
+          </Reveal>
+          <div className="lp-piliers">
+            {CONFIANCE.map(([titre, texte], i) => (
+              <Reveal key={titre} delay={i * 120} className="lp-pilier">
                 <h3>{titre}</h3>
                 <p>{texte}</p>
-              </article>
+              </Reveal>
             ))}
           </div>
         </section>
 
-        <section className="section-shell landing-value-section">
-          <div className="landing-value-panel">
-            <div className="landing-value-copy">
-              <span className="landing-section-kicker">Ce que vous récupérez</span>
-              <h2>Votre temps doit servir à travailler. Pas à chercher où est passé le paiement.</h2>
-              <p>Oryxa vous donne un même point de repère pour vos clients, vos documents et votre suivi. Vous gardez une vision claire sans multiplier les outils.</p>
-              <div className="landing-check-list">
-                {[
-                  'Clients réutilisables dans vos documents',
-                  'Devis et factures structurés et professionnels',
-                  'Lien de paiement public pour votre client',
-                  'Suivi des paiements et des montants restant à recevoir',
-                  'Prévisualisation et identité visuelle de vos documents',
-                  'Tableau de bord pour piloter votre activité',
-                ].map((item) => <div key={item}><CheckCircle2 size={17} /> <span>{item}</span></div>)}
-              </div>
+        <section id="faq" className="lp-section lp-faq">
+          <Reveal>
+            <h2 className="lp-h2">Questions fréquentes</h2>
+          </Reveal>
+          <Reveal delay={100}>
+            <div>
+              {FAQ.map((item, i) => (
+                <FaqItem key={item.q} item={item} open={faqOpen === i} onToggle={() => setFaqOpen(faqOpen === i ? null : i)} />
+              ))}
             </div>
-            <div className="landing-value-visual">
-              <div className="landing-flow-card">
-                <div className="landing-flow-head"><span>Le parcours devient lisible</span><span className="landing-preview-pill">FCFA</span></div>
-                <div className="landing-flow-row"><span>Client</span><b>✓</b></div>
-                <div className="landing-flow-row"><span>Devis / facture</span><b>✓</b></div>
-                <div className="landing-flow-row"><span>Paiement</span><b>✓</b></div>
-                <div className="landing-flow-row"><span>Suivi</span><b>✓</b></div>
-              </div>
-            </div>
-          </div>
+          </Reveal>
         </section>
 
-        <section className="section-shell landing-audience-section">
-          <div className="landing-section-heading centered">
-            <span className="landing-section-kicker">Pensé pour votre réalité</span>
-            <h2>Oryxa n’est pas réservé aux entreprises avec un service administratif.</h2>
-            <p>Si vous vendez une prestation, un produit ou votre savoir-faire, vous avez déjà besoin de suivre des clients, des documents et des paiements.</p>
-          </div>
-          <div className="landing-audience-grid">
-            {['Freelances & consultants', 'Artisans & prestataires', 'Commerçants', 'Petites entreprises'].map((item) => (
-              <div key={item} className="landing-audience-card"><CheckCircle2 size={18} />{item}</div>
-            ))}
-          </div>
+        <section className="lp-final">
+          <Reveal>
+            <h2>Votre prochaine facture, faites-la avec Oryxa.</h2>
+            <p>Créez votre compte gratuit, ajoutez un client, envoyez la facture. Cinq minutes suffisent.</p>
+            <Link to="/register" className="btn-primary lp-btn">
+              Créer mon compte gratuit <ArrowRight size={18} />
+            </Link>
+          </Reveal>
         </section>
-
-        <section className="section-shell landing-faq-section" id="faq">
-          <div className="landing-faq-intro">
-            <span className="landing-section-kicker"><HelpCircle size={15} /> Les vraies questions</span>
-            <h2>Avant de changer vos habitudes, vous avez le droit d’avoir des réponses.</h2>
-            <p>Oryxa doit être clair avant d’être impressionnant.</p>
-          </div>
-          <div className="landing-faq-list">
-            {FAQ.map((item, index) => <FaqItem key={item.q} item={item} open={faqOpen === index} onToggle={() => setFaqOpen(faqOpen === index ? null : index)} />)}
-          </div>
-        </section>
-
-        <section className="landing-final-cta section-shell">
-          <div>
-            <span className="landing-section-kicker">Commencez simplement</span>
-            <h2>La prochaine fois que vous faites une facture, faites-la avec Oryxa.</h2>
-            <p>Créez votre espace et découvrez une façon plus structurée de gérer vos ventes et vos paiements.</p>
-          </div>
-          <Link to="/register" className="btn-primary landing-main-cta">Commencer gratuitement <ArrowRight size={19} /></Link>
-        </section>
-
-        <footer className="landing-footer section-shell">
-          <OryxaLogo size={34} />
-          <div className="landing-footer-links">
-            <a href="#faq">FAQ</a>
-            <Link to="/affiliation">Devenir affilié</Link>
-            <Link to="/cgu">CGU</Link>
-            <Link to="/confidentialite">Confidentialité</Link>
-            <Link to="/mentions-legales">Mentions légales</Link>
-          </div>
-          <p>© {new Date().getFullYear()} Oryxa. Une gestion plus simple pour votre activité.</p>
-        </footer>
       </main>
+
+      <footer className="lp-footer">
+        <OryxaLogo size={30} nameClassName="font-bold text-base text-[#0a0a0c]" />
+        <div className="lp-footer-links">
+          <a href="#faq">Questions</a>
+          <Link to="/affiliation">Parrainage</Link>
+          <Link to="/cgu">CGU</Link>
+          <Link to="/confidentialite">Confidentialité</Link>
+          <Link to="/mentions-legales">Mentions légales</Link>
+        </div>
+        <p>© {new Date().getFullYear()} Oryxa</p>
+      </footer>
     </div>
   );
 }

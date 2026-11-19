@@ -4,6 +4,7 @@ import { Wallet, Search, Trash2, TrendingUp, Receipt } from 'lucide-react';
 import { getPayments, getPaymentsStats, deletePayment, paymentReceiptUrl, type PaymentsStats } from '../api/payments';
 import type { Payment } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import ChartButton from '../components/charts/ChartButton';
 import EmptyState from '../components/ui/EmptyState';
 import StatCard from '../components/ui/StatCard';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -74,6 +75,7 @@ export default function Payments() {
         title="Paiements"
         subtitle={`${total} paiement(s) enregistré(s)`}
         icon={<Wallet size={20} />}
+        actions={<ChartButton metrics={['encaissements', 'repartition_methodes']} title="Analyser mes paiements" />}
       />
 
       <div className="glass-card p-5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -134,7 +136,7 @@ export default function Payments() {
                       </td>
                       <td className="px-5 py-4"><span className="badge badge-payee">{METHODE_LABEL[p.methode]}</span></td>
                       <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{p.reference || '—'}</td>
-                      <td className="px-5 py-4 text-right font-bold text-green-600">{formatFCFA(p.montant)}</td>
+                      <td className="px-5 py-4 text-right font-bold text-green-600">{formatFCFA(p.montant, p.devise)}</td>
                       <td className="px-5 py-4 text-right">
                         <div className="flex justify-end gap-1">
                           {p.statut === 'complete' && <button className="btn-icon" title="Prévisualiser le reçu" onClick={() => setPreviewPayment(p)}><Receipt size={15} /></button>}
@@ -162,7 +164,7 @@ export default function Payments() {
 
       <ConfirmDialog
         open={!!toDelete} title="Supprimer le paiement"
-        message={`Supprimer ce paiement de ${formatFCFA(toDelete?.montant)} ?`}
+        message={`Supprimer ce paiement de ${formatFCFA(toDelete?.montant, toDelete?.devise)} ?`}
         confirmLabel="Supprimer" onConfirm={handleDelete} onClose={() => setToDelete(null)} loading={deleting}
       />
     </div>

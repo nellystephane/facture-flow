@@ -17,7 +17,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import InfoHint from '../components/ui/InfoHint';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { formatFCFA, formatDate, badgeClass, INVOICE_STATUT_LABEL, METHODE_LABEL, apiError, totalHT, totalTTC, todayISO, publicAppUrl } from '../utils/format';
+import { formatFCFA as formatBase, deviseInfo, formatDate, badgeClass, INVOICE_STATUT_LABEL, METHODE_LABEL, apiError, totalHT, totalTTC, todayISO, publicAppUrl } from '../utils/format';
 import { ouvrirPartageWhatsApp } from '../utils/whatsapp';
 import { prepareEmecefInvoice, confirmEmecefInvoice, cancelEmecefInvoice, refreshEmecefInvoiceStatus, resetEmecefInvoice } from '../api/emecef';
 
@@ -35,6 +35,8 @@ export default function InvoiceDetail() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
+  // Montants dans la devise de la facture (FCFA par défaut).
+  const formatFCFA = (n: number | null | undefined) => formatBase(n, invoice?.devise);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [payModal, setPayModal] = useState(false);
@@ -483,7 +485,7 @@ export default function InvoiceDetail() {
       <Modal open={payModal} onClose={() => setPayModal(false)} title="Enregistrer un paiement">
         <form onSubmit={handlePay} className="space-y-4">
           <div>
-            <label className="field-label">Montant (FCFA) *</label>
+            <label className="field-label">Montant ({deviseInfo(invoice?.devise).label}) *</label>
             <input type="number" min={0} step="any" className="field" value={payForm.montant}
               onChange={(e) => setPayForm({ ...payForm, montant: Number(e.target.value) })}
               placeholder={String(Math.round(reste))} required autoFocus />

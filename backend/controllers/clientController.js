@@ -24,6 +24,39 @@ exports.getClientById = asyncHandler(async (req, res) => {
   res.json(client);
 });
 
+// Fiche client : synthèse commerciale + historique des documents et paiements.
+exports.getClientHistorique = asyncHandler(async (req, res) => {
+  const Invoice = require('../models/Invoice');
+  const Quote = require('../models/Quote');
+  const Payment = require('../models/Payment');
+  const { PAID_PAYMENT_FILTER } = require('../utils/invoiceTotals');
+  const { summarizeClient } = require('../utils/clientHistory');
+
+  const client = await Client.findOne({ _id: req.params.id, owner: req.userId });
+  if (!client) return res.status(404).json({ message: 'Client introuvable' });
+
+  const invoices = await Invoice.find({ owner: req.userId, client: client._id })
+    .select('numero statut dateEmission dateEcheance devise tauxChange items remise tva fiscalisation.status fiscalisation.dgiTotal')
+    .sort({ dateEmission: -1 }).limit(500).lean();
+  const ids = invoices.map((i) => i._id);
+  const [payments, quotes] = await Promise.all([
+    ids.length ? Payment.find({ owner: req.userId, invoice: { $in: ids }, ...PAID_PAYMENT_FILTER }).sort({ date: -1 }).limit(500).lean() : [],
+    Quote.find({ owner: req.userId, client: client._id }).select('numero statut dateEmission items remise tva').sort({ dateEmission: -1 }).limit(50).lean(),
+  ]);
+
+  const synthese = summarizeClient({ invoices, payments });
+  const numeroParId = Object.fromEntries(invoices.map((i) => [String(i._id), i.numero]));
+  res.json({
+    client,
+    synthese,
+    paiements: payments.slice(0, 30).map((p) => ({
+      _id: p._id, date: p.date, devise: p.devise || 'XOF', montant: p.montantFacture ?? p.montant, methode: p.methode, origine: p.origine,
+      invoice: p.invoice, factureNumero: numeroParId[String(p.invoice)] || '',
+    })),
+    devis: quotes.map((q) => ({ _id: q._id, numero: q.numero, statut: q.statut, dateEmission: q.dateEmission })),
+  });
+});
+
 exports.createClient = asyncHandler(async (req, res) => {
   const user = await require('../models/User').findById(req.userId);
   const limite = await verifierLimiteClients(Client, user);

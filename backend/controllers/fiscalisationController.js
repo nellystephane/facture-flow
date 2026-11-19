@@ -1,4 +1,5 @@
 'use strict';
+const { normalizeDevise } = require('../utils/currency');
 const crypto = require('crypto');
 const Invoice = require('../models/Invoice');
 const User = require('../models/User');
@@ -198,6 +199,7 @@ exports.prepareInvoice = asyncHandler(async (req, res) => {
   const { taxGroup, paymentType, priceBasis, invoiceType = 'FV', aib = '', reference = '', autoConfirm = true } = req.body || {};
   const invoice = await Invoice.findOne({ _id: req.params.id, owner: req.userId }).populate('client');
   if (!invoice) return res.status(404).json({ message: 'Facture introuvable.' });
+  if (normalizeDevise(invoice.devise) !== 'XOF') return res.status(400).json({ message: 'La normalisation e-MECeF (DGI) est possible uniquement pour les factures en FCFA.' });
   const currentStatus = invoice.fiscalisation?.status || 'non_emise';
   if (['submitting', 'confirming', 'cancelling', 'pending_confirmation', 'confirmed', 'unknown'].includes(currentStatus)) {
     return res.status(409).json({ message: `Cette facture e-MECeF est déjà dans l’état « ${currentStatus} ». Ne la renvoyez pas pour éviter un doublon.`, status: currentStatus, uid: invoice.fiscalisation?.uid || null });

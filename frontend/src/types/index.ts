@@ -29,7 +29,7 @@ export interface User {
   whatsapp?: string;
   adresse?: string;
   logoUrl?: string;
-  devise?: 'FCFA';
+  devise?: string;
   banque?: BankInfo;
   payoutSettings?: { enabled: boolean; mode: 'mobile_money' | 'bank_transfer'; provider: string; phone: string; phoneMasked?: string; country: string; titulaire: string; bank?: string; iban?: string; rib?: string; schedule: 'weekly' | 'monthly'; status?: 'pending' | 'active' | 'disabled'; emailConfirmed?: boolean; confirmedAt?: string | null };
   subscription?: 'gratuit' | 'pro' | 'business';
@@ -59,6 +59,10 @@ export interface Service {
   description?: string;
   prix: number;
   unite?: string;
+  suiviStock?: boolean;
+  stock?: number;
+  seuilAlerte?: number;
+  prixAchat?: number;
   owner: string;
   createdAt?: string;
 }
@@ -71,6 +75,7 @@ export interface Item {
   taxSpecific?: number;
   originalPrice?: number | null;
   priceModification?: string;
+  service?: string | null;
 }
 
 export type InvoiceStatut =
@@ -88,6 +93,9 @@ export interface Invoice {
   tva: number;
   notes?: string;
   fraisSupportesPar?: 'utilisateur' | 'client';
+  /** Devise du document (XOF par défaut) et taux figé : FCFA pour 1 unité de la devise. */
+  devise?: string;
+  tauxChange?: number;
   statut: InvoiceStatut;
   template?: string;
   owner: string;
@@ -131,6 +139,8 @@ export interface Quote {
   remise?: number;
   tva: number;
   notes?: string;
+  devise?: string;
+  tauxChange?: number;
   template?: string;
   statut: QuoteStatut;
   owner: string;
@@ -152,6 +162,7 @@ export type PaymentStatut = 'en_attente' | 'complete' | 'echoue';
 
 export interface Payment {
   _id: string;
+  devise?: string;
   invoice: Invoice | string;
   montant: number;
   montantFacture?: number | null;
@@ -219,6 +230,8 @@ export interface Permissions {
   peutUtiliserLogoPersonnalise: boolean;
   peutUtiliserRelancesAutomatiques: boolean;
   peutVoirStatistiquesAvancees: boolean;
+  peutGererStock: boolean;
+  peutUtiliserFacturesRecurrentes: boolean;
   peutExporterComptabilite: boolean;
   peutGererEquipe: boolean;
   modelesFactureDisponibles: string[];

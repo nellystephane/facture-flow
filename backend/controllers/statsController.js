@@ -4,12 +4,13 @@ const Payment = require('../models/Payment');
 const User = require('../models/User');
 const { permissionsDe } = require('../utils/permissions');
 const { getWalletBalance } = require('../utils/financial');
-const { computeInvoiceTotals, sumPaid } = require('../utils/invoiceTotals');
+const { computeInvoiceTotals, sumPaidXOF } = require('../utils/invoiceTotals');
 
 const asyncHandler = require('../middleware/asyncHandler');
 
 // Même formule que partout ailleurs (taxe spécifique et total DGI inclus).
-const calcTTC = (inv) => computeInvoiceTotals(inv).totalTTC;
+// Tous les totaux du tableau de bord sont en équivalent FCFA (taux figé de chaque facture).
+const calcTTC = (inv) => computeInvoiceTotals(inv).totalXOF;
 
 exports.getDashboard = asyncHandler(async (req, res) => {
   const [user, invoices, clients, payments] = await Promise.all([
@@ -33,7 +34,7 @@ exports.getDashboard = asyncHandler(async (req, res) => {
       (i.dateEcheance && new Date(i.dateEcheance) < new Date() && i.statut !== 'payee' && i.statut !== 'annulee'))
     .reduce((s, i) => s + calcTTC(i), 0);
 
-  const totalPaye = sumPaid(payments);
+  const totalPaye = sumPaidXOF(payments);
   const soldeRetirable = await getWalletBalance(req.userId);
 
   const dashboard = {

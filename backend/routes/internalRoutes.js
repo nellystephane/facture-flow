@@ -23,6 +23,7 @@ function requireCronSecret(req, res, next) {
 const JOBS = {
   reversements: () => require('../jobs/payouts').executerReversements,
   relances: () => require('../jobs/paymentReminders').executerRelances,
+  recurrentes: () => require('../jobs/recurringInvoices').executerFacturesRecurrentes,
   abonnements: () => require('../jobs/cleanExpiredSubscriptions').nettoyerAbonnementsExpires,
   comptes: () => require('../jobs/cleanUnverifiedAccounts').nettoyerComptesNonConfirmes,
 };

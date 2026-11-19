@@ -4,6 +4,7 @@ import { FileText, Plus, Search, Eye, Download, Filter, FileSpreadsheet, Loader2
 import { getInvoices, invoicePdfUrl, invoicesExportUrl } from '../api/invoices';
 import type { Invoice, InvoiceStatut } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import ChartButton from '../components/charts/ChartButton';
 import EmptyState from '../components/ui/EmptyState';
 import Pagination from '../components/ui/Pagination';
 import Select from '../components/ui/Select';
@@ -90,6 +91,7 @@ export default function Invoices() {
         icon={<FileText size={20} />}
         actions={
           <div className="flex gap-2">
+            <ChartButton metrics={['factures_emises', 'encaissements', 'repartition_statuts']} title="Analyser mes factures" />
             <button
               onClick={handleExport}
               disabled={exporting}
@@ -152,7 +154,7 @@ export default function Invoices() {
                       <td className="px-5 py-4 text-gray-700 dark:text-gray-300">{client?.nom || '—'}</td>
                       <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(inv.dateEmission)}</td>
                       <td className="px-5 py-4 text-gray-500 dark:text-gray-400">{formatDate(inv.dateEcheance)}</td>
-                      <td className="px-5 py-4 font-semibold text-[#0a0a0c] dark:text-white">{formatFCFA(inv.totalTTC)}</td>
+                      <td className="px-5 py-4 font-semibold text-[#0a0a0c] dark:text-white">{formatFCFA(inv.totalTTC, inv.devise)}</td>
                       <td className="px-5 py-4"><span className={badgeClass(inv.statut)}>{INVOICE_STATUT_LABEL[inv.statut as InvoiceStatut]}</span></td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1.5">

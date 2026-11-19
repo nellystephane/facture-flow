@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { normalizeDevise, formatMoney } = require('../utils/currency');
 const User = require('../models/User');
 const Invoice = require('../models/Invoice');
 const Quote = require('../models/Quote');
@@ -78,8 +79,7 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
   if (!invoice || invoice.publicAccessRevoked) return res.status(404).json({ message: 'Lien public invalide ou révoqué.' });
   if (invoice.statut === 'payee') return res.status(400).json({ message: 'Cette facture est déjà réglée.' });
   if (invoice.statut === 'annulee') return res.status(400).json({ message: 'Cette facture a été annulée.' });
-  const owner = await User.findById(invoice.owner).select('devise');
-  if (owner?.devise && !['FCFA', 'XOF'].includes(owner.devise)) return res.status(400).json({ message: 'Le paiement en ligne Oryxa/FedaPay est actuellement disponible uniquement pour les factures en FCFA (XOF).' });
+  if (normalizeDevise(invoice.devise) !== 'XOF') return res.status(400).json({ message: `Cette facture est en ${invoice.devise}. Le paiement en ligne est disponible uniquement pour les factures en FCFA : réglez-la par virement ou selon les indications de l'émetteur.` });
 
   const { firstname, lastname, email, phone } = req.body;
   if (!email) return res.status(400).json({ message: 'Email requis pour le paiement.' });
@@ -95,10 +95,10 @@ exports.initiateOnlinePayment = asyncHandler(async (req, res) => {
     ? reste
     : Number(req.body.montant);
   if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) {
-    return res.status(400).json({ message: 'Le montant à régler doit être supérieur à 0 FCFA.' });
+    return res.status(400).json({ message: 'Le montant à régler doit être supérieur à 0.' });
   }
   if (requestedAmount > reste + 0.5) {
-    return res.status(400).json({ message: `Le montant ne peut pas dépasser le solde restant de ${Math.round(reste)} FCFA.` });
+    return res.status(400).json({ message: `Le montant ne peut pas dépasser le solde restant de ${formatMoney(reste, invoice.devise)}.` });
   }
 
   const quote = await calculatePaymentQuote(requestedAmount, fraisSupportesPar);

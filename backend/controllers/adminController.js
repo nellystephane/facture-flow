@@ -316,6 +316,30 @@ exports.resoudreLitige = asyncHandler(async (req, res) => {
   res.json(payment);
 });
 
+exports.resolvePayout = asyncHandler(async (req, res) => {
+  const { action } = req.body || {};
+  const payout = await Payout.findById(req.params.id);
+  if (!payout) return res.status(404).json({ message: 'Reversement introuvable' });
+  const { resolvePayoutManually } = require('../utils/payout');
+  try {
+    const result = await resolvePayoutManually(payout, action);
+    await AdminAuditLog.create({
+      adminEmail: req.admin?.email || req.adminEmail || process.env.ADMIN_EMAIL || 'admin',
+      action: `payout_${action}`,
+      method: req.method,
+      path: req.originalUrl,
+      status: 200,
+      ip: req.ip || '',
+      userAgent: String(req.get('user-agent') || '').slice(0, 1000),
+      success: true,
+      details: `payout ${payout._id} -> ${result.statut}`,
+    }).catch((e) => console.error('Audit payout:', e.message));
+    res.json(result);
+  } catch (err) {
+    res.status(409).json({ message: err.message });
+  }
+});
+
 exports.marquerRembourse = asyncHandler(async (req, res) => {
   // Enregistre le remboursement côté Oryxa — le remboursement réel côté FedaPay
   // se fait sur leur tableau de bord marchand ; ce bouton ne déclenche aucun

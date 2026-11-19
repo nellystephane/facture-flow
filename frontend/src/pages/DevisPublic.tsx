@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import { Building2, CheckCircle2, Loader2, AlertTriangle, MessageCircleQuestion, FileText, Download } from 'lucide-react';
 import { getPublicQuote, respondPublicQuote, type PublicQuoteResponse } from '../api/public';
 import { quotePdfUrl } from '../api/quotes';
-import { formatFCFA, formatDate, apiError } from '../utils/format';
+import { formatFCFA as formatBase, formatDate, apiError } from '../utils/format';
 
 export default function DevisPublic() {
   const { token } = useParams();
@@ -73,6 +73,7 @@ export default function DevisPublic() {
 
   if (!data) return null;
   const { quote, emetteur, totalTTC } = data;
+  const formatFCFA = (n: number | null | undefined) => formatBase(n, quote.devise);
   const dejaAccepte = quote.statut === 'accepte' || resultat === 'accepte';
   const dejaRefuse = quote.statut === 'refuse';
 

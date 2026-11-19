@@ -143,6 +143,9 @@ app.use('/api/quotes', quoteRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/expenses', require('./routes/expenseRoutes'));
+app.use('/api/recurring', require('./routes/recurringRoutes'));
 app.use('/api/public', publicRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/team', teamRoutes);
@@ -175,6 +178,7 @@ const { demarrerNettoyageAbonnements } = require('./jobs/cleanExpiredSubscriptio
 const { demarrerRelancesAutomatiques } = require('./jobs/paymentReminders');
 const { demarrerNettoyageComptesNonConfirmes } = require('./jobs/cleanUnverifiedAccounts');
 const { demarrerReversementsAutomatiques } = require('./jobs/payouts');
+const { demarrerFacturesRecurrentes } = require('./jobs/recurringInvoices');
 
 const PORT = process.env.PORT || 5000;
 
@@ -206,15 +210,6 @@ async function start() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('MongoDB connecté');
-    // Oryxa est actuellement mono-devise : normalise les anciens comptes en FCFA.
-    try {
-      const User = require('./models/User');
-      const migration = await User.updateMany({ devise: { $ne: 'FCFA' } }, { $set: { devise: 'FCFA' } });
-      if (migration.modifiedCount) console.log(`Devise normalisée en FCFA pour ${migration.modifiedCount} compte(s).`);
-    } catch (err) {
-      console.error('Migration devise FCFA impossible :', err.message);
-    }
-
     // Corrige les anciens index uniques sur Invoice.quote/publicToken avant
     // d'accepter des requêtes. Sans cette migration, une base existante peut
     // conserver l'ancien quote_1 et rejeter toute deuxième facture sans devis.
@@ -245,6 +240,7 @@ async function start() {
   demarrerRelancesAutomatiques();
   demarrerNettoyageComptesNonConfirmes();
   demarrerReversementsAutomatiques();
+  demarrerFacturesRecurrentes();
 
   app.listen(PORT, () => {
     console.log(`Serveur Oryxa démarré sur le port ${PORT}`);

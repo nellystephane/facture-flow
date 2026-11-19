@@ -8,6 +8,7 @@ const itemSchema = z.object({
   taxSpecific: nonNegativeNumber('La taxe spécifique').optional().default(0),
   originalPrice: positiveNumber('Le prix d’origine').nullable().optional(),
   priceModification: optionalText(100),
+  service: objectId('Le produit').nullable().optional(),
 }).strip();
 
 // Le statut d'une facture reflète des actions réelles (envoi effectif de
@@ -24,6 +25,8 @@ const invoiceBase = {
   remise: nonNegativeNumber('La remise').optional().default(0),
   tva: nonNegativeNumber('La TVA').max(100, 'La TVA ne peut pas dépasser 100%.').optional().default(0),
   notes: optionalText(2000),
+  devise: z.string().trim().max(10).optional(),
+  tauxChange: z.coerce.number().positive('Le taux de change doit être positif.').optional(),
   fraisSupportesPar: z.enum(['utilisateur', 'client']).optional(),
   template: z.enum(['classique', 'moderne', 'minimal', 'atelier', 'horizon', 'prestige', 'corporate', 'signature', 'noir']).optional(),
 };
@@ -34,4 +37,12 @@ const patchInvoiceStatusSchema = z.object({
   statut: z.literal('annulee', { errorMap: () => ({ message: "Seule l'annulation peut être déclenchée manuellement." }) }),
 }).strip();
 
-module.exports = { createInvoiceSchema, updateInvoiceSchema, patchInvoiceStatusSchema };
+const venteRapideSchema = z.object({
+  items: z.array(itemSchema).min(1, 'Au moins un article est requis.'),
+  methode: z.enum(['especes', 'mtn_money', 'moov_money', 'carte', 'virement', 'autre']).optional(),
+  client: objectId('Le client').optional(),
+  remise: nonNegativeNumber('La remise').optional().default(0),
+  tva: nonNegativeNumber('La TVA').max(100).optional().default(0),
+}).strip();
+
+module.exports = { createInvoiceSchema, updateInvoiceSchema, patchInvoiceStatusSchema, venteRapideSchema };

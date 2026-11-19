@@ -10,6 +10,8 @@ const itemSchema = new mongoose.Schema({
   taxSpecific: { type: Number, min: 0, default: 0 },
   originalPrice: { type: Number, min: 0, default: null },
   priceModification: { type: String, default: '' },
+  // Produit du catalogue (optionnel) : permet de faire baisser son stock.
+  service: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', default: null },
 }, { _id: false });
 
 itemSchema.virtual('total').get(function () {
@@ -24,6 +26,11 @@ const invoiceSchema = new mongoose.Schema({
   dateEmission: { type: Date, default: Date.now },
   dateEcheance: { type: Date },
   items: [itemSchema],
+  stockApplique: { type: Boolean, default: false },
+  // Devise du document. Les anciens documents n'ont pas ce champ : XOF.
+  devise: { type: String, default: 'XOF' },
+  // XOF pour 1 unité de `devise`, figé à l'émission (1 en XOF).
+  tauxChange: { type: Number, default: 1, min: 0 },
   remise: { type: Number, default: 0 },
   tva: { type: Number, default: 0 },
   notes: { type: String, default: '' },

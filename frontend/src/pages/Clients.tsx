@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Search, Pencil, Trash2, Mail, Phone, MapPin, Building2 } from 'lucide-react';
+import { Users, Plus, Search, Pencil, Trash2, Mail, Phone, MapPin, Building2, FileText } from 'lucide-react';
 import { getClients, deleteClient } from '../api/clients';
 import type { Client } from '../types';
 import PageHeader from '../components/ui/PageHeader';
+import ChartButton from '../components/charts/ChartButton';
 import EmptyState from '../components/ui/EmptyState';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Pagination from '../components/ui/Pagination';
@@ -68,9 +69,12 @@ export default function Clients() {
         subtitle={`${total} client(s) au total`}
         icon={<Users size={20} />}
         actions={
-          <Link to="/app/clients/new" className="btn-primary text-sm">
-            <Plus size={18} /> Ajouter un client
-          </Link>
+          <>
+            <ChartButton metrics={['nouveaux_clients', 'top_clients']} title="Analyser mes clients" />
+            <Link to="/app/clients/new" className="btn-primary text-sm">
+              <Plus size={18} /> Ajouter un client
+            </Link>
+          </>
         }
       />
 
@@ -109,7 +113,7 @@ export default function Clients() {
                   {c.nom.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-[#0a0a0c] dark:text-white truncate">{c.nom}</p>
+                  <Link to={`/app/clients/${c._id}`} className="font-bold text-[#0a0a0c] dark:text-white truncate block hover:text-[#d9524d]">{c.nom}</Link>
                   {c.entreprise && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{c.entreprise}</p>}
                 </div>
               </div>
@@ -122,6 +126,9 @@ export default function Clients() {
               </div>
 
               <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-white/10">
+                <Link to={`/app/clients/${c._id}`} className="btn-icon" title="Voir la fiche et l'historique">
+                  <FileText size={16} />
+                </Link>
                 <Link to={`/app/clients/${c._id}/edit`} className="btn-icon" title="Modifier">
                   <Pencil size={16} />
                 </Link>

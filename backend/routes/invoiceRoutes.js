@@ -3,7 +3,7 @@ const auth = require('../middleware/auth');
 const requireProprietaireOuAdmin = require('../middleware/requireProprietaireOuAdmin');
 const requireFeature = require('../middleware/requireFeature');
 const validate = require('../middleware/validate');
-const { createInvoiceSchema, updateInvoiceSchema, patchInvoiceStatusSchema } = require('../validators/invoiceValidators');
+const { createInvoiceSchema, updateInvoiceSchema, patchInvoiceStatusSchema, venteRapideSchema } = require('../validators/invoiceValidators');
 const controller = require('../controllers/invoiceController');
 const fiscalisationController = require('../controllers/fiscalisationController');
 const pdfController = require('../controllers/pdfController');
@@ -19,6 +19,7 @@ router.post('/:id/emecef/refresh-status', requireProprietaireOuAdmin, fiscalisat
 router.post('/:id/emecef/reset', requireProprietaireOuAdmin, fiscalisationController.resetFiscalisation);
 router.get('/', controller.getInvoices);
 router.get('/export', requireFeature('exportComptable'), controller.exportComptable);
+router.post('/vente-rapide', validate(venteRapideSchema), controller.venteRapide);
 router.post('/preview', validate(createInvoiceSchema), controller.previewInvoicePdf);
 router.get('/:id', controller.getInvoiceById);
 router.post('/', validate(createInvoiceSchema), controller.createInvoice);

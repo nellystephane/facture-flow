@@ -13,6 +13,8 @@
 // ============================================================================
 
 // Un paiement compte pour la facture s'il est confirmé ET non remboursé.
+const { roundMoney, normalizeDevise } = require('./currency');
+
 const PAID_PAYMENT_FILTER = Object.freeze({ statut: 'complete', rembourse: { $ne: true } });
 
 function num(value) {
@@ -29,6 +31,13 @@ function fiscalTotalOf(invoice) {
   if (f.dgiTotal === null || f.dgiTotal === undefined || f.dgiTotal === '') return null;
   const total = Number(f.dgiTotal);
   return Number.isFinite(total) && total >= 0 ? total : null;
+}
+
+// Facteur de conversion vers le FCFA (1 pour une facture en XOF ou sans devise).
+function rateOf(doc) {
+  if (!doc || normalizeDevise(doc.devise) === 'XOF') return 1;
+  const t = Number(doc.tauxChange);
+  return Number.isFinite(t) && t > 0 ? t : 1;
 }
 
 function computeInvoiceTotals(invoice) {
@@ -50,8 +59,10 @@ function computeInvoiceTotals(invoice) {
     totalTTCCalcule,
     fiscalTotal,
     totalTTC,
-    // Montant entier réellement exigible en FCFA (la devise n'a pas de centimes).
-    totalDu: Math.max(0, Math.round(totalTTC)),
+    // Montant réellement exigible, arrondi selon la devise (entier en XOF, centimes sinon).
+    totalDu: Math.max(0, roundMoney(totalTTC, invoice && invoice.devise)),
+    // Équivalent FCFA au taux figé du document : sert aux statistiques uniquement.
+    totalXOF: totalTTC * rateOf(invoice),
   };
 }
 
@@ -62,6 +73,17 @@ function paidAmountOf(payment) {
   if (!payment) return 0;
   if (payment.montantFacture !== null && payment.montantFacture !== undefined) return num(payment.montantFacture);
   return num(payment.montant);
+}
+
+// Montant imputé converti en FCFA (taux du paiement, copié de la facture).
+function paidAmountXOF(payment) {
+  return paidAmountOf(payment) * rateOf(payment);
+}
+
+function sumPaidXOF(payments) {
+  return (payments || [])
+    .filter((p) => p && p.statut === 'complete' && !p.rembourse)
+    .reduce((sum, p) => sum + paidAmountXOF(p), 0);
 }
 
 function sumPaid(payments) {
@@ -79,6 +101,9 @@ module.exports = {
   computeInvoiceTotals,
   fiscalTotalOf,
   paidAmountOf,
+  paidAmountXOF,
+  rateOf,
   sumPaid,
+  sumPaidXOF,
   isFullyPaid,
 };

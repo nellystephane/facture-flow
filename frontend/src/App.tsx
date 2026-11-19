@@ -11,6 +11,10 @@ import SplashScreen from './components/SplashScreen';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import ClientDetail from './pages/ClientDetail';
+import Expenses from './pages/Expenses';
+import Recurring from './pages/Recurring';
+import VenteRapide from './pages/VenteRapide';
 import Invoices from './pages/Invoices';
 import InvoiceForm from './pages/InvoiceForm';
 import InvoiceDetail from './pages/InvoiceDetail';
@@ -97,6 +101,10 @@ function AppRoutes() {
         <Route path="invoices/:id" element={<InvoiceDetail />} />
         <Route path="clients" element={<Clients />} />
         <Route path="clients/new" element={<ClientForm />} />
+        <Route path="clients/:id" element={<ClientDetail />} />
+        <Route path="depenses" element={<Expenses />} />
+        <Route path="recurrentes" element={<Recurring />} />
+        <Route path="vente-rapide" element={<VenteRapide />} />
         <Route path="clients/:id/edit" element={<ClientForm />} />
         <Route path="services" element={<Services />} />
         <Route path="quotes" element={<Quotes />} />

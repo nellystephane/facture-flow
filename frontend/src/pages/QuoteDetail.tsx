@@ -13,7 +13,7 @@ import PdfPreviewModal from '../components/PdfPreviewModal';
 import InfoHint from '../components/ui/InfoHint';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { formatFCFA, formatDate, badgeClass, QUOTE_STATUT_LABEL, apiError, totalTTC, publicAppUrl } from '../utils/format';
+import { formatFCFA as formatBase, formatDate, badgeClass, QUOTE_STATUT_LABEL, apiError, totalTTC, publicAppUrl } from '../utils/format';
 import { ouvrirPartageWhatsApp } from '../utils/whatsapp';
 
 export default function QuoteDetail() {
@@ -22,6 +22,7 @@ export default function QuoteDetail() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [quote, setQuote] = useState<Quote | null>(null);
+  const formatFCFA = (n: number | null | undefined) => formatBase(n, quote?.devise);
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);

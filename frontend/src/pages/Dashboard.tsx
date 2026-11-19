@@ -10,6 +10,7 @@ import { formatFCFA, formatCompact, badgeClass, INVOICE_STATUT_LABEL } from '../
 import StatCard from '../components/ui/StatCard';
 import PageHeader from '../components/ui/PageHeader';
 import LockedFeature from '../components/ui/LockedFeature';
+import ChartButton from '../components/charts/ChartButton';
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -46,19 +47,22 @@ export default function Dashboard() {
         subtitle="Vue d'ensemble de votre activité"
         icon={<LayoutDashboard size={20} />}
         actions={
-          <Link to="/app/invoices/new" className="btn-primary text-sm">
-            <Plus size={18} /> Nouvelle facture
-          </Link>
+          <>
+            <ChartButton metrics={['encaissements', 'depenses', 'benefice']} title="Analyser mon activité" label="Analyser" />
+            <Link to="/app/invoices/new" className="btn-primary text-sm">
+              <Plus size={18} /> Nouvelle facture
+            </Link>
+          </>
         }
       />
 
       {/* Stats principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Chiffre d'affaires" value={formatCompact(data?.chiffreAffaires)} icon={<TrendingUp size={22} />} accent="vert" delay={0} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+        <StatCard label="Chiffre d'affaires" value={formatCompact(data?.chiffreAffaires)} icon={<TrendingUp size={22} />} accent="vert" tone="mint" delay={0} />
         <StatCard label="En attente" value={formatCompact(data?.enAttente)} icon={<Clock size={22} />} accent="bleu" delay={0.08} />
         <StatCard label="En retard" value={formatCompact(data?.enRetard)} icon={<AlertTriangle size={22} />} accent="rouge" delay={0.16} />
         <StatCard label="Clients" value={data?.totalClients ?? 0} icon={<Users size={22} />} accent="noir" delay={0.24} />
-        <StatCard label="Solde retirable" value={formatCompact(data?.soldeRetirable)} icon={<Wallet size={22} />} accent="vert" delay={0.32} />
+        <StatCard label="Solde retirable" value={formatCompact(data?.soldeRetirable)} icon={<Wallet size={22} />} accent="vert" tone="dark" delay={0.32} />
       </div>
 
       {data?.statistiquesAvancees ? (
@@ -70,18 +74,16 @@ export default function Dashboard() {
                 <h3 className="font-bold text-[#0a0a0c] dark:text-white">Revenus mensuels</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">6 derniers mois</p>
               </div>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
-                style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>
-                <TrendingUp size={18} />
-              </div>
+              <ChartButton metrics={['encaissements', 'impayes']} title="Analyser mes revenus" />
             </div>
             <div className="flex items-end justify-between gap-2 sm:gap-4 h-56">
               {revenusMensuels.map((r, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                   <div className="relative w-full flex items-end justify-center" style={{ height: '200px' }}>
                     <div
-                      className="w-full max-w-[42px] rounded-t-lg transition-soft group-hover:opacity-90 relative"
+                      className="w-full max-w-[42px] rounded-t-lg transition-soft group-hover:opacity-90 relative fx-grow-y"
                       style={{
+                        ['--d' as string]: `${0.35 + i * 0.08}s`,
                         height: `${Math.max((r.total / maxRevenu) * 100, 3)}%`,
                         background: r.total === maxRevenu && maxRevenu > 0
                           ? 'linear-gradient(180deg,#d9524d,#b23c37)'
@@ -114,8 +116,8 @@ export default function Dashboard() {
                       <span className="text-gray-500 dark:text-gray-400 text-xs">{formatCompact(c.total)}</span>
                     </div>
                     <div className="h-2 rounded-full bg-gray-100 dark:bg-white/5 overflow-hidden">
-                      <div className="h-full rounded-full transition-soft"
-                        style={{ width: `${(c.total / maxClient) * 100}%`, background: 'linear-gradient(90deg,#d9524d,#b23c37)' }} />
+                      <div className="h-full rounded-full transition-soft fx-grow-x"
+                        style={{ ['--d' as string]: `${0.45 + i * 0.1}s`, width: `${(c.total / maxClient) * 100}%`, background: 'linear-gradient(90deg,#d9524d,#b23c37)' }} />
                     </div>
                   </div>
                 ))}
