@@ -1,44 +1,21 @@
-const { formatMoney: formatMoneyText } = require('./currency');
+const { formatMoney: formatMoneyText, normalizeDevise, DEVISES } = require('./currency');
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
-const { drawPaymentQr } = require('./qrcode/qrPdf');
 const { computeInvoiceTotals } = require('./invoiceTotals');
+const { templateOf } = require('./pdf/templates');
+const { drawDocument, drawReceipt } = require('./pdf/flow');
+const { splitMoney } = require('./pdf/kit');
 
-const ORYXA_LOGO_PATH = path.join(__dirname, '..', 'assets', 'oryxa-logo.png');
+// ============================================================================
+// PDF Oryxa — facture, devis, reçu.
+// Ce fichier prépare les DONNÉES (modèle de document) ; la mise en page vit dans
+// utils/pdf/ (kit, flow, templates). Neuf modèles, chacun une vraie composition.
+// Le paiement en ligne n'est plus un QR : un bouton discret, cliquable, dont
+// l'URL vient du serveur (jamais de domaine codé en dur). Le seul QR d'un PDF
+// est le sceau fiscal DGI d'une facture normalisée confirmée.
+// ============================================================================
 
-const ACCENT = '#c9504b';
-const ACCENT_DARK = '#8f3530';
-const NOIR = '#0f0f13';
-const GRIS = '#6b7280';
-const GRIS_CLAIR = '#9ca3af';
-const LIGNE = '#e5e7eb';
-const VERT = '#16803c';
-
-// Modèles de facture/devis (avantage Pro/Business — voir config/plans.js).
-// Un style est un simple jeu de couleurs/options passé en paramètre à chaque
-// fonction de dessin — jamais un état de module partagé, pour rester
-// thread-safe si plusieurs PDF se génèrent en parallèle (Promise.all).
-const TEMPLATE_STYLES = {
-  // Gratuit : volontairement conservé comme référence Oryxa.
-  classique: { accent: ACCENT, bandeArticles: NOIR, totalBox: NOIR, bandeEnTete: true, variant: 'classic' },
-  // Pro : cinq directions visuelles réellement distinctes.
-  moderne: { accent: '#2563eb', bandeArticles: '#2563eb', totalBox: '#2563eb', bandeEnTete: true, variant: 'modern' },
-  minimal: { accent: '#111111', bandeArticles: '#111111', totalBox: '#111111', bandeEnTete: false, variant: 'minimal' },
-  atelier: { accent: '#0f766e', bandeArticles: '#ecfdf5', totalBox: '#0f766e', bandeEnTete: false, variant: 'atelier' },
-  horizon: { accent: '#7c3aed', bandeArticles: '#f5f3ff', totalBox: '#7c3aed', bandeEnTete: false, variant: 'horizon' },
-  // Business : styles plus institutionnels/premium, sans sacrifier la lisibilité.
-  prestige: { accent: '#a16207', bandeArticles: '#18181b', totalBox: '#18181b', bandeEnTete: true, variant: 'prestige' },
-  corporate: { accent: '#0f172a', bandeArticles: '#0f172a', totalBox: '#0f172a', bandeEnTete: true, variant: 'corporate' },
-  signature: { accent: '#be185d', bandeArticles: '#fdf2f8', totalBox: '#be185d', bandeEnTete: false, variant: 'signature' },
-  noir: { accent: '#111827', bandeArticles: '#111827', totalBox: '#111827', bandeEnTete: true, variant: 'noir' },
-};
-function styleDe(templateId) {
-  return TEMPLATE_STYLES[templateId] || TEMPLATE_STYLES.classique;
-}
-
-// Séparateur de milliers = espace normale (l'espace fine insécable d'Intl
-// s'affiche « / » avec la police PDF de base) : voir utils/currency.formatMoney.
+// Séparateur de milliers = espace normale (la police PDF de base ne sait pas
+// rendre l'espace fine insécable d'Intl) : voir utils/currency.formatMoney.
 function formatMontant(n, devise) {
   return formatMoneyText(n, devise);
 }
@@ -60,7 +37,7 @@ function calcTotals(doc) {
 /** Exécute un PDFDocument et retourne un Buffer (utile pour pièces jointes email). */
 function toBuffer(drawFn) {
   return new Promise((resolve, reject) => {
-    const pdf = new PDFDocument({ size: 'A4', margins: { top: 50, left: 50, right: 50, bottom: 0 } });
+    const pdf = new PDFDocument({ size: 'A4', margins: { top: 0, left: 0, right: 0, bottom: 0 } });
     const chunks = [];
     pdf.on('data', (c) => chunks.push(c));
     pdf.on('end', () => resolve(Buffer.concat(chunks)));
@@ -111,443 +88,171 @@ async function fetchLogoBuffer(user) {
   }
 }
 
-function drawHeader(pdf, { user, docTitre, docNumero, docSousTitre, statutLabel, statutColor, dateEmission, echeanceLabel, echeanceDate, logoBuffer, style }) {
-  const pageWidth = 595;
-  const v = style.variant;
 
-  if (v === 'modern' || v === 'horizon' || v === 'signature') {
-    pdf.roundedRect(40, 28, 515, 106, 14).fill(v === 'horizon' ? '#faf5ff' : v === 'signature' ? '#fdf2f8' : '#eff6ff');
-    pdf.rect(40, 28, 6, 106).fill(style.accent);
-  } else if (v === 'prestige' || v === 'corporate' || v === 'noir') {
-    pdf.rect(0, 0, pageWidth, 112).fill(v === 'prestige' ? '#18181b' : '#0f172a');
-    pdf.rect(0, 108, pageWidth, 4).fill(style.accent);
-  } else if (style.bandeEnTete) {
-    pdf.rect(0, 0, pageWidth, 6).fill(style.accent);
-  }
+const STATUT_INVOICE = {
+  brouillon: ['Brouillon', 'muted'], envoyee: ['Envoyée', 'info'], vue: ['Vue par le client', 'info'],
+  payee: ['Payée', 'ok'], en_retard: ['En retard', 'bad'], annulee: ['Annulée', 'muted'],
+};
+const STATUT_QUOTE = {
+  brouillon: ['Brouillon', 'muted'], envoye: ['Envoyé', 'info'], accepte: ['Accepté', 'ok'], refuse: ['Refusé', 'bad'], expire: ['Expiré', 'warn'],
+};
+const METHODE_LABEL = {
+  especes: 'Espèces', mtn_money: 'MTN Mobile Money', moov_money: 'Moov Money',
+  carte: 'Carte bancaire', virement: 'Virement bancaire', autre: 'Autre',
+};
 
-  const darkHeader = ['prestige', 'corporate', 'noir'].includes(v);
-  const textColor = darkHeader ? '#ffffff' : NOIR;
-  const mutedColor = darkHeader ? '#cbd5e1' : GRIS;
-  const texteX = logoBuffer ? 106 : 50;
+const nombre = (n, devise) => splitMoney(formatMontant(n, devise)).num;
 
-  if (logoBuffer) {
-    try { pdf.image(logoBuffer, 50, darkHeader ? 30 : 42, { fit: [46, 46] }); } catch (err) { console.error('Logo PDF illisible:', err.message); }
-  }
-
-  const topY = darkHeader ? 32 : (v === 'minimal' ? 32 : 42);
-  const emetteur = user.entreprise || user.nom;
-  pdf.fillColor(textColor).fontSize(v === 'minimal' ? 18 : 20).font('Helvetica-Bold').text(emetteur, texteX, topY, { width: 320 - (texteX - 50) });
-  if (user.entreprise && user.nom) pdf.fillColor(mutedColor).fontSize(9).font('Helvetica').text(user.nom, texteX, topY + 24);
-
-  pdf.fillColor(darkHeader ? '#ffffff' : style.accent).fontSize(v === 'minimal' ? 20 : 16).font('Helvetica-Bold').text(docTitre, 380, topY, { width: 165, align: 'right' });
-  pdf.fillColor(darkHeader ? '#e2e8f0' : NOIR).fontSize(11).font('Helvetica-Bold').text('N° ' + (docNumero || ''), 380, topY + 22, { width: 165, align: 'right' });
-
-  let y = darkHeader ? 78 : 84;
-  pdf.fillColor(mutedColor).fontSize(9).font('Helvetica');
-  pdf.text("Date d'émission : " + formatDate(dateEmission), 380, y, { width: 165, align: 'right' });
-  y += 14;
-  if (echeanceLabel && echeanceDate) { pdf.text(echeanceLabel + formatDate(echeanceDate), 380, y, { width: 165, align: 'right' }); y += 14; }
-  if (statutLabel) pdf.fillColor(statutColor || mutedColor).font('Helvetica-Bold').text(statutLabel.toUpperCase(), 380, y, { width: 165, align: 'right' });
-
-  pdf.fillColor(mutedColor).fontSize(8.5).font('Helvetica');
-  let ey = darkHeader ? 72 : (user.entreprise && user.nom ? 78 : 66);
-  if (user.adresse) { pdf.text(user.adresse, texteX, ey, { width: 300 - (texteX - 50) }); ey += 12; }
-  const contact = [user.email, user.telephone].filter(Boolean).join('  •  ');
-  if (contact) { pdf.text(contact, texteX, ey, { width: 300 - (texteX - 50) }); ey += 12; }
-  if (logoBuffer) ey = Math.max(ey, darkHeader ? 96 : 98);
-  return Math.max(ey + (v === 'minimal' ? 12 : 16), darkHeader ? 128 : 122);
+function emitterOf(user) {
+  const adresse = user.adresse ? [user.adresse] : [];
+  const contact = [user.email, user.telephone].filter(Boolean).join('  ·  ');
+  const ifu = user.fiscalisation && user.fiscalisation.ifu ? ['IFU ' + user.fiscalisation.ifu] : [];
+  return { nom: user.nom || '', entreprise: user.entreprise || '', lines: [...adresse, ...(contact ? [contact] : []), ...ifu] };
 }
 
-function drawClientBlock(pdf, client, y, style) {
-  const lignes = [client?.entreprise, client?.email, client?.telephone, client?.adresse].filter(Boolean);
-  const hauteur = 40 + lignes.length * 13;
-  const v = style.variant;
-  if (v === 'minimal') {
-    pdf.moveTo(50, y).lineTo(310, y).strokeColor(LIGNE).stroke();
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('FACTURÉ À', 50, y + 10);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 50, y + 23);
-  } else if (v === 'atelier' || v === 'signature' || v === 'horizon') {
-    pdf.roundedRect(50, y, 495, hauteur, 10).fillAndStroke(v === 'atelier' ? '#f0fdfa' : v === 'signature' ? '#fff1f2' : '#faf5ff', LIGNE);
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('CLIENT', 64, y + 12);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 64, y + 24);
+function clientOf(client) {
+  return { nom: (client && client.nom) || 'Client', lines: [client?.entreprise, client?.email, client?.telephone, client?.adresse].filter(Boolean) };
+}
+
+function bankOf(banque) {
+  if (!banque || !(banque.iban || banque.rib || banque.nomBanque)) return [];
+  return [
+    ['Banque', banque.nomBanque], ['Titulaire', banque.titulaire], ['IBAN', banque.iban], ['RIB', banque.rib], ['SWIFT / BIC', banque.swift],
+  ].filter(([, v]) => v);
+}
+
+/** Modèle de données d'une facture ou d'un devis, indépendant de la mise en page. */
+function documentModel({ doc, user, isQuote, paymentUrl, logoBuffer, T }) {
+  const devise = normalizeDevise(doc.devise);
+  const [statutLabel, statutTone] = (isQuote ? STATUT_QUOTE : STATUT_INVOICE)[doc.statut] || [null, 'muted'];
+  const cw = { qty: 46, unit: 92, grp: 60, total: 96, ...(T.colW || {}) };
+  const fiscal = doc.fiscalisation || {};
+  const confirmed = !isQuote && fiscal.status === 'confirmed' && Array.isArray(fiscal.requestPayload?.items);
+  const unpaid = !isQuote && doc.statut !== 'payee' && doc.statut !== 'annulee';
+  const devLabel = DEVISES[devise].label;
+
+  let table; let totals;
+  if (confirmed) {
+    table = {
+      columns: [
+        { key: 'desc', label: 'Article' },
+        { key: 'qty', label: 'Qté', w: cw.qty, align: 'right' },
+        { key: 'unit', label: 'Prix TTC', w: cw.unit, align: 'right' },
+        { key: 'grp', label: 'Groupe', w: cw.grp, align: 'center' },
+        { key: 'total', label: 'Total ligne', w: cw.total, align: 'right' },
+      ],
+      rows: fiscal.requestPayload.items.map((it) => ({
+        cells: {
+          desc: String(it.name || ''), qty: String(it.quantity || 0), unit: nombre(it.price || 0, 'XOF'),
+          grp: String(it.taxGroup || '—'),
+          total: nombre(Math.round(Number(it.price || 0) * Number(it.quantity || 0)) + Number(it.taxSpecific || 0), 'XOF'),
+        },
+        sub: Number(it.taxSpecific || 0) > 0 ? 'Taxe spécifique incluse : ' + formatMontant(it.taxSpecific, 'XOF') : '',
+      })),
+    };
+    totals = { lines: [], total: { label: 'Total fiscal DGI', value: formatMontant(Number(fiscal.dgiTotal || 0), 'XOF') } };
   } else {
-    pdf.roundedRect(50, y, 260, hauteur, 8).fillAndStroke(v === 'prestige' || v === 'corporate' || v === 'noir' ? '#f4f4f5' : '#fafafa', LIGNE);
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8).text('FACTURÉ À', 64, y + 12);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(11).text(client?.nom || 'Client', 64, y + 24);
+    table = {
+      columns: [
+        { key: 'desc', label: 'Description' },
+        { key: 'qty', label: 'Qté', w: cw.qty, align: 'right' },
+        { key: 'unit', label: 'Prix unit.', w: cw.unit, align: 'right' },
+        { key: 'total', label: 'Total (' + devLabel.replace('₦', 'NGN').replace('GH₵', 'GHS') + ')', w: cw.total, align: 'right' },
+      ],
+      rows: (doc.items || []).map((it) => ({
+        cells: {
+          desc: it.description || '', qty: String(it.quantite || 0), unit: nombre(it.prixUnitaire || 0, devise),
+          total: nombre((it.quantite || 0) * (it.prixUnitaire || 0), devise),
+        },
+        sub: '',
+      })),
+    };
+    const t = calcTotals(doc);
+    const normalisee = doc.modeFacturation === 'normalisee';
+    const ls = [];
+    ls.push({ label: 'Sous-total', value: formatMontant(t.sousTotal, devise) });
+    if (doc.remise > 0) ls.push({ label: 'Remise', value: '- ' + formatMontant(doc.remise, devise), tone: 'accent' });
+    if (normalisee || t.montantTva > 0) ls.push({ label: normalisee ? 'TVA par groupe fiscal' : 'TVA (' + (doc.tva || 0) + ' %)', value: formatMontant(t.montantTva, devise) });
+    if (t.taxeSpecifique > 0) ls.push({ label: 'Taxes spécifiques', value: formatMontant(t.taxeSpecifique, devise) });
+    if (t.arrondiFiscal !== 0) ls.push({ label: 'Arrondi fiscal (DGI)', value: (t.arrondiFiscal > 0 ? '+ ' : '- ') + formatMontant(Math.abs(t.arrondiFiscal), devise) });
+    // un sous-total seul répète le total : on l'omet
+    const lines = ls.length === 1 ? [] : ls;
+    totals = { lines, total: { label: normalisee || t.montantTva > 0 ? 'Total TTC' : 'Total', value: formatMontant(t.ttc, devise) } };
   }
-  pdf.fillColor(GRIS).font('Helvetica').fontSize(8.8);
-  let cy = y + 40;
-  lignes.forEach((ligne) => { pdf.text(ligne, (v === 'minimal' ? 50 : 64), cy, { width: v === 'minimal' ? 495 : (v === 'atelier' || v === 'signature' || v === 'horizon' ? 465 : 230) }); cy += 13; });
-  return y + (v === 'minimal' ? Math.max(58, 36 + lignes.length * 13) : hauteur) + 14;
-}
 
-function drawItemsTable(pdf, items, devise, startY, style) {
-  const pageWidth = 595;
-  const finPageUtile = 740;
-  let y = startY;
-  const v = style.variant;
-  const lightHeader = ['minimal', 'atelier', 'horizon', 'signature'].includes(v);
-  const headerFill = lightHeader ? style.bandeArticles : style.bandeArticles;
-  const headerText = lightHeader ? NOIR : '#ffffff';
-  const rowFill = v === 'atelier' ? '#f7fffd' : v === 'horizon' ? '#fbfaff' : v === 'signature' ? '#fffafb' : '#f8f8fa';
+  const seal = (!isQuote && fiscal.status === 'confirmed' && fiscal.codeMECeFDGI && fiscal.qrCode)
+    ? { code: fiscal.codeMECeFDGI, nim: fiscal.nim, date: fiscal.dateTime, counter: fiscal.counters, qr: fiscal.qrCode }
+    : null;
 
-  const dessinerEntete = () => {
-    if (v === 'minimal') {
-      pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8.5);
-      pdf.text('DESCRIPTION', 50, y + 6, { width: 235 });
-      pdf.text('QTÉ', 300, y + 6, { width: 50, align: 'center' });
-      pdf.text('PRIX UNIT.', 360, y + 6, { width: 90, align: 'right' });
-      pdf.text('TOTAL', 460, y + 6, { width: 85, align: 'right' });
-      pdf.moveTo(50, y + 20).lineTo(545, y + 20).strokeColor(style.accent).stroke();
-      y += 25;
-      return;
-    }
-    pdf.roundedRect(50, y, pageWidth - 100, 24, v === 'modern' ? 6 : 3).fill(headerFill);
-    pdf.fillColor(headerText).font('Helvetica-Bold').fontSize(9.2);
-    pdf.text('DESCRIPTION', 60, y + 8, { width: 235 });
-    pdf.text('QTÉ', 300, y + 8, { width: 50, align: 'center' });
-    pdf.text('PRIX UNIT.', 360, y + 8, { width: 90, align: 'right' });
-    pdf.text('TOTAL', 460, y + 8, { width: 85, align: 'right' });
-    y += 24;
+  return {
+    kind: isQuote ? 'devis' : 'facture',
+    titre: isQuote ? 'Devis' : 'Facture',
+    numero: doc.numero || '',
+    statut: statutLabel ? { label: statutLabel, tone: statutTone } : null,
+    meta: [
+      { label: "Date d'émission", value: formatDate(doc.dateEmission) },
+      ...((isQuote ? doc.dateExpiration : doc.dateEcheance) ? [{ label: isQuote ? "Valable jusqu'au" : 'Échéance', value: formatDate(isQuote ? doc.dateExpiration : doc.dateEcheance) }] : []),
+      ...(statutLabel ? [{ label: 'Statut', value: statutLabel, tone: statutTone }] : []),
+    ],
+    emetteur: emitterOf(user),
+    logo: logoBuffer || null,
+    client: clientOf(doc.client),
+    objet: doc.objet || '',
+    devise,
+    deviseLabel: DEVISES[devise].nom,
+    table,
+    totals,
+    pay: unpaid && paymentUrl ? { url: paymentUrl } : null,
+    bank: unpaid ? bankOf(user.banque) : [],
+    notes: doc.notes || '',
+    seal,
+    accord: isQuote,
+    footer: 'Établi avec Oryxa',
   };
-  dessinerEntete();
-  pdf.font('Helvetica').fontSize(9.5);
-  (items || []).forEach((item, idx) => {
-    const rowHeight = v === 'corporate' ? 27 : 24;
-    if (y + rowHeight > finPageUtile) { pdf.addPage(); y = 50; dessinerEntete(); pdf.font('Helvetica').fontSize(9.5); }
-    if (idx % 2 === 0 && v !== 'minimal') pdf.rect(50, y, pageWidth - 100, rowHeight).fill(rowFill);
-    pdf.fillColor(NOIR).font('Helvetica');
-    pdf.text(item.description || '', 60, y + 7, { width: 235 });
-    pdf.text(String(item.quantite || 0), 300, y + 7, { width: 50, align: 'center' });
-    pdf.text(formatMontant(item.prixUnitaire || 0, devise), 360, y + 7, { width: 90, align: 'right' });
-    pdf.font('Helvetica-Bold').text(formatMontant((item.quantite || 0) * (item.prixUnitaire || 0), devise), 460, y + 7, { width: 85, align: 'right' });
-    y += rowHeight;
-  });
-  pdf.moveTo(50, y).lineTo(pageWidth - 50, y).strokeColor(LIGNE).stroke();
-  return y + 10;
 }
 
-function drawTotals(pdf, doc, devise, startY, style) {
-  const { sousTotal, montantTva, taxeSpecifique, arrondiFiscal, ttc } = calcTotals(doc);
-  const v = style.variant;
-  let y = startY;
-  pdf.fillColor(GRIS).font('Helvetica').fontSize(10);
-  pdf.text('Sous-total', 350, y, { width: 120, align: 'right' });
-  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(sousTotal, devise), 460, y, { width: 85, align: 'right' }); y += 18;
-  if (doc.remise > 0) { pdf.fillColor(GRIS).font('Helvetica').text('Remise', 350, y, { width: 120, align: 'right' }); pdf.fillColor(style.accent).font('Helvetica-Bold').text('- ' + formatMontant(doc.remise, devise), 460, y, { width: 85, align: 'right' }); y += 18; }
-  pdf.fillColor(GRIS).font('Helvetica').text(doc.modeFacturation === 'normalisee' ? 'TVA par groupe fiscal' : 'TVA (' + (doc.tva || 0) + '%)', 350, y, { width: 120, align: 'right' });
-  pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(montantTva, devise), 460, y, { width: 85, align: 'right' }); y += 18;
-  if (taxeSpecifique > 0) {
-    pdf.fillColor(GRIS).font('Helvetica').text('Taxes spécifiques', 350, y, { width: 120, align: 'right' });
-    pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(taxeSpecifique, devise), 460, y, { width: 85, align: 'right' }); y += 18;
-  }
-  if (arrondiFiscal !== 0) {
-    pdf.fillColor(GRIS).font('Helvetica').text('Arrondi fiscal (DGI)', 350, y, { width: 120, align: 'right' });
-    pdf.fillColor(NOIR).font('Helvetica-Bold').text((arrondiFiscal > 0 ? '+ ' : '- ') + formatMontant(Math.abs(arrondiFiscal), devise), 460, y, { width: 85, align: 'right' }); y += 18;
-  }
-  y += 8;
-
-  if (v === 'minimal') {
-    pdf.moveTo(350, y).lineTo(545, y).strokeColor(style.accent).stroke();
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(12).text('TOTAL TTC', 350, y + 10, { width: 95, align: 'right' });
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(14).text(formatMontant(ttc, devise), 450, y + 9, { width: 95, align: 'right' });
-    return { y: y + 36, ttc };
-  }
-  const boxH = v === 'prestige' || v === 'corporate' || v === 'noir' ? 38 : 34;
-  pdf.roundedRect(350, y, 195, boxH, 8).fill(style.totalBox);
-  pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(11.5).text('TOTAL TTC', 362, y + 11);
-  pdf.fontSize(12.5).text(formatMontant(ttc, devise), 355, y + 10, { width: 180, align: 'right' });
-  return { y: y + boxH, ttc };
-}
-
-function drawFooter(pdf, gauche) {
-  const pageWidth = 595;
-  const y = pdf.page.height - 40;
-  pdf.rect(0, y, pageWidth, 40).fill(NOIR);
-
-  let textX = 50;
-  if (fs.existsSync(ORYXA_LOGO_PATH)) {
-    try {
-      pdf.image(ORYXA_LOGO_PATH, 50, y + 8, { fit: [24, 24] });
-      textX = 82;
-    } catch (err) {
-      console.error('Logo Oryxa PDF illisible:', err.message);
-    }
-  }
-
-  pdf.fillColor('#ffffff').fontSize(8).font('Helvetica');
-  pdf.text(gauche || '', textX, y + 15, { width: 285 });
-  pdf.fillColor('#9ca3af').text('Document généré via Oryxa', 350, y + 15, { width: 195, align: 'right' });
-}
-
-/**
- * Bloc de paiement premium, volontairement isolé dans une carte réservée.
- * Le QR et le bouton utilisent exactement le même paymentUrl dynamique :
- * aucun domaine Oryxa n'est gravé dans le PDF. Le lien reste cliquable dans
- * le bouton et dans le QR, y compris après passage sur un domaine personnalisé.
- */
-function drawPaymentSection(pdf, { y, paymentUrl, banque, devise, montant, style }) {
-  const pageWidth = 595;
-  const bottomSafe = pdf.page.height - 58;
-  let cy = y + 18;
-
-  if (paymentUrl) {
-    const cardX = 50;
-    const cardW = pageWidth - 100;
-    const cardH = 146;
-    const qrSize = 92;
-    const qrX = cardX + cardW - qrSize - 18;
-    const qrY = cy + 38;
-
-    // Ne jamais laisser le bloc paiement empiéter sur le footer.
-    if (cy + cardH > bottomSafe) {
-      pdf.addPage();
-      cy = 50;
-    }
-
-    pdf.save();
-    pdf.roundedRect(cardX, cy, cardW, cardH, 12).fillAndStroke('#fffafa', LIGNE);
-    pdf.rect(cardX, cy, 5, cardH).fill(style.accent);
-    pdf.restore();
-
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(9)
-      .text('PAIEMENT EN LIGNE', cardX + 18, cy + 15);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(13)
-      .text('Réglez cette facture simplement', cardX + 18, cy + 31, { width: 300 });
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(8.5)
-      .text('Le bouton et le QR code ouvrent la page de paiement sécurisée.', cardX + 18, cy + 50, { width: 300 });
-
-    const btnX = cardX + 18;
-    const btnY = cy + 76;
-    const btnW = 275;
-    const btnH = 34;
-    pdf.roundedRect(btnX, btnY, btnW, btnH, 7).fill(style.accent);
-    pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(10.5)
-      .text('PAYER EN LIGNE', btnX, btnY + 11, { width: btnW, align: 'center' });
-    pdf.link(btnX, btnY, btnW, btnH, paymentUrl);
-
-    // On n'imprime pas l'URL complète : elle peut être longue et nuire à la
-    // mise en page. Le lien réel reste attaché au bouton et au QR.
-    let domainLabel = 'Lien de paiement sécurisé';
-    try { domainLabel = new URL(paymentUrl).hostname; } catch (_) {}
-    pdf.fillColor(GRIS_CLAIR).font('Helvetica').fontSize(7.5)
-      .text(domainLabel, btnX, btnY + btnH + 7, { width: btnW, align: 'center' });
-
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(7.5)
-      .text('SCANNER POUR PAYER', qrX - 12, cy + 15, { width: qrSize + 24, align: 'center' });
-    drawPaymentQr(pdf, paymentUrl, qrX, qrY, qrSize);
-    pdf.fillColor(GRIS_CLAIR).font('Helvetica').fontSize(6.8)
-      .text('Paiement sécurisé', qrX - 12, qrY + qrSize + 5, { width: qrSize + 24, align: 'center' });
-
-    cy += cardH + 14;
-  }
-
-  if (banque && (banque.iban || banque.rib || banque.nomBanque)) {
-    const bankLines = [
-      banque.nomBanque && ('Banque : ' + banque.nomBanque),
-      banque.titulaire && ('Titulaire : ' + banque.titulaire),
-      banque.iban && ('IBAN : ' + banque.iban),
-      banque.rib && ('RIB : ' + banque.rib),
-      banque.swift && ('SWIFT/BIC : ' + banque.swift),
-    ].filter(Boolean);
-    const bankH = 28 + bankLines.length * 13;
-    if (cy + bankH > bottomSafe) { pdf.addPage(); cy = 50; }
-    pdf.roundedRect(50, cy, pageWidth - 100, bankH, 10).fillAndStroke('#fafafa', LIGNE);
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8.5)
-      .text('PAIEMENT PAR VIREMENT BANCAIRE', 64, cy + 12);
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(8.8);
-    let by = cy + 28;
-    bankLines.forEach((line) => { pdf.text(line, 64, by, { width: 465 }); by += 13; });
-    cy += bankH + 8;
-  }
-
-  return cy;
-}
-
-const STATUT_INVOICE_LABEL = {
-  brouillon: 'Brouillon', envoyee: 'Envoyée', vue: 'Vue',
-  payee: 'Payée', en_retard: 'En retard', annulee: 'Annulée'
-};
-const STATUT_INVOICE_COLOR = {
-  brouillon: GRIS, envoyee: '#1d4ed8', vue: '#7c3aed',
-  payee: VERT, en_retard: ACCENT, annulee: GRIS
-};
-const STATUT_QUOTE_LABEL = {
-  brouillon: 'Brouillon', envoye: 'Envoyé', accepte: 'Accepté', refuse: 'Refusé', expire: 'Expiré'
-};
-
-function drawFiscalSecuritySection(pdf, fiscalisation, y, style) {
-  if (!fiscalisation || fiscalisation.status !== 'confirmed' || !fiscalisation.codeMECeFDGI || !fiscalisation.qrCode) return y;
-  const pageWidth = 595;
-  const cardX = 50;
-  const cardW = pageWidth - 100;
-  const cardH = 132;
-  const bottomSafe = pdf.page.height - 58;
-  let cy = y + 16;
-  if (cy + cardH > bottomSafe) { pdf.addPage(); cy = 50; }
-  pdf.save();
-  pdf.roundedRect(cardX, cy, cardW, cardH, 10).fillAndStroke('#ffffff', LIGNE);
-  pdf.rect(cardX, cy, 5, cardH).fill('#16803c');
-  pdf.restore();
-  pdf.fillColor('#16803c').font('Helvetica-Bold').fontSize(9).text('FACTURE NORMALISÉE — DGI / e-MECeF', cardX + 16, cy + 12);
-  pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(10).text('Code MECeF/DGI : ' + fiscalisation.codeMECeFDGI, cardX + 16, cy + 31, { width: 330 });
-  pdf.fillColor(GRIS).font('Helvetica').fontSize(8.5).text('NIM : ' + (fiscalisation.nim || '—'), cardX + 16, cy + 48);
-  pdf.text('Date DGI : ' + (fiscalisation.dateTime || '—'), cardX + 16, cy + 62);
-  pdf.text('Compteur : ' + (fiscalisation.counters || '—'), cardX + 16, cy + 76);
-  pdf.fillColor(GRIS_CLAIR).font('Helvetica').fontSize(7).text('QR fiscal émis par la DGI — distinct du QR de paiement Oryxa.', cardX + 16, cy + 100, { width: 330 });
-  const { drawPaymentQr } = require('./qrcode/qrPdf');
-  drawPaymentQr(pdf, fiscalisation.qrCode, cardX + cardW - 102, cy + 18, 84);
-  return cy + cardH + 8;
-}
-
-
-function drawFiscalItemsTable(pdf, fiscalItems, startY, style) {
-  const pageWidth = 595;
-  let y = startY;
-  const rowH = 27;
-  const header = () => {
-    pdf.roundedRect(50, y, pageWidth - 100, 25, 3).fill(style.bandeArticles);
-    pdf.fillColor(['minimal', 'atelier', 'horizon', 'signature'].includes(style.variant) ? NOIR : '#ffffff').font('Helvetica-Bold').fontSize(8.2);
-    pdf.text('ARTICLE', 58, y + 8, { width: 166 });
-    pdf.text('QTÉ', 226, y + 8, { width: 42, align: 'right' });
-    pdf.text('PRIX TTC', 274, y + 8, { width: 80, align: 'right' });
-    pdf.text('GROUPE', 358, y + 8, { width: 52, align: 'center' });
-    pdf.text('TOTAL LIGNE', 414, y + 8, { width: 128, align: 'right' });
-    y += 25;
-  };
-  header();
-  (fiscalItems || []).forEach((item, idx) => {
-    if (y + rowH > 740) { pdf.addPage(); y = 50; header(); }
-    if (idx % 2 === 0) pdf.rect(50, y, pageWidth - 100, rowH).fill('#f8f8fa');
-    const line = Math.round(Number(item.price || 0) * Number(item.quantity || 0)) + Number(item.taxSpecific || 0);
-    pdf.fillColor(NOIR).font('Helvetica').fontSize(8.5);
-    pdf.text(String(item.name || ''), 58, y + 8, { width: 166 });
-    pdf.text(String(item.quantity || 0), 226, y + 8, { width: 42, align: 'right' });
-    pdf.text(formatMontant(item.price || 0), 274, y + 8, { width: 80, align: 'right' });
-    pdf.text(String(item.taxGroup || '—'), 358, y + 8, { width: 52, align: 'center' });
-    pdf.font('Helvetica-Bold').text(formatMontant(line), 414, y + 8, { width: 128, align: 'right' });
-    if (Number(item.taxSpecific || 0) > 0) {
-      pdf.font('Helvetica').fontSize(7).fillColor(GRIS).text('Taxe spécifique incluse : ' + formatMontant(item.taxSpecific), 58, y + 17, { width: 190 });
-    }
-    y += rowH;
-  });
-  pdf.moveTo(50, y).lineTo(pageWidth - 50, y).strokeColor(LIGNE).stroke();
-  y += 12;
-  if (y + 45 > pdf.page.height - 58) { pdf.addPage(); y = 50; }
-  pdf.roundedRect(335, y, 210, 43, 7).fill(style.totalBox);
-  pdf.fillColor('#ffffff').font('Helvetica-Bold').fontSize(9).text('TOTAL FISCAL DGI', 347, y + 8, { width: 95 });
-  pdf.fontSize(10.5).text(formatMontant(pdf._oryxaDgiTotal || 0), 347, y + 23, { width: 185, align: 'right' });
-  return y + 52;
-}
-
-function drawInvoiceOrQuote(pdf, { doc, user, isQuote, paymentUrl, logoBuffer }) {
-  const devise = doc.devise || 'XOF';
-  const statutLabel = isQuote ? STATUT_QUOTE_LABEL[doc.statut] : STATUT_INVOICE_LABEL[doc.statut];
-  const statutColor = isQuote ? '#1d4ed8' : STATUT_INVOICE_COLOR[doc.statut];
-  const style = styleDe(doc.template);
-
-  let y = drawHeader(pdf, {
-    user,
-    docTitre: isQuote ? 'DEVIS' : 'FACTURE',
-    docNumero: doc.numero,
-    statutLabel,
-    statutColor,
-    dateEmission: doc.dateEmission,
-    echeanceLabel: isQuote ? "Valable jusqu'au : " : 'Échéance : ',
-    echeanceDate: isQuote ? doc.dateExpiration : doc.dateEcheance,
-    logoBuffer,
-    style,
-  });
-
-  if (doc.objet) {
-    pdf.fillColor(GRIS).font('Helvetica-Oblique').fontSize(9.5).text(doc.objet, 50, y, { width: 495 });
-    y += 18;
-  }
-
-  y = drawClientBlock(pdf, doc.client, y + 6, style);
-  const isFiscalConfirmed = !isQuote && doc.fiscalisation?.status === 'confirmed' && Array.isArray(doc.fiscalisation?.requestPayload?.items);
-  if (isFiscalConfirmed) {
-    pdf._oryxaDgiTotal = Number(doc.fiscalisation.dgiTotal || 0);
-    y = drawFiscalItemsTable(pdf, doc.fiscalisation.requestPayload.items, y + 4, style);
-  } else {
-    y = drawItemsTable(pdf, doc.items, devise, y + 4, style);
-    const { y: afterTotals } = drawTotals(pdf, doc, devise, y + 6, style);
-    y = afterTotals;
-  }
-
-  if (!isQuote) y = drawFiscalSecuritySection(pdf, doc.fiscalisation, y, style);
-
-  if (!isQuote && doc.statut !== 'payee' && doc.statut !== 'annulee') {
-    y = drawPaymentSection(pdf, { y, paymentUrl, banque: user.banque, devise, montant: calcTotals(doc).ttc, style });
-  }
-
-  if (doc.notes) {
-    pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8.5).text('NOTES', 50, y + 8);
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(9).text(doc.notes, 50, y + 22, { width: 495 });
-  }
-
-  drawFooter(pdf, isQuote ? 'Devis valable jusqu\'à la date indiquée ci-dessus.' : 'Merci pour votre confiance.');
+function render(model, templateId, drawer) {
+  const T = templateOf(templateId);
+  return toBuffer((pdf) => drawer(pdf, model, T));
 }
 
 async function buildInvoicePdf({ invoice, user, paymentUrl }) {
   const logoBuffer = await fetchLogoBuffer(user);
-  return toBuffer((pdf) => drawInvoiceOrQuote(pdf, { doc: invoice, user, isQuote: false, paymentUrl, logoBuffer }));
+  const T = templateOf(invoice.template);
+  return render(documentModel({ doc: invoice, user, isQuote: false, paymentUrl, logoBuffer, T }), invoice.template, drawDocument);
 }
 
 async function buildQuotePdf({ quote, user }) {
   const logoBuffer = await fetchLogoBuffer(user);
-  return toBuffer((pdf) => drawInvoiceOrQuote(pdf, { doc: quote, user, isQuote: true, logoBuffer }));
+  const T = templateOf(quote.template);
+  return render(documentModel({ doc: quote, user, isQuote: true, logoBuffer, T }), quote.template, drawDocument);
 }
 
 /** Reçu de paiement — document distinct, remis après règlement. */
 async function buildReceiptPdf({ invoice, payment, user }) {
-  const devise = (payment && payment.devise) || (invoice && invoice.devise) || 'XOF';
-  const METHODE_LABEL = {
-    especes: 'Espèces', mtn_money: 'MTN Mobile Money', moov_money: 'Moov Money',
-    carte: 'Carte bancaire', virement: 'Virement bancaire', autre: 'Autre'
-  };
-
+  const devise = normalizeDevise((payment && payment.devise) || (invoice && invoice.devise));
   const logoBuffer = await fetchLogoBuffer(user);
-  const style = styleDe(invoice.template);
-  return toBuffer((pdf) => {
-    let y = drawHeader(pdf, {
-      user,
-      docTitre: 'REÇU',
-      docNumero: payment.receiptNumber || String(payment._id).slice(-8).toUpperCase(),
-      statutLabel: 'Payé',
-      statutColor: VERT,
-      dateEmission: payment.date,
-      logoBuffer,
-      style,
-    });
-
-    y = drawClientBlock(pdf, invoice.client, y + 6, style);
-
-    y += 10;
-    pdf.rect(50, y, 495, 90).fillAndStroke('#f8f8fa', LIGNE);
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(9.5).text('Facture réglée', 70, y + 16);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(12).text(invoice.numero, 70, y + 30);
-
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(9.5).text('Moyen de paiement', 300, y + 16);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(12).text(METHODE_LABEL[payment.methode] || payment.methode, 300, y + 30);
-
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(9.5).text('Référence', 70, y + 55);
-    pdf.fillColor(NOIR).font('Helvetica-Bold').fontSize(10.5).text(payment.reference || payment.fedapayTransactionId || '—', 70, y + 69);
-
-    pdf.fillColor(VERT).font('Helvetica-Bold').fontSize(20).text('PAYÉ', 380, y + 55, { width: 145, align: 'right' });
-
-    y += 110;
-    pdf.fillColor(GRIS).font('Helvetica').fontSize(11).text('Montant réglé', 50, y);
-    pdf.fillColor(VERT).font('Helvetica-Bold').fontSize(22).text(formatMontant(payment.montant, devise), 50, y + 16);
-
-    y += 60;
-    if (payment.note) {
-      pdf.fillColor(style.accent).font('Helvetica-Bold').fontSize(8.5).text('NOTE', 50, y);
-      pdf.fillColor(GRIS).font('Helvetica').fontSize(9).text(payment.note, 50, y + 14, { width: 495 });
-    }
-
-    drawFooter(pdf, 'Ce reçu confirme la réception du paiement indiqué ci-dessus.');
-  });
+  const numero = payment.receiptNumber || String(payment._id).slice(-8).toUpperCase();
+  const model = {
+    kind: 'recu', titre: 'Reçu', numero, statut: null,
+    meta: [{ label: 'Date du paiement', value: formatDate(payment.date) }, { label: 'Statut', value: 'Payé', tone: 'ok' }],
+    emetteur: emitterOf(user), logo: logoBuffer || null, client: clientOf(invoice.client), objet: '',
+    devise, deviseLabel: DEVISES[devise].nom,
+    table: { columns: [], rows: [] }, totals: null, pay: null, bank: [], notes: '', seal: null, accord: false,
+    footer: 'Établi avec Oryxa',
+    receipt: {
+      amount: formatMontant(payment.montant, devise),
+      dateShort: formatDate(payment.date),
+      rows: [
+        ['Facture réglée', invoice.numero],
+        ['Moyen de paiement', METHODE_LABEL[payment.methode] || payment.methode || '—'],
+        ['Référence', payment.reference || payment.fedapayTransactionId || '—'],
+        ['Reçu n°', numero],
+      ],
+      note: payment.note || '',
+    },
+  };
+  return render(model, invoice.template, drawReceipt);
 }
 
 module.exports = {
@@ -557,4 +262,5 @@ module.exports = {
   buildReceiptPdf,
   formatMontant,
   calcTotals,
+  documentModel,
 };

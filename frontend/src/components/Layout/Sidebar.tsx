@@ -13,20 +13,32 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const NAV = [
-  { to: '/app', end: true, label: 'Tableau de bord', icon: LayoutDashboard },
-  { to: '/app/invoices', label: 'Factures', icon: FileText },
-  { to: '/app/vente-rapide', label: 'Vente comptoir', icon: ShoppingCart },
-  { to: '/app/recurrentes', label: 'Récurrentes', icon: Repeat },
-  { to: '/app/quotes', label: 'Devis', icon: FileSpreadsheet },
-  { to: '/app/clients', label: 'Clients', icon: Users },
-  { to: '/app/services', label: 'Produits & Services', icon: Package },
-  { to: '/app/payments', label: 'Paiements', icon: Wallet },
-  { to: '/app/depenses', label: 'Dépenses', icon: Receipt },
-  { to: '/app/abonnement', label: 'Abonnement', icon: Crown },
-  { to: '/app/profile', label: 'Mon profil', icon: User },
-  { to: '/app/support', label: 'Support', icon: Headphones },
-  { to: '/app/affiliation', label: 'Affiliation', icon: Gift },
+interface NavEntry { to: string; end?: boolean; label: string; icon: typeof LayoutDashboard }
+interface NavGroup { title: string | null; items: NavEntry[] }
+
+// Regroupé par intention : ce que je vends, à qui, ce que j'encaisse, mon compte.
+const GROUPS: NavGroup[] = [
+  { title: null, items: [{ to: '/app', end: true, label: 'Tableau de bord', icon: LayoutDashboard }] },
+  { title: 'Vendre', items: [
+    { to: '/app/invoices', label: 'Factures', icon: FileText },
+    { to: '/app/quotes', label: 'Devis', icon: FileSpreadsheet },
+    { to: '/app/vente-rapide', label: 'Vente comptoir', icon: ShoppingCart },
+    { to: '/app/recurrentes', label: 'Récurrentes', icon: Repeat },
+  ] },
+  { title: 'Catalogue', items: [
+    { to: '/app/clients', label: 'Clients', icon: Users },
+    { to: '/app/services', label: 'Produits & Services', icon: Package },
+  ] },
+  { title: 'Argent', items: [
+    { to: '/app/payments', label: 'Paiements', icon: Wallet },
+    { to: '/app/depenses', label: 'Dépenses', icon: Receipt },
+  ] },
+  { title: 'Compte', items: [
+    { to: '/app/abonnement', label: 'Abonnement', icon: Crown },
+    { to: '/app/profile', label: 'Mon profil', icon: User },
+    { to: '/app/affiliation', label: 'Affiliation', icon: Gift },
+    { to: '/app/support', label: 'Support', icon: Headphones },
+  ] },
 ];
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
@@ -43,9 +55,11 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   // propriétaire/admin — un collaborateur ou un compte Gratuit/Pro n'a pas
   // à voir un lien vers une page qui lui répondrait "verrouillé" ou "accès
   // refusé" à chaque clic.
-  const nav = permissions?.peutGererEquipe
-    ? [...NAV.slice(0, 9), { to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...NAV.slice(9)]
-    : NAV;
+  const groups = permissions?.peutGererEquipe
+    ? GROUPS.map((g) => (g.title === 'Compte'
+        ? { ...g, items: [{ to: '/app/equipe', label: 'Équipe', icon: UsersRound }, ...g.items] }
+        : g))
+    : GROUPS;
 
   return (
     <>
@@ -63,7 +77,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="glass-card h-full p-5 flex flex-col">
+        <div className="glass-card side-glass h-full p-5 flex flex-col">
           {/* Logo */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2.5">
@@ -79,27 +93,29 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
-            {nav.map(({ to, end, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-soft ${
-                    isActive
-                      ? 'text-white shadow-md'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-[#0a0a0c] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
-                  }`
-                }
-                style={({ isActive }) =>
-                  isActive ? { background: 'linear-gradient(135deg,#d9524d,#b23c37)' } : undefined
-                }
-              >
-                <Icon size={18} />
-                {label}
-              </NavLink>
+          <nav className="flex-1 flex flex-col overflow-y-auto pr-1 -mr-1" aria-label="Navigation principale">
+            {groups.map((g) => (
+              <div key={g.title ?? 'top'} className="flex flex-col gap-0.5">
+                {g.title && <p className="nav-group-label">{g.title}</p>}
+                {g.items.map(({ to, end, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `nav-item flex items-center gap-3 px-3.5 py-2 rounded-xl font-medium text-sm transition-soft ${
+                        isActive
+                          ? 'is-active'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-[#0a0a0c] dark:hover:text-white hover:bg-white/60 dark:hover:bg-white/10'
+                      }`
+                    }
+                  >
+                    <Icon size={17} className="nav-ico" />
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
 

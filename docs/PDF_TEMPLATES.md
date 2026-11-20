@@ -1,31 +1,26 @@
-# Modèles PDF Oryxa
+# Modèles PDF (factures, devis, reçus)
 
-Oryxa conserve **Classique** comme modèle par défaut et comme seul modèle du plan Gratuit.
+Refonte : neuf compositions réellement différentes, plus de QR de paiement.
 
-Les plans **Pro** et **Business** disposent des neuf modèles suivants, utilisables aussi bien pour les factures que pour les devis :
+## Architecture
+- `backend/utils/pdfBuilder.js` : construit un **modèle de document** (`documentModel`) à partir de la facture/du devis/du paiement. Aucune mise en page ici.
+- `backend/utils/pdf/templates.js` : un modèle = des jetons (polices, couleurs, tableau, totaux) + des hooks de composition (`chrome`, `header`, `parties`).
+- `backend/utils/pdf/flow.js` : le flux commun (tableau multipage, totaux, bouton de paiement, sceau fiscal, banque, bon pour accord, notes).
+- `backend/utils/pdf/kit.js` : primitives (texte, filets, cadres, lien cliquable).
 
-- **Classique** — référence Oryxa, sobre et universelle.
-- **Moderne** — composition structurée avec en-tête visuel et hiérarchie contemporaine.
-- **Minimal** — typographie légère, lignes fines et espaces généreux.
-- **Atelier** — composition éditoriale chaleureuse, avec bloc client élargi.
-- **Horizon** — mise en page aérée avec carte latérale et accents distinctifs.
-- **Prestige** — en-tête sombre et contraste haut de gamme.
-- **Corporate** — présentation institutionnelle, dense mais très lisible.
-- **Signature** — identité éditoriale raffinée, avec cartes et accents doux.
-- **Noir** — contraste fort et présence visuelle premium.
+Modèles : classique, moderne, minimal, atelier, horizon, prestige, corporate, signature, noir. Ajouter un modèle = un objet dans `templates.js` + une entrée dans `config/plans.js` et `frontend/src/components/TemplatePicker.tsx`.
 
-## Prévisualisation
+## Paiement
+- Le QR de paiement est supprimé. Reste un **bouton « Payer en ligne »** discret (lien cliquable), sous le total, uniquement si la facture est impayée.
+- Les coordonnées bancaires sont un bloc typographique, affiché uniquement si impayée.
+- Le seul QR restant est le **sceau fiscal DGI** d'une facture normalisée confirmée (QR + code MECeF, NIM, date, compteurs). Il prime visuellement sur le bouton.
 
-Le sélecteur de modèle est présent dans la création/modification des **factures et devis**. Le bouton d'aperçu utilise le même moteur PDF que le document final : le rendu aperçu est donc le rendu réellement envoyé ou téléchargé.
+## Devis et reçus
+- Devis : bloc « Bon pour accord » (date, signature), pas de bouton de paiement.
+- Reçu : montant en vedette, cadre « PAYÉ », grille de détails.
 
-## Paiement dans les factures
+## Devises
+Montants formatés dans la devise du document ; ₦ → NGN et GH₵ → GHS dans les PDF (polices standard WinAnsi). Facture normalisée : colonnes fiscales en XOF.
 
-Lorsqu'un lien de paiement public est disponible, la facture contient :
-
-- un bouton **Payer en ligne** cliquable ;
-- un QR code cliquable encodant exactement le même lien ;
-- une présentation réservée dans une carte dédiée afin que le QR ne chevauche jamais le bouton, les totaux, les notes ou le pied de page.
-
-Le PDF ne contient **aucun domaine codé en dur**. Le lien est construit côté serveur depuis `CLIENT_URL_PUBLIC` (avec repli sur `CLIENT_URL`). Pour passer plus tard sur un domaine personnalisé, il suffit donc de mettre à jour la variable publique côté backend sans modifier les templates PDF.
-
-Le lien de paiement reste également indépendant des liens envoyés par email ou WhatsApp : l'ajout du QR ne remplace ni ne supprime ces canaux.
+## Vérification
+Le rendu a été contrôlé via une couche de substitution de pdfkit (pdf-lib) rasterisée, pas avec pdfkit réel. Contrôler visuellement chaque modèle au premier lancement réel (facture, devis, reçu, fiscale, multipage).

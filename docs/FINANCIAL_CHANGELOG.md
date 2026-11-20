@@ -36,3 +36,9 @@ Le build complet frontend n'a pas pu être exécuté dans l'environnement de tra
 - Le tableau de bord admin distingue désormais le revenu propre d'Oryxa (abonnements effectivement payés) des flux financiers appartenant aux utilisateurs (paiements de factures, reversements et frais de transfert).
 - La section Finance affiche séparément les abonnements Oryxa encaissés, les frais Pay-in, les frais payout et la marge technique liée aux frais facturés aux clients.
 - Le « net estimé » des abonnements reste explicitement présenté comme une estimation basée sur le taux moyen FedaPay configuré ; il ne remplace pas les frais réellement retournés par FedaPay.
+
+## Partie 6 — Refonte PDF et interface
+- PDF : 9 modèles redessinés, QR de paiement supprimé, bouton « Payer en ligne » discret, bon pour accord sur les devis, reçu repensé (voir `PDF_TEMPLATES.md`).
+- Interface : liquid glass clair (surfaces en verre dépoli sur fond lumineux, rouge réservé aux actions), navigation latérale regroupée (Vendre / Catalogue / Argent / Compte), en-tête de page `.page-head`, sélecteur de modèles à miniatures (`TemplatePicker`) partagé par factures et devis.
+- Tests : `backend/tests/pdfModel.test.js`.
+- Non vérifié ici : pdfkit réel, React/tsc/Jest/Vite/MongoDB (exécutés uniquement par substitut ou transpilation).

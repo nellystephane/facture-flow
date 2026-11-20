@@ -12,20 +12,9 @@ import PdfPreviewModal from '../components/PdfPreviewModal';
 import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import DeviseField from '../components/DeviseField';
+import TemplatePicker from '../components/TemplatePicker';
 import { formatFCFA as formatBase, todayISO, addDays, deviseInfo, totalHT, totalTTC, apiError } from '../utils/format';
 import { getEmecefOptions, type EmecefOptions } from '../api/emecef';
-
-const TEMPLATES = [
-  { id: 'classique', label: 'Classique', desc: 'Référence Oryxa, sobre et universelle' },
-  { id: 'moderne', label: 'Moderne', desc: 'En-tête structuré et accents contemporains' },
-  { id: 'minimal', label: 'Minimal', desc: 'Typographie légère et espaces généreux' },
-  { id: 'atelier', label: 'Atelier', desc: 'Éditorial, chaleureux et artisanal' },
-  { id: 'horizon', label: 'Horizon', desc: 'Carte latérale et hiérarchie élégante' },
-  { id: 'prestige', label: 'Prestige', desc: 'En-tête sombre et présentation haut de gamme' },
-  { id: 'corporate', label: 'Corporate', desc: 'Institutionnel, structuré et très lisible' },
-  { id: 'signature', label: 'Signature', desc: 'Identité éditoriale raffinée et distinctive' },
-  { id: 'noir', label: 'Noir', desc: 'Contraste premium et présence visuelle forte' },
-];
 
 export default function InvoiceForm() {
   const { id } = useParams();
@@ -349,26 +338,7 @@ export default function InvoiceForm() {
           <div className="glass-card p-6">
             <h3 className="font-bold text-[#0a0a0c] dark:text-white mb-1">Modèle de PDF</h3>
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">L'apparence de la facture une fois téléchargée ou envoyée par email.</p>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {TEMPLATES.map((t) => {
-                const disponible = permissions?.modelesFactureDisponibles.includes(t.id) ?? (t.id === 'classique');
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    disabled={!disponible}
-                    onClick={() => disponible && update('template', t.id)}
-                    className={`relative p-3 rounded-xl border text-left transition-soft ${
-                      form.template === t.id ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-100 dark:border-white/10'
-                    } ${!disponible ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-300 dark:hover:border-white/20'}`}
-                  >
-                    {!disponible && <Lock size={13} className="absolute top-2 right-2 text-gray-400 dark:text-gray-500" />}
-                    <p className="text-sm font-semibold text-[#0a0a0c] dark:text-white">{t.label}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{disponible ? t.desc : 'Plan Pro'}</p>
-                  </button>
-                );
-              })}
-            </div>
+            <TemplatePicker value={form.template} onChange={(id) => update('template', id)} allowed={permissions?.modelesFactureDisponibles} lockedLabel="Plan Pro" />
           </div>
         </div>
 

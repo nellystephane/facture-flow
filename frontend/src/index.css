@@ -980,21 +980,79 @@ button { font-family: inherit; }
 .fx-modal-backdrop { animation: fxBackdrop 0.3s ease backwards; }
 @keyframes fxBackdrop { from { opacity: 0; backdrop-filter: blur(0); } to { opacity: 1; } }
 
-/* ===== Aspect : plat et net (cartes blanches, bordure fine, fond calme) ===== */
-.orb { display: none; }
-.app-bg { background: #f1f2f5; background-attachment: initial; }
-.glass-card {
-  background: #fff;
-  -webkit-backdrop-filter: none; backdrop-filter: none;
-  border: 1px solid #e8eaf0;
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px rgba(20, 21, 26, 0.04);
+/* ===== Aspect : liquid glass clair =====
+   Un fond lumineux avec de larges halos colorés, que les surfaces en verre
+   dépoli (flou + saturation) laissent deviner. Chaque surface a un reflet
+   spéculaire en haut et un liseré blanc, comme une vitre épaisse.
+   Rouge réservé aux actions ; le décor reste froid et neutre. */
+.app-bg {
+  background:
+    radial-gradient(900px 520px at 8% -8%, rgba(120, 150, 255, 0.28), transparent 62%),
+    radial-gradient(800px 520px at 96% 4%, rgba(255, 150, 140, 0.24), transparent 60%),
+    radial-gradient(900px 600px at 70% 108%, rgba(130, 205, 190, 0.22), transparent 62%),
+    linear-gradient(180deg, #f7f8fc 0%, #eef0f7 100%);
+  background-attachment: fixed;
 }
-.glass-card::before { display: none; }
-.glass-card:hover { transform: none; box-shadow: 0 8px 24px rgba(20, 21, 26, 0.07); }
+.orb { display: block; filter: blur(90px); opacity: 0.38; animation-duration: 28s; }
+.orb-1 { background: radial-gradient(circle at 30% 30%, rgba(217,82,77,0.35), rgba(217,82,77,0) 70%); }
+.orb-2 { background: radial-gradient(circle at 30% 30%, rgba(70,110,230,0.32), rgba(70,110,230,0) 70%); }
+.orb-3 { background: radial-gradient(circle at 30% 30%, rgba(60,170,150,0.26), rgba(60,170,150,0) 70%); }
+
+.glass, .glass-card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.74), rgba(255,255,255,0.46));
+  -webkit-backdrop-filter: blur(26px) saturate(170%); backdrop-filter: blur(26px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.95),
+    inset 0 -1px 0 rgba(255,255,255,0.35),
+    0 1px 2px rgba(25, 30, 60, 0.05),
+    0 12px 32px -8px rgba(25, 30, 60, 0.12);
+}
+.glass-card { border-radius: 1.25rem; }
+.glass-card::before {
+  background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,255,255,0) 38%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.5));
+  opacity: 0.85;
+}
+.glass-card:hover { transform: none; box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 2px rgba(25,30,60,0.05), 0 18px 40px -10px rgba(25,30,60,0.16); }
+/* Les formulaires et tableaux ne doivent pas « sauter » : seules les cartes cliquables se soulèvent */
+a.glass-card:hover, button.glass-card:hover, .glass-card.is-link:hover { transform: translateY(-2px); }
+
+/* Navigation latérale : verre plus dense pour rester lisible */
+.side-glass { background: linear-gradient(170deg, rgba(255,255,255,0.8), rgba(255,255,255,0.55)); }
+.nav-group-label { padding: 0 0.9rem; margin: 1rem 0 0.35rem; font-size: 0.64rem; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: #9a9ca6; }
+.nav-group-label:first-child { margin-top: 0; }
+.nav-item { position: relative; }
+.nav-item.is-active { background: rgba(255,255,255,0.9); color: #14151a; box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(25,30,60,.08), 0 6px 16px -6px rgba(25,30,60,.18); }
+.nav-item.is-active .nav-ico { color: var(--rouge); }
+.dark .nav-item.is-active { background: rgba(255,255,255,0.1); color: #fff; box-shadow: none; }
+.nav-item.is-active::before { content: ''; position: absolute; left: -0.55rem; top: 22%; bottom: 22%; width: 3px; border-radius: 3px; background: var(--rouge); }
+
+/* En-tête de page : titre, sous-titre et actions alignés */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem 1.5rem; margin-bottom: 1.5rem; }
+.page-head h1 { font-size: clamp(1.4rem, 2.6vw, 1.85rem); font-weight: 800; letter-spacing: -0.03em; color: #0a0a0c; line-height: 1.15; }
+.page-head p { margin-top: 0.25rem; font-size: 0.9rem; color: #6b6e79; }
+
+/* Sélecteur de modèles de PDF */
+.tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 0.75rem; }
+.tpl-card { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.5rem 0.5rem 0.65rem; text-align: left; border-radius: 0.9rem; border: 1px solid rgba(20,21,26,0.08); background: rgba(255,255,255,0.55); transition: transform .25s cubic-bezier(.22,1,.36,1), box-shadow .25s, border-color .2s; }
+.tpl-card:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 22px -10px rgba(25,30,60,.25); border-color: rgba(20,21,26,0.18); }
+.tpl-card.is-on { border-color: var(--rouge); box-shadow: 0 0 0 2px rgba(217,82,77,.25), 0 10px 22px -10px rgba(217,82,77,.35); background: rgba(255,255,255,0.85); }
+.tpl-card:disabled { opacity: .55; cursor: not-allowed; }
+.tpl-card:focus-visible { outline: 2px solid var(--rouge); outline-offset: 2px; }
+.tpl-thumb { position: relative; display: block; aspect-ratio: 3 / 4; border-radius: 0.5rem; overflow: hidden; background: #fff; border: 1px solid rgba(20,21,26,0.07); margin-bottom: 0.4rem; box-shadow: 0 2px 6px rgba(25,30,60,.08); }
+.tpl-lock { position: absolute; top: 6px; right: 6px; color: #6b6e79; }
+.tpl-name { font-size: 0.84rem; font-weight: 700; color: #14151a; }
+.tpl-desc { font-size: 0.72rem; line-height: 1.35; color: #7b7e89; }
 .btn-primary { background: var(--rouge); box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 6px 14px rgba(217, 82, 77, 0.22); border-radius: 0.8rem; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 10px 20px rgba(217, 82, 77, 0.3); background: var(--rouge-dark); filter: none; }
 .btn-dark { background: var(--noir); box-shadow: 0 1px 2px rgba(0,0,0,.2); border-radius: 0.8rem; }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass, .glass-card { background: rgba(255,255,255,0.92); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .glass-card { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
 
 /* Cartes de chiffres : trois tons, comme le tableau de bord de référence */
 .stat-tone-mint { background: #dcefe6 !important; border-color: #bfe0d0 !important; }
