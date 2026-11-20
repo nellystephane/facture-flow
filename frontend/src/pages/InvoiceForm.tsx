@@ -175,6 +175,10 @@ export default function InvoiceForm() {
         actions={<button onClick={() => navigate(-1)} className="btn-ghost text-sm"><ArrowLeft size={16} /> Retour</button>}
       />
 
+      <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/20 p-4 mb-5">
+        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Facture commerciale Oryxa</p>
+        <p className="text-xs text-blue-800/80 dark:text-blue-300 mt-1">Cette étape crée le document destiné à votre client. L'envoi par email est indépendant de la déclaration fiscale : les paramètres et l'envoi e-MECeF se trouvent dans la fiche de facture après l'enregistrement.</p>
+      </div>
       <form onSubmit={(e) => handleSubmit(e)} className="grid lg:grid-cols-3 gap-6 animate-fade-up">
         <div className="lg:col-span-2 space-y-6">
           {/* Infos générales */}
@@ -255,13 +259,7 @@ export default function InvoiceForm() {
                       {formatFCFA(item.quantite * item.prixUnitaire)}
                     </div>
                   </div>
-                  <div className="mt-2 max-w-xs"><label className="field-label">Taxe spécifique DGI (FCFA, total de la ligne, factures en FCFA uniquement)</label><input type="number" min={0} step={1} className="field" value={item.taxSpecific || 0} onChange={(e) => updateItem(idx, 'taxSpecific', Number(e.target.value))} /><p className="text-xs text-gray-500 mt-1">Champ fiscal transmis à la DGI ; distinct du calcul commercial standard d’Oryxa.</p></div>
-                  <div className="mt-2 max-w-xs"><label className="field-label">Groupe fiscal DGI de cette ligne</label><select className="field" value={item.taxGroup || ''} onChange={(e) => updateItem(idx, 'taxGroup', (e.target.value || null) as Item['taxGroup'])}><option value="">Utiliser le groupe choisi lors de la fiscalisation</option><option value="A">A — Groupe fiscal A</option><option value="B">B — Groupe fiscal B</option><option value="C">C — Groupe fiscal C</option><option value="D">D — Groupe fiscal D</option><option value="E">E — Groupe fiscal E</option><option value="F">F — Groupe fiscal F</option></select></div>
-                  <div className="grid sm:grid-cols-2 gap-2 mt-2">
-                    <div><label className="field-label">Prix d’origine (optionnel)</label><input type="number" min={0} step={1} className="field" value={item.originalPrice ?? ''} onChange={(e) => updateItem(idx, 'originalPrice', e.target.value === '' ? null : Number(e.target.value))} placeholder="Prix avant modification" /></div>
-                    <div><label className="field-label">Motif de modification</label><input className="field" maxLength={100} value={item.priceModification || ''} onChange={(e) => updateItem(idx, 'priceModification', e.target.value)} placeholder="Motif si prix modifié" /></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Si un prix d’origine est renseigné, le motif devient obligatoire lors de la fiscalisation.</p>
+                  <p className="text-xs text-gray-500 mt-2">Les paramètres fiscaux DGI (groupe, taxe spécifique et modification de prix) se configurent séparément après l’enregistrement, dans la section « Préparation fiscale » de la facture.</p>
                   {services.length > 0 && (
                     <div className="mt-2">
                       {permissions?.peutUtiliserFacturationExpress ? (
@@ -339,10 +337,6 @@ export default function InvoiceForm() {
                 <span className="text-gray-500 dark:text-gray-400">TVA</span>
                 <span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span>
               </div>
-              {form.items.some((item) => Number(item.taxSpecific || 0) > 0) && <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Taxes spécifiques</span>
-                <span className="font-semibold">{formatFCFA(form.items.reduce((sum, item) => sum + Number(item.taxSpecific || 0), 0))}</span>
-              </div>}
               <div className="rounded-xl p-3 mt-3 text-white"
                 style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>
@@ -357,11 +351,11 @@ export default function InvoiceForm() {
               <button type="button" onClick={(e) => handleSubmit(e as unknown as React.FormEvent, true)}
                 className="btn-primary w-full justify-center" disabled={saving}>
                 {saving && <span className="spinner" style={{ width: 16, height: 16 }} />}
-                <Send size={18} /> Enregistrer & Envoyer
+                <Send size={18} /> Enregistrer & envoyer par email
               </button>
               <button type="button" onClick={(e) => handleSubmit(e as unknown as React.FormEvent, false)}
                 className="btn-ghost w-full justify-center" disabled={saving}>
-                <Save size={16} /> {isEdit ? 'Enregistrer sans envoyer' : "Enregistrer, envoyer plus tard"}
+                <Save size={16} /> {isEdit ? 'Enregistrer sans email' : "Enregistrer — email ultérieur"}
               </button>
             </div>
           </div>
