@@ -6,6 +6,7 @@ import {
   type AnalyticsSource, type AnalyticsQuery, type AnalyticsCatalog, type AnalyticsResult, type GroupBy, type MetricInfo, type Period,
 } from '../../api/analytics';
 import { apiError } from '../../utils/format';
+import ModalPortal from '../ui/ModalPortal';
 import SeriesChart from './SeriesChart';
 import BreakdownChart from './BreakdownChart';
 import { PALETTE, bucketLabelLong, formatValue, toCsv } from './chartUtils';
@@ -48,14 +49,6 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
     fetchCatalog().then((r) => setCatalog(r.data)).catch((e) => setError(apiError(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [onClose]);
 
   // Seuls les éléments disponibles pour le plan sont réellement demandés.
   const usable = useMemo(() => {
@@ -117,14 +110,12 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 fx-modal-backdrop" style={{ background: 'rgba(10,10,12,0.55)' }} onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={title}
-        className="glass-card w-full max-w-4xl max-h-[94vh] overflow-y-auto p-5 sm:p-6 animate-scale-in rounded-b-none sm:rounded-b-2xl"
-        onClick={(e) => e.stopPropagation()}>
+    <ModalPortal onClose={onClose} sheet label={title}>
+      <div className="p-5 sm:p-7">
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
-            <h3 className="text-lg font-bold text-[#0a0a0c] dark:text-white flex items-center gap-2"><BarChart3 size={20} className="text-[#d9524d]" /> {title}</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Cochez ce que vous voulez voir, le graphique se met à jour.</p>
+            <h3 className="modal-title flex items-center gap-2"><BarChart3 size={20} className="text-[#d9524d]" /> {title}</h3>
+            <p className="modal-sub">Cochez ce que vous voulez voir, le graphique se met à jour.</p>
           </div>
           <button className="btn-icon" onClick={onClose} aria-label="Fermer"><X size={18} /></button>
         </div>
@@ -134,18 +125,14 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
           {!catalog && !error && <div className="h-16 skeleton" />}
           {grouped.map(([group, items]) => (
             <div key={group}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400 dark:text-gray-500 mb-1.5">{group}</p>
+              <p className="modal-group">{group}</p>
               <div className="flex flex-wrap gap-2">
                 {items.map((m) => {
                   const on = selected.includes(m.id);
                   return (
                     <button key={m.id} type="button" onClick={() => toggle(m)} disabled={m.locked} aria-pressed={on}
                       title={m.locked ? 'Disponible avec le plan Pro' : undefined}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-soft ${
-                        m.locked ? 'opacity-50 cursor-not-allowed border-gray-200 dark:border-white/10 text-gray-400'
-                          : on ? 'bg-[#14151a] text-white border-[#14151a] dark:bg-white dark:text-[#14151a] dark:border-white'
-                            : 'border-gray-200 dark:border-white/15 text-gray-600 dark:text-gray-300 hover:border-[#d9524d] hover:text-[#d9524d]'
-                      }`}>
+                      className={`chip ${on && !m.locked ? 'is-on' : ''}`}>
                       {m.locked && <Lock size={11} />}
                       {on && !m.locked && <span className="w-2 h-2 rounded-full" style={{ background: colorOf(m.id) }} />}
                       {m.label}
@@ -163,11 +150,11 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
         </div>
 
         {/* Période et affichage */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mb-5 pb-5 border-b border-gray-200/80 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 mb-5 pb-5 border-b border-black/10 dark:border-white/10">
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Période">
             {PERIODS.map((p) => (
               <button key={p} type="button" onClick={() => setPeriod(p)} aria-pressed={period === p}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-soft ${period === p ? 'bg-[#d9524d] text-white' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10'}`}>
+                className={`seg ${period === p ? 'is-on' : ''}`}>
                 {PERIOD_LABEL[p]}
               </button>
             ))}
@@ -180,7 +167,7 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
             </div>
           )}
           <div className="flex items-center gap-1.5 ml-auto">
-            <select className="field py-1.5 w-auto text-xs" value={groupBy} onChange={(e) => setGroupBy(e.target.value as 'auto' | GroupBy)} aria-label="Regrouper par">
+            <select className="field field-sm w-auto" value={groupBy} onChange={(e) => setGroupBy(e.target.value as 'auto' | GroupBy)} aria-label="Regrouper par">
               {(Object.keys(GROUP_LABEL) as ('auto' | GroupBy)[]).map((g) => <option key={g} value={g}>{g === 'auto' ? 'Regroupement auto' : `Par ${GROUP_LABEL[g].toLowerCase()}`}</option>)}
             </select>
             <button type="button" className="btn-icon" title="Barres" onClick={() => { setSeriesType('bar'); setBreakType('bars'); }} aria-pressed={seriesType === 'bar'}><BarChart3 size={16} /></button>
@@ -193,7 +180,7 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
         {error && <p className="text-sm text-[#b23c37] bg-[rgba(217,82,77,0.08)] rounded-xl px-4 py-3 mb-4">{error}</p>}
 
         {!usable.length && catalog && !error && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-12">Choisissez au moins un élément à analyser.</p>
+          <p className="text-sm text-[#555862] dark:text-gray-300 text-center py-12">Choisissez au moins un élément à analyser.</p>
         )}
 
         {loading && usable.length > 0 && <div className="h-72 skeleton" />}
@@ -204,7 +191,7 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
               <div key={gi}>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {group.map((s) => (
-                    <span key={s.id} className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-300">
+                    <span key={s.id} className="legend-pill">
                       <span className="w-2.5 h-2.5 rounded-sm" style={{ background: colorOf(s.id) }} />
                       {s.label} : <b className="text-[#0a0a0c] dark:text-white tabular-nums">{formatValue(s.total, s.unit)}</b>
                     </span>
@@ -226,6 +213,6 @@ export default function ChartModal({ onClose, title = 'Analyser mes chiffres', i
           </div>
         )}
       </div>
-    </div>
+    </ModalPortal>
   );
 }

@@ -42,3 +42,11 @@ Le build complet frontend n'a pas pu être exécuté dans l'environnement de tra
 - Interface : liquid glass clair (surfaces en verre dépoli sur fond lumineux, rouge réservé aux actions), navigation latérale regroupée (Vendre / Catalogue / Argent / Compte), en-tête de page `.page-head`, sélecteur de modèles à miniatures (`TemplatePicker`) partagé par factures et devis.
 - Tests : `backend/tests/pdfModel.test.js`.
 - Non vérifié ici : pdfkit réel, React/tsc/Jest/Vite/MongoDB (exécutés uniquement par substitut ou transpilation).
+
+## Partie 7 — Admin clair/sombre, modales, accueil
+- Modales : toutes passent par `components/ui/ModalPortal.tsx` (portail dans `<body>`, z-index 1000). Cause du bug : une modale rendue dans `main.relative.z-10` restait sous la barre latérale fixe (z-50). Surface presque opaque (`.modal-surface`), textes plus grands et plus contrastés.
+- Puces de choix, segments de période, légendes : classes dédiées (`.chip`, `.seg`, `.legend-pill`) qui ne dépendent plus d'aucun utilitaire de couleur global. Cause du texte invisible : la règle `.admin-shell .text-white { color: sombre !important }` (supprimée ; les titres admin utilisent `text-gray-900 dark:text-white`).
+- Sidebar admin : suit le thème (plus de fond sombre forcé), navigation `.anav`.
+- `select.field` en mode sombre : chevron unique (le fond se répétait).
+- Page d'accueil : hero avec maquette, parcours en 3 étapes, couleurs par rôle (rouge = agir, vert = argent reçu, ambre = en attente, bleu = s'organiser), vitrine des modèles PDF, appel final plein rouge.
+- Vignette « Horizon » du sélecteur : largeur négative corrigée.

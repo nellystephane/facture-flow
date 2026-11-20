@@ -59,7 +59,7 @@ function AdminShell({ children }: { children: ReactNode }) {
         )}
 
         <aside className={`admin-sidebar fixed top-0 left-0 z-50 h-screen w-[286px] p-4 transition-transform duration-300 lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="admin-sidebar-card glass-card h-full p-5 flex flex-col !bg-[rgba(26,26,31,0.78)] !border-white/10">
+          <div className="admin-sidebar-card glass-card h-full p-5 flex flex-col">
             <div className="flex items-center justify-between mb-7">
               <OryxaLogo size={40} nameClassName="font-extrabold text-lg text-gray-900 dark:text-white leading-none" imageClassName="rounded-xl shadow-lg" />
               <ThemeToggle className="hidden lg:inline-flex" /><button className="btn-icon lg:hidden" onClick={fermerMobile} aria-label="Fermer le menu"><X size={18} /></button>
@@ -75,10 +75,10 @@ function AdminShell({ children }: { children: ReactNode }) {
             <nav className="admin-nav flex-1 overflow-y-auto space-y-5 pr-1">
               {sections.map((section) => (
                 <div key={section.titre}>
-                  <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">{section.titre}</p>
+                  <p className="px-3 mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">{section.titre}</p>
                   <div className="space-y-1">
                     {section.liens.map(({ to, label, icon: Icon, end }) => (
-                      <NavLink key={to} to={to} end={end} onClick={fermerMobile} className={({ isActive }) => `group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-soft ${isActive ? 'text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`} style={({ isActive }) => isActive ? { background: 'linear-gradient(135deg,#d9524d,#b23c37)' } : undefined}>
+                      <NavLink key={to} to={to} end={end} onClick={fermerMobile} className={({ isActive }) => `anav group ${isActive ? 'is-active' : ''}`}>
                         <Icon size={17} />
                         <span className="flex-1">{label}</span>
                         <ChevronRight size={14} className="opacity-0 group-hover:opacity-50" />
@@ -89,12 +89,12 @@ function AdminShell({ children }: { children: ReactNode }) {
               ))}
             </nav>
 
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: 'linear-gradient(135deg,#d9524d,#b23c37)' }}>A</div>
                 <div className="min-w-0"><p className="text-sm font-semibold text-gray-900 dark:text-white">Administrateur</p><p className="text-xs text-gray-500 truncate">{adminEmail}</p></div>
               </div>
-              <button onClick={seDeconnecter} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-[#f4847d] bg-[#d9524d]/10 hover:bg-[#d9524d]/20 transition-soft"><LogOut size={16} /> Déconnexion</button>
+              <button onClick={seDeconnecter} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-[#b23c37] dark:text-[#f4847d] bg-[#d9524d]/10 hover:bg-[#d9524d]/20 transition-soft"><LogOut size={16} /> Déconnexion</button>
             </div>
           </div>
         </aside>
@@ -177,7 +177,7 @@ function VueEnsemble() {
 
       <div className="glass-card p-5">
         <div className="flex items-start justify-between gap-4 mb-5">
-          <div><p className="text-sm font-bold text-white flex items-center gap-2"><CircleDollarSign size={17} className="text-[#f4847d]" /> Revenus réels générés par Oryxa</p><p className="text-xs text-gray-500 mt-1">Seuls les abonnements effectivement enregistrés comme payés sont comptés comme revenus de la plateforme.</p></div>
+          <div><p className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2"><CircleDollarSign size={17} className="text-[#f4847d]" /> Revenus réels générés par Oryxa</p><p className="text-xs text-gray-500 mt-1">Seuls les abonnements effectivement enregistrés comme payés sont comptés comme revenus de la plateforme.</p></div>
           <NavLink to="/admin/finance" className="text-xs font-semibold text-[#f4847d] hover:underline whitespace-nowrap">Détail financier →</NavLink>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -188,14 +188,14 @@ function VueEnsemble() {
       </div>
 
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between gap-3 mb-4"><div><p className="text-sm font-semibold text-white">Support client</p><p className="text-xs text-gray-500 mt-1">{support.nonLus} demande{support.nonLus > 1 ? 's' : ''} avec nouveau message</p></div><NavLink to="/admin/support" className="text-xs font-semibold text-[#f4847d] hover:underline">Ouvrir le support →</NavLink></div>
+        <div className="flex items-center justify-between gap-3 mb-4"><div><p className="text-sm font-semibold text-gray-900 dark:text-white">Support client</p><p className="text-xs text-gray-500 mt-1">{support.nonLus} demande{support.nonLus > 1 ? 's' : ''} avec nouveau message</p></div><NavLink to="/admin/support" className="text-xs font-semibold text-[#f4847d] hover:underline">Ouvrir le support →</NavLink></div>
         {support.tickets.length === 0 ? <p className="text-sm text-gray-500">Aucune demande récente.</p> : <div className="space-y-2">{support.tickets.slice(0,5).map((t: any) => <NavLink key={t._id} to={`/admin/support`} className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2 hover:bg-white/10"><div className="min-w-0"><p className="text-sm text-gray-200 truncate">{t.sujet}</p><p className="text-[11px] text-gray-500 truncate">{t.owner?.nom} · {t.numero}</p></div><span className="text-[11px] text-gray-500">{supportStatus[t.statut] || t.statut}</span></NavLink>)}</div>}
       </div>
 
       <div className="glass-card p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold text-white">Diagnostic email</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">Diagnostic email</p>
             <p className="text-xs text-gray-500 mt-1">Envoie un vrai email SMTP de test pour vérifier la configuration de production.</p>
           </div>
           <button
@@ -221,7 +221,7 @@ function VueEnsemble() {
       </div>
 
       <div className="glass-card p-5">
-        <p className="text-sm font-semibold text-white mb-4">Nouveaux comptes — 6 derniers mois</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Nouveaux comptes — 6 derniers mois</p>
         <div className="flex items-end gap-3 h-32">
           {stats.croissanceMensuelle.map((c) => (
             <div key={c.mois} className="flex-1 flex flex-col items-center gap-2">
@@ -313,7 +313,7 @@ function Utilisateurs() {
               {users.map((u) => (
                 <tr key={u._id} className="border-b border-white/5">
                   <td className="px-5 py-3">
-                    <button type="button" onClick={() => setDetailId(u._id)} className="font-medium text-white hover:text-[#d9524d] text-left" title="Voir la fiche complète">{u.nom}</button>
+                    <button type="button" onClick={() => setDetailId(u._id)} className="font-medium text-gray-900 dark:text-white hover:text-[#d9524d] text-left" title="Voir la fiche complète">{u.nom}</button>
                     <p className="text-xs text-gray-500">{u.email}</p>
                   </td>
                   <td className="px-5 py-3">
@@ -415,11 +415,11 @@ function Paiements() {
               {payments.map((p) => (
                 <tr key={p._id} className="border-b border-white/5">
                   <td className="px-5 py-3">
-                    <p className="font-medium text-white">{p.owner?.nom || '—'}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{p.owner?.nom || '—'}</p>
                     <p className="text-xs text-gray-500">{p.owner?.email}</p>
                   </td>
                   <td className="px-5 py-3 text-gray-300">{p.invoice?.numero || '—'}</td>
-                  <td className="px-5 py-3 text-white font-medium">{fmt(p.montant)}</td>
+                  <td className="px-5 py-3 text-gray-900 dark:text-white font-medium">{fmt(p.montant)}</td>
                   <td className="px-5 py-3">
                     <div className="flex flex-col gap-1 items-start">
                       <span className={`badge ${p.statut === 'complete' ? 'badge-payee' : p.statut === 'echoue' ? 'badge-en_retard' : 'badge-envoyee'}`}>
@@ -491,7 +491,7 @@ function Finance() {
       </div>
 
       <div className="glass-card p-5">
-        <div className="flex items-start justify-between gap-4 mb-4"><div><h3 className="font-bold text-white flex items-center gap-2"><CircleDollarSign size={17} className="text-[#f4847d]" /> Revenu propre à Oryxa</h3><p className="text-xs text-gray-500 mt-1">Ce flux correspond aux abonnements payés. Les montants des factures clients appartiennent aux utilisateurs et ne sont pas assimilés au chiffre d'affaires Oryxa.</p></div></div>
+        <div className="flex items-start justify-between gap-4 mb-4"><div><h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2"><CircleDollarSign size={17} className="text-[#f4847d]" /> Revenu propre à Oryxa</h3><p className="text-xs text-gray-500 mt-1">Ce flux correspond aux abonnements payés. Les montants des factures clients appartiennent aux utilisateurs et ne sont pas assimilés au chiffre d'affaires Oryxa.</p></div></div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="rounded-2xl bg-[#d9524d]/10 border border-[#d9524d]/20 p-4"><p className="text-xs text-gray-400">Abonnements payés</p><p className="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{fmt(s.revenuAbonnements)}</p><p className="text-[11px] text-gray-500 mt-1">Montant brut réellement enregistré dans Oryxa</p></div>
           <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-4"><p className="text-xs text-gray-400">Net estimé</p><p className="text-2xl font-extrabold text-emerald-300 mt-1">{fmt(s.revenuAbonnementsNetEstime)}</p><p className="text-[11px] text-gray-500 mt-1">Estimation après frais moyens FedaPay ; le coût réel doit être confirmé par FedaPay.</p></div>
@@ -507,35 +507,35 @@ function Finance() {
       </div>
 
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-4"><div><h3 className="font-bold text-white">Mouvements des comptes Oryxa</h3><p className="text-xs text-gray-500">Ledger interne, sans prétendre représenter la balance FedaPay.</p></div><button onClick={charger} className="btn-ghost !py-1.5 !px-3 text-xs">Actualiser</button></div>
+        <div className="flex items-center justify-between mb-4"><div><h3 className="font-bold text-gray-900 dark:text-white">Mouvements des comptes Oryxa</h3><p className="text-xs text-gray-500">Ledger interne, sans prétendre représenter la balance FedaPay.</p></div><button onClick={charger} className="btn-ghost !py-1.5 !px-3 text-xs">Actualiser</button></div>
         <div className="space-y-2">
-          {data.mouvements.map((m) => <div key={m.type} className="flex justify-between items-center border-b border-white/5 py-2"><span className="text-sm text-gray-300">{typeLabel[m.type] || m.type}</span><span className="text-sm font-semibold text-white">{fmt(m.total)} <span className="text-xs text-gray-500">({m.count})</span></span></div>)}
+          {data.mouvements.map((m) => <div key={m.type} className="flex justify-between items-center border-b border-white/5 py-2"><span className="text-sm text-gray-300">{typeLabel[m.type] || m.type}</span><span className="text-sm font-semibold text-gray-900 dark:text-white">{fmt(m.total)} <span className="text-xs text-gray-500">({m.count})</span></span></div>)}
           {!data.mouvements.length && <p className="text-sm text-gray-500">Aucun mouvement.</p>}
         </div>
       </div>
 
       <div className="glass-card p-5">
-        <div className="flex items-center justify-between mb-4"><div><h3 className="font-bold text-white">Abonnements Oryxa encaissés</h3><p className="text-xs text-gray-500 mt-1">Historique des revenus propres de la plateforme.</p></div></div>
+        <div className="flex items-center justify-between mb-4"><div><h3 className="font-bold text-gray-900 dark:text-white">Abonnements Oryxa encaissés</h3><p className="text-xs text-gray-500 mt-1">Historique des revenus propres de la plateforme.</p></div></div>
         <div className="overflow-x-auto -mx-5"><table className="w-full text-sm min-w-[760px]"><thead><tr className="text-left text-xs text-gray-500 border-b border-white/10"><th className="px-5 py-2">Utilisateur</th><th className="px-5 py-2">Plan</th><th className="px-5 py-2">Durée</th><th className="px-5 py-2">Montant encaissé</th><th className="px-5 py-2">Date</th></tr></thead><tbody>
-          {data.abonnements.map((a) => <tr key={a._id} className="border-b border-white/5"><td className="px-5 py-3"><p className="font-medium text-white">{a.owner?.nom || '—'}</p><p className="text-xs text-gray-500">{a.owner?.email || ''}</p></td><td className="px-5 py-3 text-gray-300 capitalize">{a.plan}</td><td className="px-5 py-3 text-gray-300">{a.duree === '1mois' ? '1 mois' : a.duree === '6mois' ? '6 mois' : '1 an'}</td><td className="px-5 py-3 font-semibold text-white">{fmt(a.montant)}</td><td className="px-5 py-3 text-xs text-gray-500">{new Date(a.createdAt).toLocaleString('fr-FR')}</td></tr>)}
+          {data.abonnements.map((a) => <tr key={a._id} className="border-b border-white/5"><td className="px-5 py-3"><p className="font-medium text-gray-900 dark:text-white">{a.owner?.nom || '—'}</p><p className="text-xs text-gray-500">{a.owner?.email || ''}</p></td><td className="px-5 py-3 text-gray-300 capitalize">{a.plan}</td><td className="px-5 py-3 text-gray-300">{a.duree === '1mois' ? '1 mois' : a.duree === '6mois' ? '6 mois' : '1 an'}</td><td className="px-5 py-3 font-semibold text-gray-900 dark:text-white">{fmt(a.montant)}</td><td className="px-5 py-3 text-xs text-gray-500">{new Date(a.createdAt).toLocaleString('fr-FR')}</td></tr>)}
           {!data.abonnements.length && <tr><td colSpan={5} className="text-center text-gray-500 py-10">Aucun abonnement payé enregistré.</td></tr>}
         </tbody></table></div>
       </div>
 
       <div className="glass-card p-5">
-        <h3 className="font-bold text-white mb-4">Reversements FedaPay</h3>
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Reversements FedaPay</h3>
         <div className="overflow-x-auto -mx-5">
           <table className="w-full text-sm min-w-[900px]"><thead><tr className="text-left text-xs text-gray-500 border-b border-white/10"><th className="px-5 py-2">Utilisateur</th><th className="px-5 py-2">Montant</th><th className="px-5 py-2">Frais payout</th><th className="px-5 py-2">Débité</th><th className="px-5 py-2">Transféré</th><th className="px-5 py-2">Statut</th><th className="px-5 py-2">Date</th></tr></thead><tbody>
-            {data.payouts.map((p) => <tr key={p._id} className="border-b border-white/5"><td className="px-5 py-3"><p className="font-medium text-white">{p.owner?.nom || '—'}</p><p className="text-xs text-gray-500">{p.destination?.provider || ''} {p.destination?.phone || ''}</p></td><td className="px-5 py-3 text-white">{fmt(p.montant)}</td><td className="px-5 py-3 text-[#f4847d]">{fmt(p.fraisFedaPay)}</td><td className="px-5 py-3">{fmt(p.montantDebite)}</td><td className="px-5 py-3">{fmt(p.montantTransfere)}</td><td className="px-5 py-3"><span className={`badge ${p.statut === 'sent' ? 'badge-payee' : p.statut === 'failed' ? 'badge-en_retard' : 'badge-envoyee'}`}>{payoutStatus[p.statut] || p.statut}</span></td><td className="px-5 py-3 text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('fr-FR')}</td></tr>)}
+            {data.payouts.map((p) => <tr key={p._id} className="border-b border-white/5"><td className="px-5 py-3"><p className="font-medium text-gray-900 dark:text-white">{p.owner?.nom || '—'}</p><p className="text-xs text-gray-500">{p.destination?.provider || ''} {p.destination?.phone || ''}</p></td><td className="px-5 py-3 text-gray-900 dark:text-white">{fmt(p.montant)}</td><td className="px-5 py-3 text-[#f4847d]">{fmt(p.fraisFedaPay)}</td><td className="px-5 py-3">{fmt(p.montantDebite)}</td><td className="px-5 py-3">{fmt(p.montantTransfere)}</td><td className="px-5 py-3"><span className={`badge ${p.statut === 'sent' ? 'badge-payee' : p.statut === 'failed' ? 'badge-en_retard' : 'badge-envoyee'}`}>{payoutStatus[p.statut] || p.statut}</span></td><td className="px-5 py-3 text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('fr-FR')}</td></tr>)}
             {!data.payouts.length && <tr><td colSpan={7} className="text-center text-gray-500 py-10">Aucun reversement.</td></tr>}
           </tbody></table>
         </div>
       </div>
 
       <div className="glass-card p-5">
-        <h3 className="font-bold text-white mb-4">Mouvements de paiement</h3>
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Mouvements de paiement</h3>
         <div className="overflow-x-auto -mx-5"><table className="w-full text-sm min-w-[900px]"><thead><tr className="text-left text-xs text-gray-500 border-b border-white/10"><th className="px-5 py-2">Utilisateur</th><th className="px-5 py-2">Facture</th><th className="px-5 py-2">Payé par client</th><th className="px-5 py-2">Frais Pay-in</th><th className="px-5 py-2">Supportés par</th><th className="px-5 py-2">Net utilisateur</th><th className="px-5 py-2">Date</th></tr></thead><tbody>
-          {data.paiements.map((p) => <tr key={p._id} className="border-b border-white/5"><td className="px-5 py-3 text-white">{p.owner?.nom || '—'}</td><td className="px-5 py-3 text-gray-300">{p.invoice?.numero || '—'}</td><td className="px-5 py-3">{fmt(p.montantClientPaye ?? p.montant)}</td><td className="px-5 py-3 text-[#f4847d]">{fmt(p.fraisPayin)}</td><td className="px-5 py-3">{p.fraisSupportesPar === 'client' ? 'Client' : 'Utilisateur'}</td><td className="px-5 py-3 font-semibold text-white">{fmt(p.montantNetUtilisateur ?? 0)}</td><td className="px-5 py-3 text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('fr-FR')}</td></tr>)}
+          {data.paiements.map((p) => <tr key={p._id} className="border-b border-white/5"><td className="px-5 py-3 text-gray-900 dark:text-white">{p.owner?.nom || '—'}</td><td className="px-5 py-3 text-gray-300">{p.invoice?.numero || '—'}</td><td className="px-5 py-3">{fmt(p.montantClientPaye ?? p.montant)}</td><td className="px-5 py-3 text-[#f4847d]">{fmt(p.fraisPayin)}</td><td className="px-5 py-3">{p.fraisSupportesPar === 'client' ? 'Client' : 'Utilisateur'}</td><td className="px-5 py-3 font-semibold text-gray-900 dark:text-white">{fmt(p.montantNetUtilisateur ?? 0)}</td><td className="px-5 py-3 text-xs text-gray-500">{new Date(p.createdAt).toLocaleString('fr-FR')}</td></tr>)}
           {!data.paiements.length && <tr><td colSpan={7} className="text-center text-gray-500 py-10">Aucun paiement en ligne.</td></tr>}
         </tbody></table></div>
       </div>
@@ -601,14 +601,14 @@ function Tarifs() {
       </div>
 
       <div className="rounded-2xl bg-[#d9524d]/10 border border-[#d9524d]/20 p-4">
-        <p className="text-sm font-semibold text-white flex items-center gap-2"><Settings2 size={16} className="text-[#f4847d]" /> Règle tarifaire unique</p>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2"><Settings2 size={16} className="text-[#f4847d]" /> Règle tarifaire unique</p>
         <p className="text-xs text-gray-400 mt-1 leading-relaxed">Tu modifies uniquement le prix 1 mois. Oryxa recalcule immédiatement les deux autres durées : <strong className="text-gray-200">prix × durée × 81%</strong>. Cela évite qu'un ancien prix reste différent entre l'interface publique, le paiement FedaPay et l'administration.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
         {(['pro', 'business'] as const).map((plan) => (
           <div key={plan} className="glass-card p-5">
-            <div className="flex items-center justify-between mb-4"><div><p className="text-base font-bold text-white capitalize">Plan {plan}</p><p className="text-xs text-gray-500">Prix de référence mensuel</p></div><span className="badge badge-payee">− {reduction}%</span></div>
+            <div className="flex items-center justify-between mb-4"><div><p className="text-base font-bold text-gray-900 dark:text-white capitalize">Plan {plan}</p><p className="text-xs text-gray-500">Prix de référence mensuel</p></div><span className="badge badge-payee">− {reduction}%</span></div>
             <div className="mb-5">
               <label className="field-label">1 mois (FCFA)</label>
               <input type="number" min="0" className="field text-lg font-bold" value={tarifs[plan]?.[1] ?? 0} onChange={(e) => majMensuel(plan, e.target.value)} />
@@ -623,7 +623,7 @@ function Tarifs() {
       </div>
 
       <div className="glass-card p-5">
-        <div className="flex items-center gap-2 mb-1"><WalletCards size={17} className="text-[#f4847d]" /><p className="text-sm font-semibold text-white">Barème payout prévisionnel</p></div>
+        <div className="flex items-center gap-2 mb-1"><WalletCards size={17} className="text-[#f4847d]" /><p className="text-sm font-semibold text-gray-900 dark:text-white">Barème payout prévisionnel</p></div>
         <p className="text-xs text-gray-500 mb-4">Utilisé pour afficher les frais de transfert avant que FedaPay retourne le coût réel.</p>
         <div className="space-y-2">
           {payoutFeeBrackets.map((b, i) => <div key={i} className="grid grid-cols-2 gap-3"><input type="number" className="field" value={b.seuilMax >= 900000000 ? '' : b.seuilMax} placeholder="Jusqu'à…" onChange={(e) => setPayoutFeeBrackets((arr) => arr.map((x, j) => j === i ? { ...x, seuilMax: Number(e.target.value) || x.seuilMax } : x))} /><input type="number" className="field" value={b.frais} onChange={(e) => setPayoutFeeBrackets((arr) => arr.map((x, j) => j === i ? { ...x, frais: Number(e.target.value) || 0 } : x))} /></div>)}
@@ -670,10 +670,10 @@ function AffiliationAdmin() {
   return <div className="flex flex-col gap-5">
     <div><h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Programme d’affiliation</h1><p className="text-sm text-gray-500 mt-1">Un compte Oryxa peut être client, affilié, ou les deux. Les commissions sont déclenchées uniquement par les abonnements réellement payés.</p></div>
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-      {[[Gift,'Affiliés',overview.stats.affiliates],[MousePointerClick,'Clics',overview.stats.clicks],[Users,'Filleuls',overview.stats.referrals],[Check,'Clients payants',overview.stats.paidReferrals],[WalletCards,'Commissions',fmt(overview.stats.commissions)]].map(([Icon,label,value]: any) => <div className="glass-card p-4" key={label}><Icon size={18} className="text-[#f4847d]"/><p className="text-xs text-gray-500 mt-3">{label}</p><p className="text-lg font-extrabold text-white mt-1">{value}</p></div>)}
+      {[[Gift,'Affiliés',overview.stats.affiliates],[MousePointerClick,'Clics',overview.stats.clicks],[Users,'Filleuls',overview.stats.referrals],[Check,'Clients payants',overview.stats.paidReferrals],[WalletCards,'Commissions',fmt(overview.stats.commissions)]].map(([Icon,label,value]: any) => <div className="glass-card p-4" key={label}><Icon size={18} className="text-[#f4847d]"/><p className="text-xs text-gray-500 mt-3">{label}</p><p className="text-lg font-extrabold text-gray-900 dark:text-white mt-1">{value}</p></div>)}
     </div>
     <div className="glass-card p-5">
-      <div className="flex items-center justify-between gap-3 mb-5"><div><h2 className="font-bold text-white">Règles du programme</h2><p className="text-xs text-gray-500 mt-1">Tout est modifiable ici sans changer le code.</p></div><label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={!!overview.settings.enabled} onChange={e => update('enabled', e.target.checked)} className="accent-[#d9524d]"/> Programme actif</label></div>
+      <div className="flex items-center justify-between gap-3 mb-5"><div><h2 className="font-bold text-gray-900 dark:text-white">Règles du programme</h2><p className="text-xs text-gray-500 mt-1">Tout est modifiable ici sans changer le code.</p></div><label className="flex items-center gap-2 text-sm text-gray-300"><input type="checkbox" checked={!!overview.settings.enabled} onChange={e => update('enabled', e.target.checked)} className="accent-[#d9524d]"/> Programme actif</label></div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div><label className="field-label">Réduction filleul (%)</label><input className="field" type="number" min="0" max="100" value={overview.settings.discountPercent} onChange={e => update('discountPercent', Number(e.target.value))}/></div>
         <div><label className="field-label">Durée de réduction (mois)</label><input className="field" type="number" min="1" max="12" value={overview.settings.discountMonths} onChange={e => update('discountMonths', Number(e.target.value))}/></div>
@@ -682,7 +682,7 @@ function AffiliationAdmin() {
       </div>
       <div className="mt-5 flex items-center gap-3"><button className="btn-primary" disabled={saving} onClick={save}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>{message && <span className="text-sm text-emerald-300">{message}</span>}</div>
     </div>
-    <div className="glass-card p-5 overflow-x-auto"><h2 className="font-bold text-white mb-4">Affiliés inscrits</h2><table className="w-full min-w-[850px] text-sm"><thead><tr className="text-left text-xs text-gray-500 border-b border-white/10"><th className="py-2">Affilié</th><th>Code</th><th>Clics</th><th>Filleuls</th><th>Payants</th><th>Commissions</th><th>Statut</th></tr></thead><tbody>{affiliates.map(a => <tr key={a._id} className="border-b border-white/5"><td className="py-3 text-white">{a.user?.nom}<div className="text-xs text-gray-500">{a.user?.email}</div></td><td className="font-mono text-[#f4847d]">{a.code}</td><td>{a.clicks}</td><td>{a.referrals}</td><td>{a.paidReferrals}</td><td>{fmt(a.commissions)}</td><td>{a.active ? 'Actif' : 'Désactivé'}</td></tr>)}{!affiliates.length && <tr><td colSpan={7} className="py-10 text-center text-gray-500">Aucun affilié.</td></tr>}</tbody></table></div>
+    <div className="glass-card p-5 overflow-x-auto"><h2 className="font-bold text-gray-900 dark:text-white mb-4">Affiliés inscrits</h2><table className="w-full min-w-[850px] text-sm"><thead><tr className="text-left text-xs text-gray-500 border-b border-white/10"><th className="py-2">Affilié</th><th>Code</th><th>Clics</th><th>Filleuls</th><th>Payants</th><th>Commissions</th><th>Statut</th></tr></thead><tbody>{affiliates.map(a => <tr key={a._id} className="border-b border-white/5"><td className="py-3 text-gray-900 dark:text-white">{a.user?.nom}<div className="text-xs text-gray-500">{a.user?.email}</div></td><td className="font-mono text-[#f4847d]">{a.code}</td><td>{a.clicks}</td><td>{a.referrals}</td><td>{a.paidReferrals}</td><td>{fmt(a.commissions)}</td><td>{a.active ? 'Actif' : 'Désactivé'}</td></tr>)}{!affiliates.length && <tr><td colSpan={7} className="py-10 text-center text-gray-500">Aucun affilié.</td></tr>}</tbody></table></div>
   </div>;
 }
 
@@ -731,7 +731,7 @@ function ContenuLegal() {
             key={p.slug}
             onClick={() => setSlug(p.slug)}
             className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-soft ${
-              slug === p.slug ? 'text-white bg-white/10 border border-white/10' : 'text-gray-400 hover:text-gray-200'
+              slug === p.slug ? 'text-gray-900 dark:text-white bg-white/80 dark:bg-white/10 border border-black/5 dark:border-white/10 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
             {p.label}
@@ -823,16 +823,16 @@ function SupportAdmin() {
   return <div className="flex flex-col gap-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">Support client</h1><p className="text-sm text-gray-500 mt-1">Demandes reçues depuis les espaces Oryxa.</p></div>
-      <div className="flex items-center gap-2"><span className="text-xs text-gray-400">Non lues : <strong className="text-white">{unread}</strong></span><Select value={status} onChange={setStatus} options={[{value:"",label:"Toutes"},{value:"nouveau",label:"Nouvelles"},{value:"en_cours",label:"En cours"},{value:"resolu",label:"Résolues"},{value:"ferme",label:"Fermées"}]} className="!w-auto !py-2" /></div>
+      <div className="flex items-center gap-2"><span className="text-xs text-gray-400">Non lues : <strong className="text-gray-900 dark:text-white">{unread}</strong></span><Select value={status} onChange={setStatus} options={[{value:"",label:"Toutes"},{value:"nouveau",label:"Nouvelles"},{value:"en_cours",label:"En cours"},{value:"resolu",label:"Résolues"},{value:"ferme",label:"Fermées"}]} className="!w-auto !py-2" /></div>
     </div>
     {error && <div className="rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 text-sm">{error}</div>}
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
       <div className="lg:col-span-2 glass-card overflow-hidden">
-        {loading ? <div className="flex justify-center py-16"><div className="spinner" /></div> : tickets.length === 0 ? <div className="p-10 text-center text-gray-500">Aucune demande.</div> : tickets.map(t => <button key={t._id} onClick={() => open(t._id)} className={`w-full text-left p-4 border-b border-white/10 hover:bg-white/5 ${selected?._id === t._id ? 'bg-white/5' : ''}`}><div className="flex justify-between gap-2"><span className="text-xs text-gray-500">{t.numero}</span>{!t.dernierMessageLuAdmin && t.dernierMessagePar === 'utilisateur' && <span className="badge" style={{color:'#f4847d'}}>Nouveau message</span>}</div><p className="font-semibold text-white mt-2 truncate">{t.sujet}</p><p className="text-xs text-gray-500 mt-1">{t.owner?.nom} · {t.owner?.email}</p><p className="text-xs text-gray-500 mt-1">{supportStatus[t.statut] || t.statut} · {new Date(t.updatedAt).toLocaleString('fr-FR')}</p></button>)}
+        {loading ? <div className="flex justify-center py-16"><div className="spinner" /></div> : tickets.length === 0 ? <div className="p-10 text-center text-gray-500">Aucune demande.</div> : tickets.map(t => <button key={t._id} onClick={() => open(t._id)} className={`w-full text-left p-4 border-b border-white/10 hover:bg-white/5 ${selected?._id === t._id ? 'bg-white/5' : ''}`}><div className="flex justify-between gap-2"><span className="text-xs text-gray-500">{t.numero}</span>{!t.dernierMessageLuAdmin && t.dernierMessagePar === 'utilisateur' && <span className="badge" style={{color:'#f4847d'}}>Nouveau message</span>}</div><p className="font-semibold text-gray-900 dark:text-white mt-2 truncate">{t.sujet}</p><p className="text-xs text-gray-500 mt-1">{t.owner?.nom} · {t.owner?.email}</p><p className="text-xs text-gray-500 mt-1">{supportStatus[t.statut] || t.statut} · {new Date(t.updatedAt).toLocaleString('fr-FR')}</p></button>)}
       </div>
       <div className="lg:col-span-3 glass-card p-5 min-h-[480px]">
         {!selected ? <div className="h-full min-h-[420px] flex items-center justify-center text-gray-500">Sélectionnez une demande.</div> : <>
-          <div className="border-b border-white/10 pb-4 mb-4"><div className="flex flex-wrap justify-between gap-3"><div><p className="text-xs text-gray-500">{selected.numero} · {selected.owner?.email}</p><h2 className="text-xl font-bold text-white mt-1">{selected.sujet}</h2></div><Select value={selected.statut} onChange={changeStatus} disabled={busy} options={[{value:"nouveau",label:"Nouveau"},{value:"en_cours",label:"En cours"},{value:"resolu",label:"Résolu"},{value:"ferme",label:"Fermé"}]} className="!w-auto !py-2" /></div></div>
+          <div className="border-b border-white/10 pb-4 mb-4"><div className="flex flex-wrap justify-between gap-3"><div><p className="text-xs text-gray-500">{selected.numero} · {selected.owner?.email}</p><h2 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{selected.sujet}</h2></div><Select value={selected.statut} onChange={changeStatus} disabled={busy} options={[{value:"nouveau",label:"Nouveau"},{value:"en_cours",label:"En cours"},{value:"resolu",label:"Résolu"},{value:"ferme",label:"Fermé"}]} className="!w-auto !py-2" /></div></div>
           <div className="space-y-3 max-h-[430px] overflow-y-auto pr-1">{selected.messages.map(m => <div key={m._id} className={`rounded-2xl p-4 ${m.auteurType === 'admin' ? 'bg-[#d9524d]/10 border border-[#d9524d]/20' : 'bg-white/5'}`}><div className="flex justify-between gap-3 text-xs text-gray-500 mb-2"><span className="font-semibold text-gray-300">{m.auteurType === 'admin' ? 'Support Oryxa' : m.auteurNom}</span><span>{new Date(m.createdAt).toLocaleString('fr-FR')}</span></div><p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{m.message}</p></div>)}</div>
           {selected.statut !== 'ferme' && <div className="mt-4 flex gap-2"><textarea className="field min-h-[90px]" value={reply} onChange={e => setReply(e.target.value)} placeholder="Répondre au client…" /><button className="btn-primary self-end" disabled={busy || !reply.trim()} onClick={replyTo}>Répondre</button></div>}
         </>}

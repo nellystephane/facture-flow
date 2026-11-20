@@ -21,7 +21,7 @@ const SOFT = '#c9ccd4';
 /** Miniatures vectorielles des mises en page (aperçu schématique, pas le rendu réel). */
 function Thumb({ id }: { id: string }): ReactNode {
   const lines = (x: number, y: number, n: number, w = 40, c = SOFT, gap = 5) =>
-    Array.from({ length: n }, (_, i) => <rect key={i} x={x} y={y + i * gap} width={w - (i % 3) * 6} height="1.6" rx=".8" fill={c} />);
+    Array.from({ length: n }, (_, i) => <rect key={i} x={x} y={y + i * gap} width={Math.max(2, w - (i % 3) * 6)} height="1.6" rx=".8" fill={c} />);
   switch (id) {
     case 'classique':
       return <g><rect x="8" y="8" width="18" height="3" fill={INK} /><rect x="8" y="14" width="10" height="1.6" fill="#d9524d" /><rect x="38" y="8" width="14" height="1.6" fill="#d9524d" />{lines(8, 30, 6, 44)}<rect x="30" y="66" width="22" height="2" fill={INK} /></g>;
@@ -44,6 +44,16 @@ function Thumb({ id }: { id: string }): ReactNode {
     default:
       return null;
   }
+}
+
+/** Miniature autonome d'un modèle (page d'accueil, aperçus). */
+export function TemplateThumb({ id }: { id: string }) {
+  return (
+    <svg viewBox="0 0 60 80" width="100%" height="100%" role="img" aria-label={`Modèle ${id}`}>
+      <rect width="60" height="80" fill="#fff" />
+      <Thumb id={id} />
+    </svg>
+  );
 }
 
 interface Props {

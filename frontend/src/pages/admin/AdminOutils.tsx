@@ -3,6 +3,7 @@ import { Activity, AlertTriangle, CheckCircle2, Download, ScrollText, ServerCog,
 import adminApi from '../../api/adminAxios';
 import type { AnalyticsCatalog, AnalyticsQuery, AnalyticsResult, AnalyticsSource } from '../../api/analytics';
 import ChartButton from '../../components/charts/ChartButton';
+import ModalPortal from '../../components/ui/ModalPortal';
 
 const fmt = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
 const dateHeure = (d?: string | null) => (d ? new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
@@ -49,23 +50,17 @@ export function UserDetailModal({ id, onClose }: { id: string; onClose: () => vo
     adminApi.get(`/admin/users/${id}`).then((r) => setData(r.data)).catch(() => setErreur('Impossible de charger ce compte.'));
   }, [id]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const Ligne = ({ l, v }: { l: string; v: string | number }) => (
-    <div className="flex justify-between gap-4 py-2 border-b border-gray-100 text-sm"><span className="text-gray-500">{l}</span><span className="font-semibold text-right">{v}</span></div>
+    <div className="flex justify-between gap-4 py-2 border-b border-gray-100 dark:border-white/10 text-sm"><span className="text-[#5c5f6a] dark:text-gray-400">{l}</span><span className="font-semibold text-right">{v}</span></div>
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 fx-modal-backdrop" style={{ background: 'rgba(10,10,12,0.55)' }} onClick={onClose}>
-      <div role="dialog" aria-modal="true" className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+    <ModalPortal onClose={onClose} label="Fiche utilisateur" width="42rem">
+      <div className="p-6">
         <div className="flex items-start justify-between gap-4 mb-5">
           <div>
-            <h3 className="text-lg font-bold">{data?.user.nom || 'Compte'}</h3>
-            <p className="text-xs text-gray-500">{data?.user.email}{data?.user.entreprise ? ` · ${data.user.entreprise}` : ''}</p>
+            <h3 className="modal-title">{data?.user.nom || 'Compte'}</h3>
+            <p className="modal-sub">{data?.user.email}{data?.user.entreprise ? ` · ${data.user.entreprise}` : ''}</p>
           </div>
           <button className="btn-icon" onClick={onClose} aria-label="Fermer"><X size={18} /></button>
         </div>
@@ -75,11 +70,11 @@ export function UserDetailModal({ id, onClose }: { id: string; onClose: () => vo
           <div className="space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[['Factures', data.activite.factures], ['Clients', data.activite.clients], ['Payées', data.activite.facturesPayees], ['Équipe', data.activite.membresEquipe]].map(([l, v]) => (
-                <div key={l as string} className="rounded-xl bg-gray-50 p-3"><p className="text-[11px] text-gray-500 uppercase tracking-wide">{l}</p><p className="text-xl font-extrabold tabular-nums">{v}</p></div>
+                <div key={l as string} className="rounded-xl bg-gray-50 dark:bg-white/5 p-3"><p className="text-[11px] text-[#5c5f6a] dark:text-gray-400 uppercase tracking-wide">{l}</p><p className="text-xl font-extrabold tabular-nums">{v}</p></div>
               ))}
             </div>
             <div>
-              <p className="text-sm font-bold mb-1">Compte</p>
+              <p className="modal-group !mt-0 mb-1">Compte</p>
               <Ligne l="Plan" v={data.user.subscription} />
               <Ligne l="Fin d’abonnement" v={data.user.abonnement?.dateFin ? new Date(data.user.abonnement.dateFin).toLocaleDateString('fr-FR') : '—'} />
               <Ligne l="E-mail confirmé" v={data.user.emailVerifie ? 'Oui' : 'Non'} />
@@ -88,7 +83,7 @@ export function UserDetailModal({ id, onClose }: { id: string; onClose: () => vo
               <Ligne l="Inscrit le" v={new Date(data.user.createdAt).toLocaleDateString('fr-FR')} />
             </div>
             <div>
-              <p className="text-sm font-bold mb-1">Activité financière</p>
+              <p className="modal-group !mt-0 mb-1">Activité financière</p>
               <Ligne l="Chiffre d’affaires facturé (payé)" v={fmt(data.activite.chiffreAffairesFacture)} />
               <Ligne l="Encaissé" v={fmt(data.activite.encaisse)} />
               <Ligne l="Solde retirable" v={fmt(data.activite.soldeRetirable)} />
@@ -96,7 +91,7 @@ export function UserDetailModal({ id, onClose }: { id: string; onClose: () => vo
             </div>
             {data.abonnements.length > 0 && (
               <div>
-                <p className="text-sm font-bold mb-1">Abonnements</p>
+                <p className="modal-group !mt-0 mb-1">Abonnements</p>
                 {data.abonnements.map((s) => (
                   <Ligne key={s._id} l={`${s.plan} · ${s.duree} · ${new Date(s.createdAt).toLocaleDateString('fr-FR')}`} v={`${fmt(s.montant)} (${s.statut})`} />
                 ))}
@@ -104,7 +99,7 @@ export function UserDetailModal({ id, onClose }: { id: string; onClose: () => vo
             )}
             {(data.affiliation || data.parraine) && (
               <div>
-                <p className="text-sm font-bold mb-1">Parrainage</p>
+                <p className="modal-group !mt-0 mb-1">Parrainage</p>
                 {data.affiliation && <><Ligne l="Code" v={data.affiliation.code} /><Ligne l="Visites / filleuls" v={`${data.affiliation.clics} / ${data.affiliation.filleuls}`} /><Ligne l="Commissions gagnées" v={fmt(data.affiliation.commissions)} /></>}
                 {data.parraine && <Ligne l="Parrainé par" v={`${data.parraine.par} (${data.parraine.statut})`} />}
               </div>
@@ -112,7 +107,7 @@ export function UserDetailModal({ id, onClose }: { id: string; onClose: () => vo
           </div>
         )}
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
