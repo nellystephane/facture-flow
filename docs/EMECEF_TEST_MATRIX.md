@@ -52,7 +52,7 @@ La couverture du code a été étendue aux types `FV`, `FA`, `EV`, `EA`, aux gro
 Restent à traiter ou à confirmer :
 - Le test 11 « taxe de séjour » : l'API v1.0 fournie décrit `taxSpecific`, mais pas de champ distinct ni de règle explicite pour la taxe de séjour. Ne pas assimiler les deux sans confirmation écrite de la DGI.
 - Les remises globales restent bloquées, car le payload ne représente pas encore sans ambiguïté la remise au niveau de chaque ligne selon l'API.
-- Le modèle commercial Oryxa conserve un total global avec un seul taux de TVA. Pour les lignes de groupes fiscaux mixtes, le PDF fiscal confirmé utilise le payload et le total renvoyés/enregistrés pour la DGI ; chaque cas doit être vérifié sur le portail de validation pour confirmer que les montants et les libellés correspondent exactement.
+- Le mode commercial historique conserve son total global avec un seul taux de TVA. Le nouveau mode `normalisee` calcule les montants par groupe fiscal de ligne, avec arrondi du prix unitaire TTC selon le manuel. Chaque cas doit encore être vérifié sur le portail DGI.
 - Les champs `originalPrice` et `priceModification` sont transmis lorsqu'ils existent sur une ligne, mais leur workflow complet d'édition et de validation reste à tester.
 
 Le document d'auto-déclaration DGI exige des exemples de facture et des captures lisibles avec QR scannable, la vérification sur `https://developper.impots.bj/sygmef-test/verification`, l'envoi du dossier à `emecefbenin@finances.bj` et l'attente de l'approbation. Le code ne peut pas marquer ces étapes administratives comme réussies.
@@ -89,3 +89,8 @@ Les tests 1 à 20 sont des exemples indicatifs de déclaration, pas une suite au
 - Une modification de prix exige désormais le prix d'origine et son motif.
 
 Cette correction privilégie la cohérence des montants : elle peut refuser certains scénarios mixtes ou avec taxe spécifique tant que le total commercial Oryxa ne représente pas exactement le total fiscal. Ce refus est volontaire et préférable à l'émission d'une facture DGI différente du document client.
+
+
+## Mise à jour du 20 novembre 2026 — mode normalisé à la création
+
+Le formulaire distingue désormais `commerciale` et `normalisee`. En mode normalisé, les groupes et taux sont chargés depuis les options DGI, les paramètres sont saisis par ligne et le calcul TTC est fait ligne par ligne. Le test mixte A/B 2 × 1 000 FCFA + 3 × 1 000 FCFA à 18 % est attendu à 5 540 FCFA. La taxe spécifique reste distincte et facultative ; elle n'est pas déduite automatiquement du groupe fiscal. Voir `IMPLEMENTATION_MODE_FACTURE_NORMALISEE.md`. Les tests locaux ajoutés ne remplacent pas les essais réels DGI et la validation écrite.

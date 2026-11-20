@@ -72,6 +72,7 @@ export interface Item {
   quantite: number;
   prixUnitaire: number;
   taxGroup?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | null;
+  taxRate?: number;
   taxSpecific?: number;
   originalPrice?: number | null;
   priceModification?: string;
@@ -89,6 +90,7 @@ export interface Invoice {
   dateEmission: string;
   dateEcheance?: string;
   items: Item[];
+  modeFacturation?: 'commerciale' | 'normalisee';
   remise?: number;
   tva: number;
   notes?: string;

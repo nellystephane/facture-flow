@@ -23,3 +23,13 @@
 - `cd backend && npm ci && npm test`
 - Parcours manuel sur facture brouillon avec sauvegarde puis contrôle des totaux.
 - Test DGI uniquement après validation manuelle du cas simple et décision explicite de l'opérateur.
+
+## Phase 2 — choix du mode dès la création et fiscalité par ligne
+
+- Ajout du choix `Facture commerciale classique` / `Facture normalisée e-MECeF` au début du formulaire.
+- Le mode normalisé charge les groupes et taux fiscaux disponibles auprès de la DGI.
+- Les champs groupe fiscal et taxe spécifique sont affichés par article ; la TVA est calculée selon le groupe de chaque ligne.
+- La taxe spécifique reste séparée de la TVA et facultative ; aucune valeur automatique n'est inventée à partir du groupe fiscal.
+- Le modèle et le calcul backend conservent le mode commercial historique et calculent le mode normalisé ligne par ligne avec arrondi unitaire TTC.
+- Le test mixte A/B de référence (2 × 1 000 A + 3 × 1 000 B à 18 %) est couvert localement avec un total attendu de 5 540 FCFA.
+- Les détails techniques et limites sont consignés dans `IMPLEMENTATION_MODE_FACTURE_NORMALISEE.md`.

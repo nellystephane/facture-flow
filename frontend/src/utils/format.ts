@@ -83,8 +83,8 @@ export function totalHT(items: { quantite: number; prixUnitaire: number }[], rem
   return Math.max(0, sousTotal(items) - (remise || 0));
 }
 
-type TotalItem = { quantite: number; prixUnitaire: number; taxSpecific?: number };
-type TotalDocument = { items: TotalItem[]; remise?: number; tva?: number; totalTTC?: number };
+type TotalItem = { quantite: number; prixUnitaire: number; taxSpecific?: number; taxRate?: number };
+type TotalDocument = { items: TotalItem[]; remise?: number; tva?: number; totalTTC?: number; modeFacturation?: 'commerciale' | 'normalisee' };
 
 export function totalTTC(
   input: TotalItem[] | TotalDocument,
@@ -97,6 +97,9 @@ export function totalTTC(
     if (input.totalTTC !== undefined && input.totalTTC !== null && Number.isFinite(Number(input.totalTTC))) return Number(input.totalTTC);
     const items = Array.isArray(input.items) ? input.items : [];
     const specific = items.reduce((sum, item) => sum + (Number(item.taxSpecific) || 0), 0);
+    if (input.modeFacturation === 'normalisee') {
+      return items.reduce((sum, item) => sum + Math.round(Math.round(Number(item.prixUnitaire || 0) * (1 + Number(item.taxRate || 0) / 100)) * Number(item.quantite || 0)), 0) + specific - Number(input.remise || 0);
+    }
     return totalHT(items, Number(input.remise || 0)) * (1 + (Number(input.tva) || 0) / 100) + specific;
   }
   const specific = input.reduce((sum, item) => sum + (Number(item.taxSpecific) || 0), 0);

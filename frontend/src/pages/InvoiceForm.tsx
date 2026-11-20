@@ -13,6 +13,7 @@ import { useToast } from '../contexts/ToastContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import DeviseField from '../components/DeviseField';
 import { formatFCFA as formatBase, todayISO, addDays, deviseInfo, totalHT, totalTTC, apiError } from '../utils/format';
+import { getEmecefOptions, type EmecefOptions } from '../api/emecef';
 
 const TEMPLATES = [
   { id: 'classique', label: 'Classique', desc: 'Référence Oryxa, sobre et universelle' },
@@ -40,16 +41,20 @@ export default function InvoiceForm() {
   const [saving, setSaving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [emecefOptions, setEmecefOptions] = useState<EmecefOptions | null>(null);
+  const [emecefOptionsError, setEmecefOptionsError] = useState('');
+  const [loadingFiscalOptions, setLoadingFiscalOptions] = useState(false);
 
   const [form, setForm] = useState<{
     client: string; objet: string; dateEmission: string; dateEcheance: string;
-    items: Item[]; remise: number; tva: number; notes: string; fraisSupportesPar: 'utilisateur' | 'client'; statut: InvoiceStatut; template: string; devise: string; tauxChange: number;
+    items: Item[]; modeFacturation: 'commerciale' | 'normalisee'; remise: number; tva: number; notes: string; fraisSupportesPar: 'utilisateur' | 'client'; statut: InvoiceStatut; template: string; devise: string; tauxChange: number;
   }>({
     client: '',
     objet: '',
     dateEmission: todayISO(),
     dateEcheance: addDays(15),
-    items: [{ description: '', quantite: 1, prixUnitaire: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }] as Item[],
+    items: [{ description: '', quantite: 1, prixUnitaire: 0, taxGroup: null, taxRate: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }] as Item[],
+    modeFacturation: 'commerciale',
     remise: 0,
     tva: 0,
     notes: '',
@@ -80,7 +85,8 @@ export default function InvoiceForm() {
           objet: d.objet || '',
           dateEmission: d.dateEmission ? new Date(d.dateEmission).toISOString().split('T')[0] : todayISO(),
           dateEcheance: d.dateEcheance ? new Date(d.dateEcheance).toISOString().split('T')[0] : '',
-          items: d.items?.length ? d.items : [{ description: '', quantite: 1, prixUnitaire: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }],
+          items: d.items?.length ? d.items : [{ description: '', quantite: 1, prixUnitaire: 0, taxGroup: null, taxRate: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }],
+          modeFacturation: d.modeFacturation || 'commerciale',
           remise: d.remise || 0,
           tva: d.tva || 0,
           notes: d.notes || '',
@@ -95,10 +101,49 @@ export default function InvoiceForm() {
       .finally(() => setLoading(false));
   }, [id, isEdit]);
 
+  useEffect(() => {
+    if (form.modeFacturation !== 'normalisee' || emecefOptions || loading) return;
+    getEmecefOptions().then((response) => {
+      setEmecefOptions(response.data);
+      setForm((current) => ({ ...current, items: current.items.map((item) => item.taxGroup && item.taxRate == null
+        ? { ...item, taxRate: Number(response.data.taxGroups?.[item.taxGroup.toLowerCase()] ?? 0) }
+        : item) }));
+    }).catch((error) => {
+      setEmecefOptionsError(apiError(error));
+      toast(`Impossible de charger les options DGI : ${apiError(error)}`, 'error');
+    });
+  }, [form.modeFacturation, emecefOptions, loading]);
+
   const update = (k: string, v: string | number) => setForm((f) => ({ ...f, [k]: v }));
   const updateItem = (idx: number, k: keyof Item, v: string | number | null) =>
     setForm((f) => ({ ...f, items: f.items.map((it, i) => i === idx ? { ...it, [k]: v } : it) }));
-  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { description: '', quantite: 1, prixUnitaire: 0, taxSpecific: 0, originalPrice: null, priceModification: '' }] }));
+  const addItem = () => setForm((f) => ({ ...f, items: [...f.items, { description: '', quantite: 1, prixUnitaire: 0, taxGroup: f.modeFacturation === 'normalisee' ? 'A' : null, taxRate: f.modeFacturation === 'normalisee' ? Number(emecefOptions?.taxGroups?.a ?? 0) : 0, taxSpecific: 0, originalPrice: null, priceModification: '' }] }));
+
+  const changeInvoiceMode = async (mode: 'commerciale' | 'normalisee') => {
+    if (mode === 'commerciale') { setForm((f) => ({ ...f, modeFacturation: mode })); return; }
+    if (form.remise > 0) { toast('La remise globale n’est pas encore prise en charge dans le parcours e-MECeF. Retirez-la avant de passer en facture normalisée.', 'error'); return; }
+    if (form.devise !== 'XOF') { toast('Les montants e-MECeF de cette intégration sont en FCFA (XOF). Sélectionnez cette devise avant de passer en facture normalisée.', 'error'); return; }
+    setLoadingFiscalOptions(true); setEmecefOptionsError('');
+    try {
+      const response = await getEmecefOptions();
+      const options = response.data;
+      setEmecefOptions(options);
+      const firstGroup = ['a','b','c','d','e','f'].find((key) => options.taxGroups?.[key] !== undefined)?.toUpperCase() as Item['taxGroup'];
+      if (!firstGroup) throw new Error('La DGI ne retourne aucun groupe fiscal exploitable.');
+      setForm((f) => ({ ...f, modeFacturation: mode, items: f.items.map((item) => {
+        const group = item.taxGroup || firstGroup;
+        return { ...item, taxGroup: group, taxRate: Number(options.taxGroups[group.toLowerCase()] ?? 0), taxSpecific: Number(item.taxSpecific || 0) };
+      }) }));
+    } catch (error) {
+      setEmecefOptionsError(apiError(error));
+      toast(`Impossible de charger les paramètres fiscaux DGI : ${apiError(error)}`, 'error');
+    } finally { setLoadingFiscalOptions(false); }
+  };
+
+  const selectItemTaxGroup = (idx: number, group: string) => {
+    const rate = Number(emecefOptions?.taxGroups?.[group.toLowerCase()]);
+    setForm((f) => ({ ...f, items: f.items.map((item, i) => i === idx ? { ...item, taxGroup: group as Item['taxGroup'], taxRate: rate } : item) }));
+  };
   const removeItem = (idx: number) => setForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
 
   // Pré-remplir depuis un service existant
@@ -126,6 +171,9 @@ export default function InvoiceForm() {
     e.preventDefault();
     if (!form.client) { toast('Sélectionnez un client', 'error'); return; }
     if (form.items.some((i) => !i.description.trim())) { toast('Toutes les lignes doivent avoir une description', 'error'); return; }
+    if (form.modeFacturation === 'normalisee' && form.items.some((i) => !i.taxGroup || !Number.isFinite(Number(i.taxRate)))) { toast('Sélectionnez un groupe fiscal DGI pour chaque ligne.', 'error'); return; }
+    if (form.modeFacturation === 'normalisee' && form.remise > 0) { toast('La remise globale n’est pas prise en charge dans le parcours e-MECeF.', 'error'); return; }
+    if (form.modeFacturation === 'normalisee' && form.devise !== 'XOF') { toast('Une facture normalisée e-MECeF doit être libellée en FCFA (XOF).', 'error'); return; }
     setSaving(true);
     try {
       // Le statut n'est jamais envoyé ici : il reflète toujours une action
@@ -164,7 +212,8 @@ export default function InvoiceForm() {
   // Tous les montants du document s'affichent dans sa devise ; le catalogue reste en FCFA.
   const formatFCFA = (n: number | null | undefined) => formatBase(n, form.devise);
   const ht = totalHT(form.items, form.remise);
-  const ttc = totalTTC(form.items, form.remise, form.tva);
+  const fiscalVat = form.modeFacturation === 'normalisee' ? form.items.reduce((sum, item) => sum + Math.round(Math.round(Number(item.prixUnitaire || 0) * (1 + Number(item.taxRate || 0) / 100)) * Number(item.quantite || 0)) - Number(item.prixUnitaire || 0) * Number(item.quantite || 0), 0) : ht * form.tva / 100;
+  const ttc = form.modeFacturation === 'normalisee' ? form.items.reduce((sum, item) => sum + Math.round(Math.round(Number(item.prixUnitaire || 0) * (1 + Number(item.taxRate || 0) / 100)) * Number(item.quantite || 0)), 0) + form.items.reduce((sum, item) => sum + Number(item.taxSpecific || 0), 0) : totalTTC(form.items, form.remise, form.tva);
 
   return (
     <div>
@@ -175,9 +224,18 @@ export default function InvoiceForm() {
         actions={<button onClick={() => navigate(-1)} className="btn-ghost text-sm"><ArrowLeft size={16} /> Retour</button>}
       />
 
-      <div className="rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/20 p-4 mb-5">
-        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Facture commerciale Oryxa</p>
-        <p className="text-xs text-blue-800/80 dark:text-blue-300 mt-1">Cette étape crée le document destiné à votre client. L'envoi par email est indépendant de la déclaration fiscale : les paramètres et l'envoi e-MECeF se trouvent dans la fiche de facture après l'enregistrement.</p>
+      <div className="glass-card p-5 mb-5 space-y-3">
+        <div><p className="font-semibold text-[#0a0a0c] dark:text-white">Quel type de facture souhaitez-vous créer ?</p><p className="text-xs text-gray-500 mt-1">Ce choix adapte les champs et les calculs dès la création. Il ne déclenche jamais seul une transmission à la DGI.</p></div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <button type="button" onClick={() => changeInvoiceMode('commerciale')} className={`text-left rounded-xl border p-4 transition-soft ${form.modeFacturation === 'commerciale' ? 'border-[#d9524d] bg-[#d9524d]/5' : 'border-gray-200 dark:border-white/10'}`}>
+            <p className="font-semibold text-sm">Facture commerciale classique</p><p className="text-xs text-gray-500 mt-1">TVA globale, usage commercial habituel, sans préparation e-MECeF intégrée.</p>
+          </button>
+          <button type="button" disabled={loadingFiscalOptions} onClick={() => changeInvoiceMode('normalisee')} className={`text-left rounded-xl border p-4 transition-soft ${form.modeFacturation === 'normalisee' ? 'border-emerald-500 bg-emerald-500/5' : 'border-gray-200 dark:border-white/10'} ${loadingFiscalOptions ? 'opacity-60' : ''}`}>
+            <p className="font-semibold text-sm">Facture normalisée e-MECeF</p><p className="text-xs text-gray-500 mt-1">Groupes fiscaux par article, taux DGI et préparation fiscale dès la saisie.</p>
+          </button>
+        </div>
+        {form.modeFacturation === 'normalisee' && <p className="text-xs text-emerald-700 dark:text-emerald-300">Options fiscales chargées depuis la DGI. L'émission fiscale restera une action séparée après enregistrement.</p>}
+        {emecefOptionsError && <p className="text-xs text-red-600">{emecefOptionsError}</p>}
       </div>
       <form onSubmit={(e) => handleSubmit(e)} className="grid lg:grid-cols-3 gap-6 animate-fade-up">
         <div className="lg:col-span-2 space-y-6">
@@ -203,7 +261,7 @@ export default function InvoiceForm() {
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/10">
-              <DeviseField devise={form.devise} tauxChange={form.tauxChange} onChange={(d) => setForm((f) => ({ ...f, ...d }))} />
+              {form.modeFacturation === 'normalisee' ? <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3 text-sm"><strong>Devise fiscale : FCFA (XOF)</strong><p className="text-xs text-gray-500 mt-1">L’API e-MECeF de cette intégration attend les montants en FCFA. La devise est verrouillée pour éviter une conversion implicite.</p></div> : <DeviseField devise={form.devise} tauxChange={form.tauxChange} onChange={(d) => setForm((f) => ({ ...f, ...d }))} />}
             </div>
           </div>
 
@@ -259,7 +317,11 @@ export default function InvoiceForm() {
                       {formatFCFA(item.quantite * item.prixUnitaire)}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">Les paramètres fiscaux DGI (groupe, taxe spécifique et modification de prix) se configurent séparément après l’enregistrement, dans la section « Préparation fiscale » de la facture.</p>
+                  {form.modeFacturation === 'normalisee' ? <div className="grid sm:grid-cols-2 gap-3 mt-3 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 p-3">
+                    <div><label className="field-label">Groupe fiscal DGI *</label><select className="field" value={item.taxGroup || ''} onChange={(e) => selectItemTaxGroup(idx, e.target.value)}><option value="">Choisir un groupe</option>{['a','b','c','d','e','f'].filter((key) => emecefOptions?.taxGroups?.[key] !== undefined).map((key) => <option key={key} value={key.toUpperCase()}>{key.toUpperCase()} — {Number(emecefOptions!.taxGroups[key])}%</option>)}</select><p className="text-[11px] text-gray-500 mt-1">Taux récupéré auprès de la DGI.</p></div>
+                    <div><label className="field-label">Taxe spécifique (FCFA, facultative)</label><input type="number" min={0} step={1} className="field" value={item.taxSpecific || 0} onChange={(e) => updateItem(idx, 'taxSpecific', Number(e.target.value))} /><p className="text-[11px] text-gray-500 mt-1">À saisir uniquement si cette taxe s'applique réellement à l'article. Ce n'est pas la TVA.</p></div>
+                    <div className="sm:col-span-2 text-xs text-gray-600 dark:text-gray-300">TVA calculée pour cette ligne : <strong>{Number(item.taxRate || 0)} %</strong> · TVA estimée : <strong>{formatFCFA(item.quantite * item.prixUnitaire * Number(item.taxRate || 0) / 100)}</strong></div>
+                  </div> : <p className="text-xs text-gray-500 mt-2">Facture commerciale : les paramètres fiscaux DGI ne sont pas affichés.</p>}
                   {services.length > 0 && (
                     <div className="mt-2">
                       {permissions?.peutUtiliserFacturationExpress ? (
@@ -321,22 +383,23 @@ export default function InvoiceForm() {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500 dark:text-gray-400">Remise ({deviseInfo(form.devise).label})</span>
-                <input type="number" min={0} className="field w-28 text-right py-1" value={form.remise}
+                <input type="number" min={0} className="field w-28 text-right py-1" value={form.remise} disabled={form.modeFacturation === 'normalisee'}
                   onChange={(e) => update('remise', Number(e.target.value))} />
               </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500 dark:text-gray-400">TVA (%)</span>
+              {form.modeFacturation === 'commerciale' && <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500 dark:text-gray-400">TVA globale (%)</span>
                 <input type="number" min={0} className="field w-28 text-right py-1" value={form.tva}
                   onChange={(e) => update('tva', Number(e.target.value))} />
-              </div>
+              </div>}
               <div className="flex justify-between text-sm pt-2 border-t border-gray-100 dark:border-white/10">
                 <span className="text-gray-500 dark:text-gray-400">Total HT</span>
                 <span className="font-semibold">{formatFCFA(ht)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">TVA</span>
-                <span className="font-semibold">{formatFCFA(ht * form.tva / 100)}</span>
+                <span className="text-gray-500 dark:text-gray-400">TVA {form.modeFacturation === 'normalisee' ? 'par groupe' : ''}</span>
+                <span className="font-semibold">{formatFCFA(fiscalVat)}</span>
               </div>
+              {form.modeFacturation === 'normalisee' && <div className="flex justify-between text-sm"><span className="text-gray-500 dark:text-gray-400">Taxes spécifiques</span><span className="font-semibold">{formatFCFA(form.items.reduce((sum, item) => sum + Number(item.taxSpecific || 0), 0))}</span></div>}
               <div className="rounded-xl p-3 mt-3 text-white"
                 style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>

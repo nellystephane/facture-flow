@@ -153,7 +153,8 @@ export default function InvoiceDetail() {
     if (!id) return;
     setEmecefBusy(true);
     try {
-      const res = await prepareEmecefInvoice(id, emecefForm);
+      const firstConfiguredGroup = invoice?.items.find((item) => item.taxGroup)?.taxGroup;
+      const res = await prepareEmecefInvoice(id, { ...emecefForm, taxGroup: firstConfiguredGroup || emecefForm.taxGroup });
       toast(res.data.message || 'Demande envoyée à la DGI.');
       load();
     } catch (err) { toast(apiError(err), 'error'); load(); }
@@ -283,7 +284,7 @@ export default function InvoiceDetail() {
 
   const fiscalisationLocksInvoice = ['submitting', 'pending_confirmation', 'confirming', 'cancelling', 'unknown', 'confirmed'].includes(invoice.fiscalisation?.status || '');
   const client = typeof invoice.client === 'object' ? invoice.client : null;
-  const ttc = invoice.totalTTC || totalTTC(invoice.items, invoice.remise, invoice.tva);
+  const ttc = totalTTC(invoice);
   const paiementsCompletes = payments.filter((p) => (p.statut || 'complete') === 'complete');
   const totalPaye = paiementsCompletes.reduce((s, p) => s + p.montant, 0);
   const reste = ttc - totalPaye;
@@ -442,7 +443,7 @@ export default function InvoiceDetail() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Sous-total</span><span className="font-medium">{formatFCFA(invoice.items.reduce((s, i) => s + i.quantite * i.prixUnitaire, 0))}</span></div>
               {invoice.remise ? <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Remise</span><span className="font-medium text-[#d9524d]">- {formatFCFA(invoice.remise)}</span></div> : null}
-              <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">TVA ({invoice.tva}%)</span><span className="font-medium">{formatFCFA(totalHT(invoice.items, invoice.remise) * invoice.tva / 100)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">{invoice.modeFacturation === 'normalisee' ? 'TVA par groupe fiscal' : `TVA (${invoice.tva}%)`}</span><span className="font-medium">{formatFCFA(invoice.modeFacturation === 'normalisee' ? invoice.items.reduce((sum, item) => sum + Math.round(Math.round(Number(item.prixUnitaire || 0) * (1 + Number(item.taxRate || 0) / 100)) * Number(item.quantite || 0)) - Number(item.prixUnitaire || 0) * Number(item.quantite || 0), 0) : totalHT(invoice.items, invoice.remise) * invoice.tva / 100)}</span></div>
               {invoice.items.some((item) => Number(item.taxSpecific || 0) > 0) && <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Taxes spécifiques</span><span className="font-medium">{formatFCFA(invoice.items.reduce((sum, item) => sum + Number(item.taxSpecific || 0), 0))}</span></div>}
               <div className="rounded-xl p-3 mt-3 text-white" style={{ background: 'linear-gradient(135deg,#1a1a1f,#0a0a0c)' }}>
                 <p className="text-xs text-gray-300 dark:text-gray-600 uppercase">Total TTC</p>
@@ -461,7 +462,7 @@ export default function InvoiceDetail() {
                   <p className="text-sm font-semibold">Ligne {index + 1} — {item.description}</p>
                   <div>
                     <label className="field-label">Groupe fiscal DGI de la ligne</label>
-                    <select className="field" value={item.taxGroup || ''} disabled={invoice.statut !== 'brouillon' || !!invoice.fiscalisation?.status && !['non_emise', 'error'].includes(invoice.fiscalisation.status)} onChange={(e) => updateFiscalItem(index, 'taxGroup', (e.target.value || null) as Item['taxGroup'])}>
+                    <select className="field" value={item.taxGroup || ''} disabled={invoice.statut !== 'brouillon' || !!invoice.fiscalisation?.status && !['non_emise', 'error'].includes(invoice.fiscalisation.status)} onChange={(e) => { const group = e.target.value || null; const rate = group ? Number(emecefOptions?.taxGroups?.[group.toLowerCase()] ?? 0) : 0; setFiscalItems((current) => current.map((line, i) => i === index ? { ...line, taxGroup: group as Item['taxGroup'], taxRate: rate } : line)); setFiscalItemsDirty(true); }}>
                       <option value="">Utiliser le groupe fiscal général ci-dessous</option>
                       {['A', 'B', 'C', 'D', 'E', 'F'].map((group) => <option key={group} value={group}>{group} — Groupe fiscal DGI</option>)}
                     </select>
@@ -507,7 +508,8 @@ export default function InvoiceDetail() {
                   <div><label className="field-label">Type de facture DGI (options chargées depuis la DGI)</label><select className="field" value={emecefForm.invoiceType} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, invoiceType: e.target.value as 'FV' | 'FA' | 'EV' | 'EA' })}>{(emecefOptions?.invoiceTypes || []).filter((type) => ['FV', 'FA', 'EV', 'EA'].includes(dgiOptionCode(type))).map((type) => { const value = dgiOptionCode(type); const labels: Record<string, string> = { FV: 'Facture de vente', FA: 'Facture d’avoir', EV: 'Vente à l’exportation', EA: 'Avoir à l’exportation' }; return <option key={value} value={value}>{value} — {dgiOptionDescription(type) || labels[value] || value}</option>; })}</select></div>
                   {['FA', 'EA'].includes(emecefForm.invoiceType) && <div><label className="field-label">Code MECeF/DGI de la facture originale (référence)</label><input className="field" value={emecefForm.reference} maxLength={29} placeholder="Code MECeF/DGI original" onChange={(e) => setEmecefForm({ ...emecefForm, reference: e.target.value.trim() })} /><p className="text-xs text-gray-500 mt-1">Obligatoire pour les avoirs ; utilisez le code de la facture originale déjà confirmée par la DGI.</p></div>}
                   <div><label className="field-label">AIB (taux retournés par la DGI)</label><select className="field" value={emecefForm.aib} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, aib: e.target.value as '' | 'A' | 'B' })}><option value="">Aucun AIB</option>{Number(emecefOptions?.taxGroups?.aibA) > 0 && <option value="A">AIB A — {Number(emecefOptions!.taxGroups.aibA)} %</option>}{Number(emecefOptions?.taxGroups?.aibB) > 0 && <option value="B">AIB B — {Number(emecefOptions!.taxGroups.aibB)} %</option>}</select></div>
-                  <div><label className="field-label">Groupe fiscal (taux DGI)</label><select className="field" value={emecefForm.taxGroup} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, taxGroup: e.target.value })}>{['a','b','c','d','e','f'].filter((key) => emecefOptions?.taxGroups?.[key] !== undefined).map((key) => <option key={key} value={key.toUpperCase()}>{key.toUpperCase()} — {Number(emecefOptions!.taxGroups[key])}%</option>)}</select></div>
+                  {invoice.items.some((item) => !item.taxGroup) && <div><label className="field-label">Groupe fiscal par défaut (pour les lignes non renseignées)</label><select className="field" value={emecefForm.taxGroup} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, taxGroup: e.target.value })}>{['a','b','c','d','e','f'].filter((key) => emecefOptions?.taxGroups?.[key] !== undefined).map((key) => <option key={key} value={key.toUpperCase()}>{key.toUpperCase()} — {Number(emecefOptions!.taxGroups[key])}%</option>)}</select></div>}
+                  {invoice.items.every((item) => !!item.taxGroup) && <p className="text-xs text-emerald-700 dark:text-emerald-300">Les groupes fiscaux sont définis article par article. Oryxa transmettra chaque ligne avec son groupe respectif.</p>}
                   <p className="text-xs text-gray-500">Base de prix : HT (comme dans le calcul des factures Oryxa). La TVA est ajoutée avant l’envoi à la DGI.</p>
                   <div><label className="field-label">Mode de paiement déclaré (options DGI)</label><select className="field" value={emecefForm.paymentType} disabled={!emecefOptions || emecefOptionsLoading} onChange={(e) => setEmecefForm({ ...emecefForm, paymentType: e.target.value })}>{(emecefOptions?.paymentTypes || []).filter((type) => ['ESPECES', 'CHEQUES', 'MOBILEMONEY', 'CARTEBANCAIRE', 'VIREMENT', 'CREDIT', 'AUTRE'].includes(dgiOptionCode(type))).map((type) => { const value = dgiOptionCode(type); const labels: Record<string, string> = { ESPECES: 'Espèces', CHEQUES: 'Chèques', MOBILEMONEY: 'Mobile Money', CARTEBANCAIRE: 'Carte bancaire', VIREMENT: 'Virement', CREDIT: 'Crédit', AUTRE: 'Autre' }; return <option key={value} value={value}>{dgiOptionDescription(type) || labels[value] || value}</option>; })}</select></div>
                   <p className="text-xs text-amber-700 dark:text-amber-400">La DGI reste l’autorité de calcul fiscal. Les remises globales sont bloquées tant que leur représentation exacte n’est pas prise en charge. Pour un avoir, vérifiez la référence originale avant l’envoi.</p>

@@ -48,7 +48,8 @@ function buildPayload({ invoice, client, config, taxGroup, paymentType, priceBas
   if (invoice.statut === 'annulee') throw new Error('Une facture commerciale annulée ne peut pas être envoyée à la DGI.');
   if (!Array.isArray(invoice.items) || invoice.items.length === 0) throw new Error('Ajoutez au moins un article avant la fiscalisation.');
   if (Number(invoice.remise || 0) !== 0) throw new Error('La remise globale n’est pas encore prise en charge par l’intégration e-MECeF. Retirez-la ou attendez la prise en charge dédiée.');
-  if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(taxGroup)) throw new Error('Choisissez un groupe fiscal valide (A à F).');
+  const fallbackTaxGroup = taxGroup || invoice.items.find((item) => item.taxGroup)?.taxGroup;
+  if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(fallbackTaxGroup)) throw new Error('Choisissez un groupe fiscal valide sur chaque article.');
   if (!['FV', 'FA', 'EV', 'EA'].includes(invoiceType)) throw new Error('Choisissez un type de facture reconnu par la DGI.');
   if (['FA', 'EA'].includes(invoiceType)) {
     if (typeof reference !== 'string') throw new Error('Pour un avoir, renseignez le code MECeF/DGI de la facture originale.');
@@ -66,7 +67,7 @@ function buildPayload({ invoice, client, config, taxGroup, paymentType, priceBas
   // Dans le modèle Oryxa, prixUnitaire est une base HT et totalTTC ajoute la TVA.
   // Accepter TTC ici créerait un document fiscal différent de la facture commerciale.
   if (priceBasis !== 'HT') throw new Error('Cette version fiscalise les factures Oryxa dont les prix sont saisis HT. Le mode TTC n’est pas pris en charge car Oryxa calcule déjà la TVA sur les prix saisis.');
-  const taxRate = Number(taxGroupRates?.[taxGroup.toLowerCase()]);
+  const taxRate = Number(taxGroupRates?.[fallbackTaxGroup.toLowerCase()]);
   if (!Number.isFinite(taxRate) || taxRate < 0 || taxRate > 100) throw new Error('Le taux de ce groupe fiscal n’a pas pu être vérifié auprès de la DGI. Réessayez après avoir vérifié la connexion.');
   if (!config.ifu || !/^\d{13}$/.test(config.ifu)) throw new Error('L’IFU du vendeur doit comporter 13 chiffres.');
   if (!config.operatorName?.trim()) throw new Error('Renseignez le nom de l’opérateur dans le profil e-MECeF.');
@@ -77,7 +78,7 @@ function buildPayload({ invoice, client, config, taxGroup, paymentType, priceBas
     if (!Number.isFinite(quantity) || quantity <= 0) throw new Error(`La quantité de l’article ${index + 1} est invalide.`);
     if (!Number.isFinite(unitPrice) || unitPrice <= 0) throw new Error(`Le prix de l’article ${index + 1} doit être supérieur à zéro.`);
     if (item.taxGroup && !['A', 'B', 'C', 'D', 'E', 'F'].includes(item.taxGroup)) throw new Error(`Le groupe fiscal de l’article ${index + 1} est invalide.`);
-    const selectedTaxGroup = item.taxGroup || taxGroup;
+    const selectedTaxGroup = item.taxGroup || fallbackTaxGroup;
     const selectedRate = Number(taxGroupRates?.[selectedTaxGroup.toLowerCase()]);
     if (!Number.isFinite(selectedRate) || selectedRate < 0 || selectedRate > 100) throw new Error(`Le taux fiscal de l’article ${index + 1} est invalide.`);
     // Le manuel e-MECeF définit `price` comme le prix unitaire TTC.

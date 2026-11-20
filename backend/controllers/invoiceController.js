@@ -48,12 +48,36 @@ async function verifierLimiteGratuite(userId) {
   return verifierLimiteFactures(Invoice, user);
 }
 
-const ALLOWED = ['client', 'objet', 'dateEmission', 'dateEcheance', 'items', 'remise', 'tva', 'notes', 'template', 'fraisSupportesPar', 'devise', 'tauxChange'];
+const ALLOWED = ['client', 'objet', 'dateEmission', 'dateEcheance', 'items', 'modeFacturation', 'remise', 'tva', 'notes', 'template', 'fraisSupportesPar', 'devise', 'tauxChange'];
 
 function pickFields(body) {
   const o = {};
   ALLOWED.forEach((f) => { if (body[f] !== undefined) o[f] = body[f]; });
   return o;
+}
+
+// Validation serveur du parcours normalisé : le frontend ne peut pas choisir
+// une devise ou un taux global incompatibles et chaque ligne doit porter un
+// groupe et un taux récupérés depuis les options DGI. Le backend e-MECeF
+// revalide ensuite les taux avec la réponse DGI au moment de la transmission.
+function validateInvoiceMode(data, existing = null) {
+  const mode = data.modeFacturation || existing?.modeFacturation || 'commerciale';
+  if (mode !== 'normalisee') return null;
+  const devise = data.devise || existing?.devise || 'XOF';
+  const remise = data.remise !== undefined ? Number(data.remise) : Number(existing?.remise || 0);
+  const items = data.items || existing?.items || [];
+  if (devise !== 'XOF') return 'Une facture normalisée e-MECeF doit être libellée en FCFA (XOF).';
+  if (remise !== 0) return 'La remise globale n’est pas prise en charge dans le parcours e-MECeF.';
+  if (!Array.isArray(items) || !items.length) return 'Ajoutez au moins un article à la facture normalisée.';
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(item.taxGroup)) return `Sélectionnez un groupe fiscal DGI pour l’article ${i + 1}.`;
+    const rate = Number(item.taxRate);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) return `Le taux fiscal de l’article ${i + 1} est invalide.`;
+    const specific = Number(item.taxSpecific || 0);
+    if (!Number.isSafeInteger(specific) || specific < 0) return `La taxe spécifique de l’article ${i + 1} doit être un montant entier positif ou nul.`;
+  }
+  return null;
 }
 
 exports.getInvoices = asyncHandler(async (req, res) => {
@@ -115,6 +139,8 @@ exports.createInvoice = asyncHandler(async (req, res) => {
   const dev = resolveDocumentCurrency(data, user.devise);
   if (dev.error) return res.status(400).json({ message: dev.error });
   Object.assign(data, dev.fields);
+  const modeError = validateInvoiceMode(data);
+  if (modeError) return res.status(400).json({ message: modeError });
   data.owner = req.userId;
   data.numero = await nextInvoiceNumber(req.userId);
   if (data.template && !permissionsDe(user).peutUtiliserModele(data.template)) {
@@ -202,6 +228,8 @@ exports.updateInvoice = asyncHandler(async (req, res) => {
   if (dev.error) return res.status(400).json({ message: dev.error });
   delete updates.devise; delete updates.tauxChange;
   Object.assign(updates, dev.fields);
+  const modeError = validateInvoiceMode(updates, existing);
+  if (modeError) return res.status(400).json({ message: modeError });
   if (updates.template) {
     const user = await User.findById(req.userId);
     if (!permissionsDe(user).peutUtiliserModele(updates.template)) {

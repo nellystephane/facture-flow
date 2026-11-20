@@ -7,6 +7,7 @@ const itemSchema = new mongoose.Schema({
   quantite: { type: Number, required: true, default: 1 },
   prixUnitaire: { type: Number, required: true, default: 0 },
   taxGroup: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F'], default: null },
+  taxRate: { type: Number, min: 0, max: 100, default: null },
   taxSpecific: { type: Number, min: 0, default: 0 },
   originalPrice: { type: Number, min: 0, default: null },
   priceModification: { type: String, default: '' },
@@ -26,6 +27,7 @@ const invoiceSchema = new mongoose.Schema({
   dateEmission: { type: Date, default: Date.now },
   dateEcheance: { type: Date },
   items: [itemSchema],
+  modeFacturation: { type: String, enum: ['commerciale', 'normalisee'], default: 'commerciale' },
   stockApplique: { type: Boolean, default: false },
   // Devise du document. Les anciens documents n'ont pas ce champ : XOF.
   devise: { type: String, default: 'XOF' },

@@ -10,6 +10,35 @@ describe('invoiceTotals (source unique des montants)', () => {
     expect(t.totalDu).toBe(11899);
   });
 
+  test('facture normalisée mixte : A exonéré et B à 18 % sont calculés ligne par ligne', () => {
+    const t = computeInvoiceTotals({
+      modeFacturation: 'normalisee', remise: 0, tva: 0,
+      items: [
+        { description: 'Article A', quantite: 2, prixUnitaire: 1000, taxGroup: 'A', taxRate: 0, taxSpecific: 0 },
+        { description: 'Article B', quantite: 3, prixUnitaire: 1000, taxGroup: 'B', taxRate: 18, taxSpecific: 0 },
+      ],
+    });
+    expect(t.totalTTC).toBe(5540);
+    expect(t.montantTva).toBe(540);
+  });
+
+  test('la taxe spécifique est ajoutée séparément de la TVA', () => {
+    const t = computeInvoiceTotals({
+      modeFacturation: 'normalisee', remise: 0, tva: 0,
+      items: [{ quantite: 3, prixUnitaire: 1000, taxGroup: 'B', taxRate: 18, taxSpecific: 120 }],
+    });
+    expect(t.totalTTC).toBe(3660);
+    expect(t.taxSpecific).toBe(120);
+  });
+
+  test('les factures commerciales conservent le calcul global historique', () => {
+    const t = computeInvoiceTotals({
+      modeFacturation: 'commerciale', remise: 0, tva: 18,
+      items: [{ quantite: 3, prixUnitaire: 1000, taxRate: 18, taxSpecific: 0 }],
+    });
+    expect(t.totalTTC).toBe(3540);
+  });
+
   test('le total DGI confirmé fait foi', () => {
     const t = computeInvoiceTotals({ ...base, fiscalisation: { status: 'confirmed', dgiTotal: 11900 } });
     expect(t.totalTTC).toBe(11900);

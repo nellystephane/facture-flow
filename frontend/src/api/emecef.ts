@@ -27,7 +27,7 @@ export const getEmecefConfig = () => api.get<EmecefConfig>('/auth/profile/emecef
 export const saveEmecefConfig = (data: { ifu: string; operatorName: string; token: string }) =>
   api.put<EmecefConfig>('/auth/profile/emecef', data);
 export const testEmecefConnection = () => api.post<{ connected: boolean; environment: 'test'; version?: string; tokenValidUntil?: string; nim?: string }>('/auth/profile/emecef/test-connection');
-export const prepareEmecefInvoice = (id: string, data: { taxGroup: string; paymentType: string; priceBasis: 'HT' | 'TTC'; invoiceType: 'FV' | 'FA' | 'EV' | 'EA'; aib?: '' | 'A' | 'B'; reference?: string; autoConfirm?: boolean }) =>
+export const prepareEmecefInvoice = (id: string, data: { taxGroup?: string; paymentType: string; priceBasis: 'HT' | 'TTC'; invoiceType: 'FV' | 'FA' | 'EV' | 'EA'; aib?: '' | 'A' | 'B'; reference?: string; autoConfirm?: boolean }) =>
   api.post<{ status: string; uid?: string; response?: Record<string, unknown>; expectedTotal?: number; message?: string }>(`/invoices/${id}/emecef/prepare`, data);
 export const confirmEmecefInvoice = (id: string) => api.post<{ status: string; fiscalisation?: EmecefStatus }>(`/invoices/${id}/emecef/confirm`);
 export const cancelEmecefInvoice = (id: string) => api.post<{ status: string; fiscalisation?: EmecefStatus }>(`/invoices/${id}/emecef/cancel`);

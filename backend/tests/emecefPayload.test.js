@@ -132,3 +132,28 @@ test('exige une justification lorsqu’un prix d’origine est transmis', () => 
   input.invoice.items[0].originalPrice = 1200;
   expect(() => buildPayload(input)).toThrow(/justification de modification/);
 });
+
+
+test('test 3 : transmet deux groupes fiscaux A et B avec total TTC 5 540 FCFA', () => {
+  const input = base();
+  input.invoice.items = [
+    { description: 'Article exonéré', quantite: 2, prixUnitaire: 1000, taxGroup: 'A', taxSpecific: 0 },
+    { description: 'Article taxable', quantite: 3, prixUnitaire: 1000, taxGroup: 'B', taxSpecific: 0 },
+  ];
+  input.invoice.totalTTC = 5540;
+  const result = buildPayload(input);
+  expect(result.payload.items).toEqual([
+    { name: 'Article exonéré', price: 1000, quantity: 2, taxGroup: 'A' },
+    { name: 'Article taxable', price: 1180, quantity: 3, taxGroup: 'B' },
+  ]);
+  expect(result.expectedTotal).toBe(5540);
+});
+
+test('la TVA du groupe B n’est pas envoyée comme taxe spécifique', () => {
+  const input = base();
+  input.invoice.items = [{ description: 'Article taxable', quantite: 3, prixUnitaire: 1000, taxGroup: 'B', taxSpecific: 0 }];
+  input.invoice.totalTTC = 3540;
+  const result = buildPayload(input);
+  expect(result.payload.items[0].taxSpecific).toBeUndefined();
+  expect(result.expectedTotal).toBe(3540);
+});

@@ -46,8 +46,19 @@ function computeInvoiceTotals(invoice) {
   const remise = num(invoice && invoice.remise);
   const totalHT = sousTotal - remise;
   const taxSpecific = items.reduce((sum, item) => sum + num(item.taxSpecific), 0);
-  const montantTva = (totalHT * num(invoice && invoice.tva)) / 100;
-  const totalTTCCalcule = totalHT + montantTva + taxSpecific;
+  // En mode normalisé, la TVA est calculée ligne par ligne selon le taux
+  // DGI enregistré avec le groupe fiscal de chaque article. Le mode commercial
+  // conserve strictement le calcul historique à taux global.
+  const montantTva = invoice && invoice.modeFacturation === 'normalisee'
+    ? items.reduce((sum, item) => {
+      const base = num(item.quantite) * num(item.prixUnitaire);
+      const apiGross = Math.round(Math.round(num(item.prixUnitaire) * (1 + num(item.taxRate) / 100)) * num(item.quantite));
+      return sum + (apiGross - base);
+    }, 0)
+    : (totalHT * num(invoice && invoice.tva)) / 100;
+  const totalTTCCalcule = invoice && invoice.modeFacturation === 'normalisee'
+    ? items.reduce((sum, item) => sum + Math.round(Math.round(num(item.prixUnitaire) * (1 + num(item.taxRate) / 100)) * num(item.quantite)), 0) + taxSpecific - remise
+    : totalHT + montantTva + taxSpecific;
   const fiscalTotal = fiscalTotalOf(invoice);
   const totalTTC = fiscalTotal !== null ? fiscalTotal : totalTTCCalcule;
   return {

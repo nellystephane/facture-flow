@@ -235,7 +235,7 @@ function drawTotals(pdf, doc, devise, startY, style) {
   pdf.text('Sous-total', 350, y, { width: 120, align: 'right' });
   pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(sousTotal, devise), 460, y, { width: 85, align: 'right' }); y += 18;
   if (doc.remise > 0) { pdf.fillColor(GRIS).font('Helvetica').text('Remise', 350, y, { width: 120, align: 'right' }); pdf.fillColor(style.accent).font('Helvetica-Bold').text('- ' + formatMontant(doc.remise, devise), 460, y, { width: 85, align: 'right' }); y += 18; }
-  pdf.fillColor(GRIS).font('Helvetica').text('TVA (' + (doc.tva || 0) + '%)', 350, y, { width: 120, align: 'right' });
+  pdf.fillColor(GRIS).font('Helvetica').text(doc.modeFacturation === 'normalisee' ? 'TVA par groupe fiscal' : 'TVA (' + (doc.tva || 0) + '%)', 350, y, { width: 120, align: 'right' });
   pdf.fillColor(NOIR).font('Helvetica-Bold').text(formatMontant(montantTva, devise), 460, y, { width: 85, align: 'right' }); y += 18;
   if (taxeSpecifique > 0) {
     pdf.fillColor(GRIS).font('Helvetica').text('Taxes spécifiques', 350, y, { width: 120, align: 'right' });
