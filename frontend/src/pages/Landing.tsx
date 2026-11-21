@@ -30,10 +30,7 @@ const GAINS: { titre: string; texte: string; tone: Tone; icon: typeof FileText }
   { titre: 'Votre argent, quand vous voulez', texte: 'Les paiements s’ajoutent à votre solde. Vous voyez ce qui est disponible et vous demandez votre retrait.', tone: 'vert', icon: Banknote },
 ];
 
-const MODELES = [
-  { id: 'classique', nom: 'Classique' }, { id: 'atelier', nom: 'Atelier' }, { id: 'horizon', nom: 'Horizon' },
-  { id: 'prestige', nom: 'Prestige' }, { id: 'corporate', nom: 'Corporate' }, { id: 'noir', nom: 'Noir' },
-];
+const MODELES = ['classique', 'atelier', 'horizon', 'prestige', 'corporate', 'noir'];
 
 const METIERS = ['Freelances et consultants', 'Artisans et prestataires', 'Commerçants et grossistes', 'Petites entreprises et agences'];
 
@@ -165,14 +162,14 @@ export default function Landing() {
         <section className="lp-section">
           <Reveal>
             <p className="lp-eyebrow">Vos documents</p>
-            <h2 className="lp-h2">Des factures qui ont de la tenue, pas un tableau Excel imprimé.</h2>
-            <p className="lp-sub">Neuf modèles dessinés un par un : sobre, éditorial, institutionnel… Choisissez celui qui vous ressemble, vos clients le verront.</p>
+            <h2 className="lp-h2">Choisissez votre modèle.</h2>
+            <p className="lp-sub">Une facture, c’est un peu votre vitrine. Sobre, chaleureuse, élégante ou très pro : prenez celle qui vous ressemble, vos clients la remarqueront. Vous pouvez en changer d’une facture à l’autre.</p>
+            <p className="lp-note">Le plan gratuit commence avec le modèle de base ; les autres sont inclus dans Pro et Business.</p>
           </Reveal>
           <div className="lp-models">
-            {MODELES.map((m, i) => (
-              <Reveal key={m.id} delay={i * 70} className="lp-model">
-                <div className="lp-model-page"><TemplateThumb id={m.id} /></div>
-                <span>{m.nom}</span>
+            {MODELES.map((id, i) => (
+              <Reveal key={id} delay={i * 70} className="lp-model">
+                <div className="lp-model-page" aria-hidden="true"><TemplateThumb id={id} /></div>
               </Reveal>
             ))}
           </div>
@@ -211,28 +208,28 @@ export default function Landing() {
           </Reveal>
         </section>
 
-        <section className="lp-final">
-          <Reveal>
-            <div className="lp-final-card">
-              <h2>Votre prochaine facture, faites-la avec Oryxa.</h2>
-              <p>Créez votre compte gratuit, ajoutez un client, envoyez la facture. Cinq minutes suffisent.</p>
-              <Link to="/register" className="lp-btn-light">Créer mon compte gratuit <ArrowRight size={18} /></Link>
-            </div>
-          </Reveal>
-        </section>
       </main>
 
+      <div className="lp-end">
+        <section className="lp-final">
+          <Reveal>
+            <h2>Votre prochaine facture, faites-la avec Oryxa.</h2>
+            <p>Créez votre compte gratuit, ajoutez un client, envoyez la facture. Cinq minutes suffisent.</p>
+            <Link to="/register" className="lp-btn-light">Créer mon compte gratuit <ArrowRight size={18} /></Link>
+          </Reveal>
+        </section>
       <footer className="lp-footer">
-        <OryxaLogo size={30} nameClassName="font-bold text-base text-[#0a0a0c]" />
-        <div className="lp-footer-links">
-          <a href="#faq">Questions</a>
-          <Link to="/affiliation">Parrainage</Link>
-          <Link to="/cgu">CGU</Link>
-          <Link to="/confidentialite">Confidentialité</Link>
-          <Link to="/mentions-legales">Mentions légales</Link>
-        </div>
-        <p>© {new Date().getFullYear()} Oryxa</p>
-      </footer>
+          <OryxaLogo size={30} nameClassName="font-bold text-base text-[#0a0a0c]" />
+          <div className="lp-footer-links">
+            <a href="#faq">Questions</a>
+            <Link to="/affiliation">Parrainage</Link>
+            <Link to="/cgu">CGU</Link>
+            <Link to="/confidentialite">Confidentialité</Link>
+            <Link to="/mentions-legales">Mentions légales</Link>
+          </div>
+          <p>© {new Date().getFullYear()} Oryxa</p>
+        </footer>
+      </div>
     </div>
   );
 }

@@ -49,7 +49,7 @@ function Thumb({ id }: { id: string }): ReactNode {
 /** Miniature autonome d'un modèle (page d'accueil, aperçus). */
 export function TemplateThumb({ id }: { id: string }) {
   return (
-    <svg viewBox="0 0 60 80" width="100%" height="100%" role="img" aria-label={`Modèle ${id}`}>
+    <svg viewBox="0 0 60 80" width="100%" height="100%" aria-hidden="true">
       <rect width="60" height="80" fill="#fff" />
       <Thumb id={id} />
     </svg>

@@ -50,3 +50,4 @@ Le build complet frontend n'a pas pu être exécuté dans l'environnement de tra
 - `select.field` en mode sombre : chevron unique (le fond se répétait).
 - Page d'accueil : hero avec maquette, parcours en 3 étapes, couleurs par rôle (rouge = agir, vert = argent reçu, ambre = en attente, bleu = s'organiser), vitrine des modèles PDF, appel final plein rouge.
 - Vignette « Horizon » du sélecteur : largeur négative corrigée.
+- Accueil (ajustement) : bande finale néon pleine largeur jusqu'au pied de page ; section documents « Choisissez votre modèle. » sans noms de modèles, avec mention honnête des plans.
